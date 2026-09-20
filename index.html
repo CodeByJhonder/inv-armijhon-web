@@ -1,0 +1,1590 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INV. Armijhon — Centro Profesional de Copiado | Elorza, Apure</title>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://images.pexels.com">
+    <link rel="preconnect" href="https://images.unsplash.com">
+    <!-- Tailwind CSS compilado localmente -->
+    <link rel="stylesheet" href="assets/css/tailwind.min.css">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;0,700;1,500&family=Jost:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+        .brand-logo {
+            border-radius: 1rem;
+            overflow: hidden;
+            filter: drop-shadow(0 5px 10px rgba(23, 21, 18, 0.14));
+        }
+        .dark .glass-panel, .dark-glass {
+            background: rgba(23, 21, 18, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #171512;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4A453C;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #A8834A;
+        }
+
+        /* Add to cart animation */
+        @keyframes cart-fly {
+            0%   { transform: translate(0,0) scale(0.4) rotate(0deg); opacity: 0; }
+            10%  { opacity: 1; transform: translate(0,0) scale(1) rotate(0deg); }
+            80%  { opacity: 1; }
+            100% { transform: translate(var(--fly-x), var(--fly-y)) scale(0.25) rotate(15deg); opacity: 0; }
+        }
+        .cart-fly-icon {
+            position: fixed;
+            width: 56px;
+            height: 56px;
+            pointer-events: none;
+            z-index: 200;
+            animation: cart-fly 0.85s cubic-bezier(.35,.02,.4,1) forwards;
+            filter: drop-shadow(0 6px 14px rgba(0,0,0,.25));
+        }
+        @keyframes cart-bump {
+            0%   { transform: scale(1); }
+            30%  { transform: scale(1.35) rotate(-8deg); }
+            55%  { transform: scale(0.92) rotate(6deg); }
+            75%  { transform: scale(1.15) rotate(-3deg); }
+            100% { transform: scale(1) rotate(0deg); }
+        }
+        .cart-bump { animation: cart-bump 0.6s cubic-bezier(.34,1.56,.64,1); }
+        @keyframes badge-pop {
+            0% { transform: scale(1); }
+            40% { transform: scale(1.6); }
+            100% { transform: scale(1); }
+        }
+        .badge-pop { animation: badge-pop 0.5s ease; }
+
+        /* Cotizador: estados de interacción de las opciones */
+        .quote-opt {
+            position: relative;
+            overflow: hidden;
+            isolation: isolate;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+            transition: transform 180ms ease, background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+        }
+        .quote-opt::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(120deg, transparent 20%, rgba(255, 255, 255, 0.08), transparent 80%);
+            transform: translateX(-120%);
+            transition: transform 500ms ease;
+            pointer-events: none;
+            z-index: -1;
+        }
+        .quote-opt:hover {
+            transform: translateY(-3px);
+            background-color: #F7F3EA !important;
+            border-color: rgba(201, 166, 107, 0.85) !important;
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(201, 166, 107, 0.12);
+        }
+        .quote-opt {
+            background-color: #FFFFFF !important;
+            border-color: #DED4C1 !important;
+            color: #171512;
+        }
+        .dark .quote-opt {
+            background-color: #100F0C !important;
+            border-color: #4A453C !important;
+            color: #FFFFFF;
+        }
+        .dark .quote-opt:hover {
+            background-color: #23241F !important;
+        }
+        .quote-opt:hover::before {
+            transform: translateX(120%);
+        }
+        .quote-opt:focus-visible {
+            outline: 2px solid #E3CC9A;
+            outline-offset: 3px;
+        }
+        .quote-opt.bg-indigo-500\/20 {
+            background-color: rgba(29, 74, 56, 0.12) !important;
+            border-color: #3D7A5A !important;
+            box-shadow: 0 0 0 1px rgba(201, 166, 107, 0.18), 0 10px 24px rgba(0, 0, 0, 0.2);
+        }
+        .dark .quote-opt.bg-indigo-500\/20 {
+            background-color: rgba(61, 122, 90, 0.2) !important;
+            border-color: #6E9E80 !important;
+        }
+        #quote-send {
+            transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+        }
+        #quote-send:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(16, 185, 129, 0.28);
+            filter: saturate(1.15);
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .quote-opt,
+            .quote-opt::before,
+            #quote-send {
+                transition: none;
+            }
+        }
+
+        /* Catalogo: controles con respuesta tactil y jerarquia clara */
+        .catalog-filter,
+        .catalog-product-action,
+        .catalog-quick-view {
+            transition: transform 180ms ease, background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease, color 180ms ease;
+        }
+        .catalog-filter:hover {
+            transform: translateY(-2px);
+            background-color: rgba(201, 166, 107, 0.14) !important;
+            border-color: rgba(201, 166, 107, 0.75) !important;
+            color: #E3CC9A !important;
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.14);
+        }
+        .catalog-filter:focus-visible,
+        .catalog-product-action:focus-visible,
+        .catalog-quick-view:focus-visible {
+            outline: 2px solid #E3CC9A;
+            outline-offset: 3px;
+        }
+        .catalog-filter.is-active {
+            box-shadow: 0 8px 20px rgba(168, 131, 74, 0.22);
+        }
+        .catalog-quick-view {
+            position: relative;
+        }
+        .catalog-quick-view::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: -4px;
+            height: 1px;
+            background: currentColor;
+            transform: scaleX(0);
+            transform-origin: right;
+            transition: transform 180ms ease;
+        }
+        .catalog-quick-view:hover {
+            color: #E3CC9A !important;
+        }
+        .catalog-quick-view:hover::after {
+            transform: scaleX(1);
+            transform-origin: left;
+        }
+        .catalog-product-action:hover {
+            transform: translateY(-2px);
+            background: linear-gradient(135deg, #E3CC9A, #D3B06A) !important;
+            border-color: #171512 !important;
+            color: #171512 !important;
+            box-shadow: 0 12px 24px rgba(168, 131, 74, 0.28), inset 0 2px 0 #C9A66B, inset 0 -2px 0 #C9A66B;
+        }
+        .catalog-product-action:hover i {
+            color: #332F28;
+            transform: translateX(2px) scale(1.08) rotate(-4deg);
+        }
+        .catalog-product-action i {
+            transition: transform 180ms ease;
+        }
+        .catalog-card {
+            content-visibility: auto;
+            contain-intrinsic-size: 360px;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .catalog-filter,
+            .catalog-product-action,
+            .catalog-quick-view,
+            .catalog-quick-view::after,
+            .catalog-product-action i {
+                transition: none;
+            }
+        }
+        @media (max-width: 767px) {
+            .parallax-float {
+                transform: none !important;
+                will-change: auto;
+            }
+            .doodle-icon {
+                opacity: 0.72;
+            }
+            .glass-panel,
+            .dark-glass,
+            [class*="backdrop-blur"] {
+                -webkit-backdrop-filter: none !important;
+                backdrop-filter: none !important;
+            }
+        }
+
+        /* Elementos flotantes con profundidad al hacer scroll */
+        .parallax-float {
+            --parallax-x: 0px;
+            --parallax-y: 0px;
+            --parallax-rotate: 0deg;
+            transform: translate3d(var(--parallax-x), var(--parallax-y), 0) rotate(var(--parallax-rotate));
+        }
+        .parallax-card {
+            position: absolute;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.65rem;
+            padding: 0.65rem 0.8rem;
+            border: 1px solid rgba(227, 204, 154, 0.28);
+            border-radius: 0.85rem;
+            background: rgba(23, 21, 18, 0.72);
+            color: #E3CC9A;
+            box-shadow: 0 14px 32px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            pointer-events: none;
+            z-index: 2;
+        }
+        .parallax-card i {
+            color: #D3B06A;
+        }
+        .doodle-pattern {
+            position: fixed;
+            inset: 0;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .doodle-icon {
+            position: absolute;
+            display: grid;
+            place-items: center;
+            width: 2.5rem;
+            height: 2.5rem;
+            color: rgba(168, 131, 74, 0.34);
+            font-size: 1.3rem;
+            transform-origin: center;
+            filter: drop-shadow(0 4px 8px rgba(23, 21, 18, 0.08));
+        }
+        .dark .doodle-icon {
+            color: rgba(227, 204, 154, 0.28);
+        }
+        .doodle-icon:nth-child(3n) { color: rgba(180, 85, 63, 0.3); }
+        .dark .doodle-icon:nth-child(3n) { color: rgba(204, 128, 105, 0.3); }
+        .doodle-icon:nth-child(4n) { color: rgba(29, 74, 56, 0.3); }
+        .dark .doodle-icon:nth-child(4n) { color: rgba(110, 158, 128, 0.3); }
+        .doodle-icon:nth-child(2n) { font-size: 1.08rem; }
+        @media (prefers-reduced-motion: reduce) {
+            .parallax-float {
+                transform: none !important;
+                will-change: auto;
+            }
+            .doodle-icon {
+                transform: none !important;
+            }
+        }
+        @media (max-width: 767px) {
+            .parallax-card {
+                display: none !important;
+            }
+            .mobile-hero {
+                padding-top: 2.75rem !important;
+                padding-bottom: 3.5rem !important;
+            }
+            .mobile-hero h1 {
+                font-size: clamp(2.15rem, 10vw, 3rem);
+                line-height: 1.08;
+            }
+            .mobile-hero .hero-eyebrow {
+                max-width: calc(100vw - 3rem);
+                margin-inline: auto;
+                text-align: center;
+            }
+            .mobile-hero .hero-copy {
+                padding-inline: 0.25rem;
+            }
+            .mobile-hero .hero-metrics {
+                gap: 0.7rem;
+            }
+            .mobile-hero .hero-metrics .text-2xl {
+                font-size: 1.55rem;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-sans selection:bg-indigo-500 selection:text-white min-h-screen flex flex-col justify-between transition-colors duration-300">
+
+    <div class="doodle-pattern" aria-hidden="true">
+        <span class="doodle-icon parallax-float left-[8%] top-[16%]" data-parallax-speed="0.08" data-parallax-rotate="-2" data-parallax-fixed><i class="fa-solid fa-scissors"></i></span>
+        <span class="doodle-icon parallax-float left-[24%] top-[10%]" data-parallax-speed="-0.06" data-parallax-rotate="3" data-parallax-fixed><i class="fa-solid fa-pencil"></i></span>
+        <span class="doodle-icon parallax-float left-[47%] top-[18%]" data-parallax-speed="0.1" data-parallax-rotate="-4" data-parallax-fixed><i class="fa-regular fa-file-lines"></i></span>
+        <span class="doodle-icon parallax-float right-[12%] top-[14%]" data-parallax-speed="-0.07" data-parallax-rotate="2" data-parallax-fixed><i class="fa-solid fa-ruler"></i></span>
+        <span class="doodle-icon parallax-float right-[4%] top-[35%]" data-parallax-speed="0.09" data-parallax-rotate="-3" data-parallax-fixed><i class="fa-solid fa-bottle-droplet"></i></span>
+        <span class="doodle-icon parallax-float left-[5%] top-[42%]" data-parallax-speed="-0.08" data-parallax-rotate="4" data-parallax-fixed><i class="fa-solid fa-eraser"></i></span>
+        <span class="doodle-icon parallax-float left-[18%] top-[55%]" data-parallax-speed="0.07" data-parallax-rotate="-2" data-parallax-fixed><i class="fa-solid fa-highlighter"></i></span>
+        <span class="doodle-icon parallax-float right-[22%] top-[48%]" data-parallax-speed="-0.1" data-parallax-rotate="3" data-parallax-fixed><i class="fa-solid fa-paperclip"></i></span>
+        <span class="doodle-icon parallax-float right-[7%] top-[64%]" data-parallax-speed="0.06" data-parallax-rotate="-4" data-parallax-fixed><i class="fa-solid fa-box-open"></i></span>
+        <span class="doodle-icon parallax-float left-[9%] top-[76%]" data-parallax-speed="-0.09" data-parallax-rotate="2" data-parallax-fixed><i class="fa-solid fa-book"></i></span>
+        <span class="doodle-icon parallax-float left-[36%] top-[83%]" data-parallax-speed="0.08" data-parallax-rotate="-3" data-parallax-fixed><i class="fa-solid fa-pen-ruler"></i></span>
+        <span class="doodle-icon parallax-float right-[38%] top-[76%]" data-parallax-speed="-0.06" data-parallax-rotate="4" data-parallax-fixed><i class="fa-solid fa-note-sticky"></i></span>
+        <span class="doodle-icon parallax-float right-[15%] top-[88%]" data-parallax-speed="0.1" data-parallax-rotate="-2" data-parallax-fixed><i class="fa-solid fa-print"></i></span>
+        <span class="doodle-icon parallax-float left-[52%] top-[62%]" data-parallax-speed="-0.07" data-parallax-rotate="3" data-parallax-fixed><i class="fa-solid fa-palette"></i></span>
+        <span class="doodle-icon parallax-float left-[31%] top-[31%]" data-parallax-speed="0.06" data-parallax-rotate="-3" data-parallax-fixed><i class="fa-solid fa-pen"></i></span>
+        <span class="doodle-icon parallax-float right-[29%] top-[28%]" data-parallax-speed="-0.08" data-parallax-rotate="2" data-parallax-fixed><i class="fa-solid fa-folder-open"></i></span>
+        <span class="doodle-icon parallax-float left-[43%] top-[47%]" data-parallax-speed="0.09" data-parallax-rotate="4" data-parallax-fixed><i class="fa-solid fa-thumbtack"></i></span>
+        <span class="doodle-icon parallax-float right-[47%] top-[56%]" data-parallax-speed="-0.06" data-parallax-rotate="-2" data-parallax-fixed><i class="fa-solid fa-bookmark"></i></span>
+        <span class="doodle-icon parallax-float left-[4%] top-[91%]" data-parallax-speed="0.07" data-parallax-rotate="3" data-parallax-fixed><i class="fa-solid fa-calculator"></i></span>
+        <span class="doodle-icon parallax-float right-[4%] top-[79%]" data-parallax-speed="-0.09" data-parallax-rotate="-3" data-parallax-fixed><i class="fa-solid fa-box"></i></span>
+    </div>
+
+    <div class="bg-gradient-to-r from-indigo-900 via-slate-900 to-purple-900 text-xs py-2 px-4 border-b border-white/10 text-slate-300">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
+            <div class="flex items-center gap-4">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 mr-1.5"></span> Lun. a sáb. · 8:00 am – 6:00 pm
+                </span>
+                <span class="hidden md:inline"><i class="fa-solid fa-location-dot text-indigo-400 mr-1"></i> Mereyal, El Relleno, Elorza, Apure</span>
+            </div>
+            <div class="flex items-center gap-6">
+                <a href="https://wa.me/584264057916" target="_blank" class="hover:text-indigo-400 transition flex items-center gap-1.5"><i class="fa-brands fa-whatsapp text-xs"></i> 0426 405 7916</a>
+            </div>
+        </div>
+    </div>
+
+    <header class="sticky top-0 z-40 bg-white/80 dark:bg-slate-900/85 backdrop-blur-md border-b border-slate-200 dark:border-slate-800/80 shadow-sm dark:shadow-2xl transition-colors duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-20">
+                <!-- Brand Logo -->
+                <a href="#" class="flex items-center gap-3 group">
+                    <img src="assets/images/logo.png" alt="INV. Armijhon — Centro Profesional de Copiado" class="brand-logo h-14 w-auto group-hover:scale-105 transition transform duration-300">
+                </a>
+
+                <!-- Desktop Navigation Links -->
+                <nav class="hidden lg:flex items-center space-x-1 font-medium text-sm text-slate-600 dark:text-slate-300">
+                    <a href="#servicios" class="px-4 py-2 rounded-xl hover:text-indigo-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition flex items-center gap-2">
+                        <i class="fa-solid fa-cubes text-indigo-500"></i> Servicios
+                    </a>
+                    <a href="#catalogo" class="px-4 py-2 rounded-xl hover:text-indigo-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition flex items-center gap-2">
+                        <i class="fa-solid fa-store text-violet-500"></i> Catálogo
+                    </a>
+                    <a href="#express" class="px-4 py-2 rounded-xl hover:text-indigo-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition flex items-center gap-2">
+                        <i class="fa-solid fa-bolt text-amber-500"></i> Enviar Archivo
+                    </a>
+                    <a href="#faq" class="px-4 py-2 rounded-xl hover:text-indigo-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition flex items-center gap-2">
+                        <i class="fa-solid fa-circle-question text-emerald-500"></i> Ayuda
+                    </a>
+                    <a href="#contacto" class="px-4 py-2 rounded-xl hover:text-indigo-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition">Ubicación</a>
+                </nav>
+
+                <!-- Header Actions: Theme Switcher, Cart & WhatsApp Button -->
+                <div class="flex items-center space-x-3">
+                    
+                    <!-- Theme Toggle Switch -->
+                    <button id="theme-toggle" onclick="toggleTheme()" class="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 p-3 rounded-2xl transition border border-slate-200 dark:border-slate-700 hover:scale-105 flex items-center justify-center">
+                        <i id="theme-icon" class="fa-solid fa-moon text-lg text-indigo-500"></i>
+                    </button>
+
+                    <!-- Cart Toggle Button -->
+                    <button id="cart-toggle-btn" class="relative bg-emerald-500/10 dark:bg-emerald-500/15 hover:bg-emerald-500/20 dark:hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-400 p-3 rounded-2xl transition border border-emerald-500/30 group">
+                        <i id="cart-icon" class="fa-solid fa-cart-shopping text-lg text-indigo-500 group-hover:scale-110 transition"></i>
+                        <span id="cart-badge-count" class="absolute -top-1.5 -right-1.5 bg-emerald-500 text-white text-xs font-black w-5 h-5 rounded-full flex items-center justify-center shadow-lg border-2 border-white dark:border-slate-900">0</span>
+                    </button>
+
+                    <a href="https://wa.me/584264057916?text=Hola%2C%20necesito%20asistencia%20con%20un%20servicio" target="_blank" 
+                       class="hidden sm:flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-bold px-4 py-3 rounded-2xl shadow-lg shadow-emerald-500/20 transition transform hover:-translate-y-0.5">
+                        <i class="fa-brands fa-whatsapp text-base"></i> Escribir por WhatsApp
+                    </a>
+
+                    <!-- Mobile Menu Button -->
+                    <button id="mobile-menu-btn" class="lg:hidden text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white p-2 text-xl focus:outline-none">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Drawer Menu -->
+        <div id="mobile-menu" class="hidden lg:hidden bg-white/95 dark:bg-slate-900/95 border-b border-slate-200 dark:border-slate-800 px-6 py-6 space-y-4 text-sm font-medium">
+            <a href="#servicios" class="mobile-nav-link block p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200"><i class="fa-solid fa-cubes text-indigo-500 mr-3"></i>Servicios Principales</a>
+            <a href="#catalogo" class="mobile-nav-link block p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200"><i class="fa-solid fa-store text-violet-500 mr-3"></i>Catálogo de Productos</a>
+            <a href="#express" class="mobile-nav-link block p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200"><i class="fa-solid fa-bolt text-amber-500 mr-3"></i>Cotizador de Impresión</a>
+            <a href="#faq" class="mobile-nav-link block p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200"><i class="fa-solid fa-circle-question text-emerald-500 mr-3"></i>Preguntas Frecuentes</a>
+            <a href="#contacto" class="mobile-nav-link block p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200"><i class="fa-solid fa-map-pin text-indigo-500 mr-3"></i>Ubicación y Horarios</a>
+            
+            <a href="https://wa.me/584264057916" target="_blank" class="block w-full text-center bg-emerald-500 text-white font-bold py-3 rounded-xl shadow-lg mt-4">
+                <i class="fa-brands fa-whatsapp mr-2"></i> Contacto Directo WhatsApp
+            </a>
+        </div>
+    </header>
+
+    <section class="mobile-hero relative overflow-hidden py-16 md:py-24 border-b border-slate-200 dark:border-slate-800/80">
+        <!-- Background Glow Orbs -->
+        <div class="parallax-float absolute top-10 left-1/4 w-96 h-96 bg-indigo-500/10 dark:bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" data-parallax-speed="0.12" data-parallax-rotate="-1"></div>
+        <div class="parallax-float absolute bottom-10 right-10 w-96 h-96 bg-purple-500/10 dark:bg-purple-600/15 rounded-full blur-3xl pointer-events-none" data-parallax-speed="-0.08" data-parallax-rotate="1.5"></div>
+        <div class="parallax-float parallax-card left-[3%] top-8 hidden md:inline-flex text-xs font-bold" data-parallax-speed="0.2" data-parallax-rotate="-3">
+            <i class="fa-solid fa-file-circle-check"></i> Trabajo listo
+        </div>
+        <div class="parallax-float parallax-card right-[8%] bottom-24 hidden md:inline-flex text-xs font-bold" data-parallax-speed="-0.16" data-parallax-rotate="3">
+            <i class="fa-solid fa-bolt"></i> Entrega express
+        </div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+                
+                <div class="hero-copy lg:col-span-7 space-y-6 text-center lg:text-left">
+                    <div class="hero-eyebrow inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-300 text-xs font-semibold">
+                        <i class="fa-solid fa-print text-amber-500"></i> Centro Profesional de Copiado
+                    </div>
+                    <h1 class="text-4xl sm:text-6xl font-black text-slate-900 dark:text-white leading-tight tracking-tight">
+                        Papelería, copiado y <span class="text-violet-600 dark:text-violet-400">multiservicios en Elorza</span>
+                    </h1>
+                    <p class="text-slate-600 dark:text-slate-400 text-base sm:text-lg max-w-2xl mx-auto lg:mx-0 font-normal leading-relaxed">
+                        Fotocopiado e impresión de documentos, útiles escolares y una selección de productos para el hogar y el carro. Todo en un mismo lugar, en Mereyal.
+                    </p>
+
+                    <!-- Hero CTAs -->
+                    <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start pt-2">
+                        <a href="#express" class="bg-[#E3CC9A] hover:bg-[#D3B06A] text-slate-900 font-bold px-8 py-4 rounded-2xl shadow-lg transition transform hover:-translate-y-0.5 flex items-center justify-center gap-3 text-sm border border-[#C9A66B]/40">
+                            <i class="fa-solid fa-calculator text-slate-700"></i> Cotizar impresión
+                        </a>
+                        <a href="#catalogo" class="bg-[#E3CC9A] hover:bg-[#D3B06A] text-slate-900 font-bold px-8 py-4 rounded-2xl shadow-lg transition transform hover:-translate-y-0.5 flex items-center justify-center gap-3 text-sm border border-[#C9A66B]/40">
+                            <i class="fa-solid fa-border-all text-base text-slate-700"></i> Ver Catálogo
+                        </a>
+                    </div>
+
+                    <!-- Hero Metrics -->
+                    <div class="hero-metrics grid grid-cols-3 gap-4 pt-8 border-t border-slate-200 dark:border-slate-800/80 max-w-lg mx-auto lg:mx-0">
+                        <div>
+                            <div class="text-2xl font-black text-slate-900 dark:text-white">31<span class="text-indigo-500">+</span></div>
+                            <div class="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">Productos disponibles</div>
+                        </div>
+                        <div>
+                            <div class="text-2xl font-black text-slate-900 dark:text-white">4</div>
+                            <div class="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">Categorías</div>
+                        </div>
+                        <div>
+                            <div class="text-2xl font-black text-slate-900 dark:text-white">Lun–Sáb</div>
+                            <div class="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">8:00 am – 6:00 pm</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Interactive Hero Graphic -->
+                <div class="lg:col-span-5">
+                    <div class="relative bg-white dark:bg-slate-900/90 p-6 sm:p-8 rounded-3xl border border-slate-200 dark:border-slate-700/60 shadow-2xl backdrop-blur-xl">
+                        <div class="flex justify-between items-center mb-6 border-b border-slate-100 dark:border-slate-700/60 pb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                                <div class="w-3 h-3 rounded-full bg-amber-500"></div>
+                                <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
+                            </div>
+                            <span class="text-xs font-mono text-indigo-500 dark:text-indigo-400">MEREYAL · ELORZA</span>
+                        </div>
+
+                        <!-- Card Dynamic Status Feed -->
+                        <div class="space-y-4">
+                            <div class="bg-slate-50 dark:bg-slate-950/80 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-500 flex items-center justify-center text-lg">
+                                        <i class="fa-solid fa-file-pdf"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs font-bold text-slate-800 dark:text-slate-200">Copiado e Impresión</div>
+                                        <div class="text-[11px] text-slate-500 dark:text-slate-400">Fotocopias y documentos</div>
+                                    </div>
+                                </div>
+                                <span class="text-xs bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold px-2.5 py-1 rounded-lg border border-emerald-500/30">Activo</span>
+                            </div>
+
+                            <div class="bg-slate-50 dark:bg-slate-950/80 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-xl bg-violet-500/20 text-violet-500 flex items-center justify-center text-lg">
+                                        <i class="fa-solid fa-book"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs font-bold text-slate-800 dark:text-slate-200">Papelería y Útiles</div>
+                                        <div class="text-[11px] text-slate-500 dark:text-slate-400">Marcadores, blocks y más</div>
+                                    </div>
+                                </div>
+                                <span class="text-xs bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 font-bold px-2.5 py-1 rounded-lg border border-indigo-500/30">Disponible</span>
+                            </div>
+
+                            <div class="p-4 rounded-2xl bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/20">
+                                <div class="flex justify-between items-center text-xs mb-2">
+                                    <span class="text-slate-700 dark:text-slate-300 font-semibold"><i class="fa-solid fa-clock text-indigo-500 mr-1.5"></i> Horario de atención</span>
+                                    <span class="font-bold text-indigo-600 dark:text-indigo-300">Lun–Sáb</span>
+                                </div>
+                                <div class="w-full bg-slate-200 dark:bg-slate-950 rounded-full h-2 overflow-hidden">
+                                    <div class="bg-gradient-to-r from-indigo-500 to-purple-500 h-full w-4/5 rounded-full"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                            <span class="text-xs text-slate-500 dark:text-slate-400">¿Envías tu archivo directamente?</span>
+                            <a href="#express" class="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 flex items-center gap-1">Cotizar impresión <i class="fa-solid fa-arrow-right"></i></a>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <section id="servicios" class="py-20 bg-slate-100 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800/80 transition-colors duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <span class="text-xs font-extrabold uppercase tracking-widest px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">Qué Hacemos</span>
+                <h2 class="text-3xl sm:text-5xl font-black text-slate-900 dark:text-white mt-3">Nuestros Servicios</h2>
+                <p class="text-slate-600 dark:text-slate-400 text-sm sm:text-base mt-2">Copiado e impresión, papelería escolar y una selección de productos que resuelven el día a día.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- Service Card 1 -->
+                <div class="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 hover:border-indigo-500 transition duration-300 space-y-4 group">
+                    <div class="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center text-2xl group-hover:scale-110 transition">
+                        <i class="fa-solid fa-print"></i>
+                    </div>
+                    <h3 class="font-extrabold text-slate-900 dark:text-white text-lg">Copiado e Impresión</h3>
+                    <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                        Fotocopiado e impresión de documentos, tareas y trabajos, con la calidad que necesitás para entregar.
+                    </p>
+                </div>
+
+                <!-- Service Card 2 -->
+                <div class="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 hover:border-violet-500 transition duration-300 space-y-4 group">
+                    <div class="w-12 h-12 rounded-2xl bg-violet-500/10 text-violet-500 flex items-center justify-center text-2xl group-hover:scale-110 transition">
+                        <i class="fa-solid fa-pen-ruler"></i>
+                    </div>
+                    <h3 class="font-extrabold text-slate-900 dark:text-white text-lg">Papelería y Útiles</h3>
+                    <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                        Todo lo que piden en el colegio: marcadores, pegas, blocks, cintas y más, siempre a la mano.
+                    </p>
+                </div>
+
+                <!-- Service Card 3 -->
+                <div class="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 hover:border-purple-500 transition duration-300 space-y-4 group">
+                    <div class="w-12 h-12 rounded-2xl bg-purple-500/10 text-purple-500 flex items-center justify-center text-2xl group-hover:scale-110 transition">
+                        <i class="fa-solid fa-shop"></i>
+                    </div>
+                    <h3 class="font-extrabold text-slate-900 dark:text-white text-lg">Multiservicios</h3>
+                    <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                        Lubricantes para carro y moto, cuidado personal y limpieza del hogar, para un imprevisto de último momento.
+                    </p>
+                </div>
+
+                <!-- Service Card 4 -->
+                <div class="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 hover:border-emerald-500 transition duration-300 space-y-4 group">
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center text-2xl group-hover:scale-110 transition">
+                        <i class="fa-brands fa-whatsapp"></i>
+                    </div>
+                    <h3 class="font-extrabold text-slate-900 dark:text-white text-lg">Pedidos por WhatsApp</h3>
+                    <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                        Elegís del catálogo, armamos el resumen y coordinamos precio, disponibilidad y retiro por WhatsApp.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="catalogo" class="py-20 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800/80 transition-colors duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
+                <div>
+                    <span class="text-xs font-extrabold uppercase tracking-widest px-3 py-1 rounded-full bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20">Tienda Online</span>
+                    <h2 class="text-3xl sm:text-5xl font-black text-slate-900 dark:text-white mt-3">Catálogo de Productos</h2>
+                </div>
+
+                <!-- Search and Sorting Controls -->
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <div class="relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-slate-400 text-sm"></i>
+                        <input type="text" id="catalog-search" oninput="filterCatalog()" placeholder="Buscar marcador, lubricante..." class="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-2xl pl-11 pr-4 py-3 text-xs text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-full sm:w-64 transition">
+                    </div>
+                    <select id="catalog-sort" onchange="filterCatalog()" class="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-700 dark:text-slate-300 font-semibold focus:outline-none focus:border-indigo-500 transition">
+                        <option value="popular">Más Populares</option>
+                        <option value="price-asc">Precio: Menor a Mayor</option>
+                        <option value="price-desc">Precio: Mayor a Menor</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Category Pills -->
+            <div class="flex flex-wrap gap-2 mb-10 overflow-x-auto pb-2 scrollbar-none">
+                <button onclick="selectCategory('todos', this)" class="cat-pill catalog-filter is-active bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold px-5 py-2.5 rounded-2xl text-xs transition">Todos</button>
+                <button onclick="selectCategory('escolares', this)" class="cat-pill catalog-filter bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold px-5 py-2.5 rounded-2xl text-xs border border-slate-200 dark:border-slate-800 transition">Papelería</button>
+                <button onclick="selectCategory('lubricantes', this)" class="cat-pill catalog-filter bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold px-5 py-2.5 rounded-2xl text-xs border border-slate-200 dark:border-slate-800 transition">Lubricantes</button>
+                <button onclick="selectCategory('cuidado', this)" class="cat-pill catalog-filter bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold px-5 py-2.5 rounded-2xl text-xs border border-slate-200 dark:border-slate-800 transition">Cuidado Personal</button>
+                <button onclick="selectCategory('limpieza', this)" class="cat-pill catalog-filter bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold px-5 py-2.5 rounded-2xl text-xs border border-slate-200 dark:border-slate-800 transition">Limpieza</button>
+            </div>
+
+            <!-- Product Cards Grid -->
+            <div id="product-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                <!-- Dynamically populated via JS -->
+            </div>
+        </div>
+    </section>
+
+    <section id="express" class="py-20 bg-slate-100 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800/80 transition-colors duration-300">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="bg-white dark:bg-slate-900 text-slate-900 dark:text-white p-6 sm:p-12 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl relative overflow-hidden transition-colors duration-300">
+                <div class="absolute -right-10 -bottom-10 opacity-10 text-9xl text-indigo-400 dark:text-indigo-300 pointer-events-none">
+                    <i class="fa-solid fa-print"></i>
+                </div>
+
+                <div class="relative z-10">
+                    <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-bold">
+                        <i class="fa-brands fa-whatsapp"></i> Cotizador de Impresión
+                    </span>
+                    <h2 class="text-3xl sm:text-4xl font-black mt-4">Armá tu trabajo en 4 pasos</h2>
+                    <p class="text-slate-600 dark:text-slate-400 text-sm leading-relaxed mt-2 max-w-xl">
+                        Elegí tamaño, papel, acabado y cantidad. Armamos el resumen y te confirmamos el precio por WhatsApp.
+                    </p>
+
+                    <!-- Steps progress -->
+                    <div class="flex items-center gap-1 sm:gap-2 mt-10 mb-8" id="quote-steps-bar">
+                        <div class="quote-step-dot flex-1" data-step="0">
+                            <div class="flex items-center gap-2">
+                                <span class="dot w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-indigo-500 text-white transition">1</span>
+                                <span class="label text-[11px] font-bold uppercase tracking-wider text-slate-900 dark:text-white hidden sm:inline">Tamaño</span>
+                            </div>
+                        </div>
+                        <div class="h-px flex-1 bg-slate-700 quote-line" data-line="0"></div>
+                        <div class="quote-step-dot flex-1" data-step="1">
+                            <div class="flex items-center gap-2">
+                                <span class="dot w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-slate-700 text-slate-400 transition">2</span>
+                                <span class="label text-[11px] font-bold uppercase tracking-wider text-slate-400 hidden sm:inline">Papel</span>
+                            </div>
+                        </div>
+                        <div class="h-px flex-1 bg-slate-700 quote-line" data-line="1"></div>
+                        <div class="quote-step-dot flex-1" data-step="2">
+                            <div class="flex items-center gap-2">
+                                <span class="dot w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-slate-700 text-slate-400 transition">3</span>
+                                <span class="label text-[11px] font-bold uppercase tracking-wider text-slate-400 hidden sm:inline">Acabado</span>
+                            </div>
+                        </div>
+                        <div class="h-px flex-1 bg-slate-700 quote-line" data-line="2"></div>
+                        <div class="quote-step-dot flex-1" data-step="3">
+                            <div class="flex items-center gap-2">
+                                <span class="dot w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-slate-700 text-slate-400 transition">4</span>
+                                <span class="label text-[11px] font-bold uppercase tracking-wider text-slate-400 hidden sm:inline">Cantidad</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step panels -->
+                    <div class="quote-panel" data-panel="0">
+                        <h3 class="font-bold text-lg mb-4">¿Qué tamaño necesitás?</h3>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <button onclick="selectQuoteOpt('tamano','Carta',this)" class="quote-opt bg-slate-950/60 hover:bg-slate-800 border border-slate-700 rounded-2xl p-5 text-center transition">
+                                <i class="fa-regular fa-file text-xl text-indigo-400 mb-2 block"></i>
+                                <span class="text-xs font-bold block">Carta</span>
+                                <span class="text-[10px] text-slate-400">21,6 × 27,9 cm</span>
+                            </button>
+                            <button onclick="selectQuoteOpt('tamano','Oficio',this)" class="quote-opt bg-slate-950/60 hover:bg-slate-800 border border-slate-700 rounded-2xl p-5 text-center transition">
+                                <i class="fa-regular fa-file-lines text-xl text-indigo-400 mb-2 block"></i>
+                                <span class="text-xs font-bold block">Oficio</span>
+                                <span class="text-[10px] text-slate-400">21,6 × 35,6 cm</span>
+                            </button>
+                            <button onclick="selectQuoteOpt('tamano','A4',this)" class="quote-opt bg-slate-950/60 hover:bg-slate-800 border border-slate-700 rounded-2xl p-5 text-center transition">
+                                <i class="fa-regular fa-rectangle-list text-xl text-indigo-400 mb-2 block"></i>
+                                <span class="text-xs font-bold block">A4</span>
+                                <span class="text-[10px] text-slate-400">21 × 29,7 cm</span>
+                            </button>
+                            <button onclick="selectQuoteOpt('tamano','Otro tamaño',this)" class="quote-opt bg-slate-950/60 hover:bg-slate-800 border border-slate-700 rounded-2xl p-5 text-center transition">
+                                <i class="fa-solid fa-ruler-combined text-xl text-indigo-400 mb-2 block"></i>
+                                <span class="text-xs font-bold block">Otro</span>
+                                <span class="text-[10px] text-slate-400">Lo conversamos</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="quote-panel hidden" data-panel="1">
+                        <h3 class="font-bold text-lg mb-4">¿Sobre qué papel?</h3>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <button onclick="selectQuoteOpt('papel','Papel bond',this)" class="quote-opt bg-slate-950/60 hover:bg-slate-800 border border-slate-700 rounded-2xl p-5 text-center transition">
+                                <i class="fa-regular fa-file-lines text-xl text-violet-400 mb-2 block"></i>
+                                <span class="text-xs font-bold block">Bond</span>
+                                <span class="text-[10px] text-slate-400">Uso diario</span>
+                            </button>
+                            <button onclick="selectQuoteOpt('papel','Papel grueso',this)" class="quote-opt bg-slate-950/60 hover:bg-slate-800 border border-slate-700 rounded-2xl p-5 text-center transition">
+                                <i class="fa-solid fa-layer-group text-xl text-violet-400 mb-2 block"></i>
+                                <span class="text-xs font-bold block">Grueso</span>
+                                <span class="text-[10px] text-slate-400">Más cuerpo</span>
+                            </button>
+                            <button onclick="selectQuoteOpt('papel','Cartulina',this)" class="quote-opt bg-slate-950/60 hover:bg-slate-800 border border-slate-700 rounded-2xl p-5 text-center transition">
+                                <i class="fa-regular fa-square text-xl text-violet-400 mb-2 block"></i>
+                                <span class="text-xs font-bold block">Cartulina</span>
+                                <span class="text-[10px] text-slate-400">Portadas</span>
+                            </button>
+                            <button onclick="selectQuoteOpt('papel','A consultar',this)" class="quote-opt bg-slate-950/60 hover:bg-slate-800 border border-slate-700 rounded-2xl p-5 text-center transition">
+                                <i class="fa-regular fa-circle-question text-xl text-violet-400 mb-2 block"></i>
+                                <span class="text-xs font-bold block">No sé</span>
+                                <span class="text-[10px] text-slate-400">Recomiéndenme</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="quote-panel hidden" data-panel="2">
+                        <h3 class="font-bold text-lg mb-4">¿Qué acabado lleva?</h3>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <button onclick="selectQuoteOpt('acabado','Sin acabado, hojas sueltas',this)" class="quote-opt bg-slate-950/60 hover:bg-slate-800 border border-slate-700 rounded-2xl p-5 text-center transition">
+                                <i class="fa-regular fa-file text-xl text-purple-400 mb-2 block"></i>
+                                <span class="text-xs font-bold block">Hojas sueltas</span>
+                                <span class="text-[10px] text-slate-400">Sin terminar</span>
+                            </button>
+                            <button onclick="selectQuoteOpt('acabado','Engrapado',this)" class="quote-opt bg-slate-950/60 hover:bg-slate-800 border border-slate-700 rounded-2xl p-5 text-center transition">
+                                <i class="fa-solid fa-paperclip text-xl text-purple-400 mb-2 block"></i>
+                                <span class="text-xs font-bold block">Engrapado</span>
+                                <span class="text-[10px] text-slate-400">Rápido y simple</span>
+                            </button>
+                            <button onclick="selectQuoteOpt('acabado','Anillado',this)" class="quote-opt bg-slate-950/60 hover:bg-slate-800 border border-slate-700 rounded-2xl p-5 text-center transition">
+                                <i class="fa-solid fa-book text-xl text-purple-400 mb-2 block"></i>
+                                <span class="text-xs font-bold block">Anillado</span>
+                                <span class="text-[10px] text-slate-400">Para informes</span>
+                            </button>
+                            <button onclick="selectQuoteOpt('acabado','Consultar acabado',this)" class="quote-opt bg-slate-950/60 hover:bg-slate-800 border border-slate-700 rounded-2xl p-5 text-center transition">
+                                <i class="fa-regular fa-circle-question text-xl text-purple-400 mb-2 block"></i>
+                                <span class="text-xs font-bold block">A consultar</span>
+                                <span class="text-[10px] text-slate-400">Lo vemos juntos</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="quote-panel hidden" data-panel="3">
+                        <h3 class="font-bold text-lg mb-4">¿Cuántas copias?</h3>
+                        <input type="number" id="quote-qty" min="1" value="10" oninput="updateQuoteResume()"
+                            class="bg-slate-950/60 border border-slate-700 rounded-2xl p-4 text-2xl font-bold text-white text-center w-40 focus:outline-none focus:border-indigo-400">
+                        <p class="text-xs text-slate-400 mt-3">Si es un número aproximado no hay problema, lo ajustamos al confirmar.</p>
+                    </div>
+
+                    <!-- Nav -->
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-8 pt-6 border-t border-slate-700/60">
+                        <button id="quote-back" onclick="quoteBack()" class="text-xs font-bold text-slate-400 hover:text-white transition flex items-center gap-2 invisible">
+                            <i class="fa-solid fa-arrow-left"></i> Atrás
+                        </button>
+                        <p id="quote-resume" class="text-xs text-slate-300">Elegí una opción para continuar</p>
+                        <a id="quote-send" href="#" target="_blank" style="display:none"
+                           class="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold px-6 py-3 rounded-2xl shadow-lg transition flex items-center justify-center gap-2 text-sm whitespace-nowrap">
+                            <i class="fa-brands fa-whatsapp text-lg"></i> Enviar para cotizar
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="faq" class="py-20 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800/80 transition-colors duration-300">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <span class="text-xs font-extrabold uppercase tracking-widest px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">Resuelve tus dudas</span>
+                <h2 class="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white mt-3">Preguntas Frecuentes</h2>
+            </div>
+
+            <div class="space-y-4">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 cursor-pointer transition shadow-sm" onclick="toggleFaq(this)">
+                    <div class="flex justify-between items-center font-bold text-slate-800 dark:text-slate-200 text-sm">
+                        <span>¿En qué formatos aceptan los documentos para imprimir?</span>
+                        <i class="fa-solid fa-chevron-down text-indigo-500 transition transform"></i>
+                    </div>
+                    <p class="text-xs text-slate-600 dark:text-slate-400 mt-3 hidden leading-relaxed">
+                        Aceptamos principalmente PDF (recomendado para mantener fuentes y márgenes intactos), Microsoft Word (.docx), PowerPoint, Excel e imágenes en alta resolución (JPG, PNG).
+                    </p>
+                </div>
+
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 cursor-pointer transition shadow-sm" onclick="toggleFaq(this)">
+                    <div class="flex justify-between items-center font-bold text-slate-800 dark:text-slate-200 text-sm">
+                        <span>¿Los precios del catálogo son definitivos?</span>
+                        <i class="fa-solid fa-chevron-down text-indigo-500 transition transform"></i>
+                    </div>
+                    <p class="text-xs text-slate-600 dark:text-slate-400 mt-3 hidden leading-relaxed">
+                        Son referenciales. Los precios pueden variar según la tasa del día, así que antes de cerrar cualquier pedido te confirmamos el monto final por WhatsApp.
+                    </p>
+                </div>
+
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 cursor-pointer transition shadow-sm" onclick="toggleFaq(this)">
+                    <div class="flex justify-between items-center font-bold text-slate-800 dark:text-slate-200 text-sm">
+                        <span>¿Puedo pedir algo que no está en el catálogo?</span>
+                        <i class="fa-solid fa-chevron-down text-indigo-500 transition transform"></i>
+                    </div>
+                    <p class="text-xs text-slate-600 dark:text-slate-400 mt-3 hidden leading-relaxed">
+                        Sí. Lo publicado es una primera selección de treinta y un productos; el inventario es más amplio y seguimos sumando. Escríbenos por WhatsApp y te confirmamos si lo tenemos.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="contacto" class="py-20 bg-slate-100 dark:bg-slate-900 relative transition-colors duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                
+                <div class="space-y-6">
+                    <span class="text-xs font-extrabold uppercase tracking-widest px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">Ubicación & Atención</span>
+                    <h2 class="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white">Visitanos en Mereyal</h2>
+                    <p class="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
+                        Pasá por el local o escribinos por WhatsApp — lo que te quede más cómodo.
+                    </p>
+
+                    <div class="space-y-4 pt-2">
+                        <div class="flex items-start gap-4">
+                            <div class="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-500 flex items-center justify-center shrink-0">
+                                <i class="fa-solid fa-location-dot"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">Dirección</h4>
+                                <p class="text-xs text-slate-600 dark:text-slate-300 mt-0.5">Calle Pedro Telmo Ojeda, Mereyal, El Relleno, Elorza, estado Apure.</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start gap-4">
+                            <div class="w-10 h-10 rounded-xl bg-violet-500/20 text-violet-500 flex items-center justify-center shrink-0">
+                                <i class="fa-solid fa-clock"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">Horario de Atención</h4>
+                                <p class="text-xs text-slate-600 dark:text-slate-300 mt-0.5">Lunes a sábado: 8:00 am – 6:00 pm</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-4 flex gap-3">
+                        <button onclick="copyAddress()" class="bg-white dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold px-5 py-3 rounded-xl border border-slate-300 dark:border-slate-700 transition flex items-center gap-2">
+                            <i class="fa-solid fa-copy text-indigo-500"></i> Copiar Dirección
+                        </button>
+                        <a href="https://wa.me/584264057916?text=Hola%2C%20quiero%20hacer%20una%20consulta" target="_blank" class="bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold px-5 py-3 rounded-xl transition flex items-center gap-2">
+                            <i class="fa-brands fa-whatsapp"></i> Escribirnos
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Map visual card -->
+                <div class="h-80 rounded-3xl bg-slate-200 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 relative overflow-hidden shadow-xl">
+                    <iframe class="absolute inset-0 w-full h-full grayscale-[30%] contrast-[1.05]" loading="lazy" title="Ubicación de INV. Armijhon en Google Maps" referrerpolicy="no-referrer-when-downgrade"
+                        src="https://www.google.com/maps?q=Inv+Armijhon,+Mereyal,+Elorza,+Apure&ll=7.0660236,-69.4939834&z=17&output=embed"></iframe>
+                    <a href="https://www.google.com/maps/place/Inv+Armijhon/@7.0660236,-69.4939834,17z" target="_blank"
+                       class="absolute bottom-4 right-4 z-10 inline-flex items-center gap-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md text-slate-800 dark:text-white font-bold text-xs px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg hover:bg-indigo-600 hover:text-white transition">
+                        <i class="fa-solid fa-diamond-turn-right text-indigo-500"></i> Cómo llegar
+                    </a>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <div id="cart-drawer" class="fixed inset-0 z-50 pointer-events-none transition duration-300 opacity-0">
+        <!-- Backdrop overlay -->
+        <div id="cart-backdrop" onclick="toggleCartDrawer()" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
+
+        <div class="absolute right-0 top-0 bottom-0 w-full max-w-md bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-2xl pointer-events-auto flex flex-col justify-between p-6 transform translate-x-full transition duration-300" id="cart-panel">
+            
+            <!-- Cart Header -->
+            <div class="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-4">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-cart-shopping text-indigo-500"></i>
+                    <h3 class="font-extrabold text-slate-900 dark:text-white text-base">Tu Carrito de Compras</h3>
+                </div>
+                <button onclick="toggleCartDrawer()" class="text-slate-400 hover:text-slate-600 dark:hover:text-white p-2 text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Cart Items Container -->
+            <div id="cart-items-container" class="my-6 space-y-4 overflow-y-auto flex-1 pr-1">
+                <!-- Dynamic Items Inserted via JS -->
+            </div>
+
+            <!-- Cart Footer Summary & Checkout -->
+            <div class="border-t border-slate-200 dark:border-slate-800 pt-4 space-y-4">
+                <div class="space-y-2 text-xs">
+                    <div class="flex justify-between text-slate-500 dark:text-slate-400">
+                        <span>Subtotal:</span>
+                        <span id="cart-subtotal" class="font-bold text-slate-800 dark:text-white">$0.00</span>
+                    </div>
+                    <div class="flex justify-between text-slate-500 dark:text-slate-400">
+                        <span>Envío / Retiro:</span>
+                        <span class="font-bold text-emerald-500">Gratis en Tienda</span>
+                    </div>
+                    <div class="flex justify-between items-baseline pt-2 border-t border-slate-200 dark:border-slate-800 text-sm">
+                        <span class="font-bold text-slate-900 dark:text-white">Total Final:</span>
+                        <span id="cart-total" class="text-2xl font-black text-indigo-500">$0.00</span>
+                    </div>
+                </div>
+
+                <button onclick="checkoutWhatsApp()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold py-4 rounded-2xl shadow-lg transition flex items-center justify-center gap-2 text-xs">
+                    <i class="fa-brands fa-whatsapp text-lg"></i> Finalizar Pedido por WhatsApp
+                </button>
+                <button onclick="openPaymentCheckout()" class="w-full bg-[#E3CC9A] hover:bg-[#D3B06A] text-slate-900 font-bold py-4 rounded-2xl shadow-lg transition flex items-center justify-center gap-2 text-xs border border-[#C9A66B]/50">
+                    <i class="fa-solid fa-building-columns"></i> Pagar por Pago Móvil / Transferencia
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment checkout modal -->
+    <div id="payment-modal" class="fixed inset-0 z-[60] hidden items-center justify-center p-4">
+        <div onclick="closePaymentCheckout()" class="absolute inset-0 bg-slate-950/70"></div>
+        <div class="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+            <button onclick="closePaymentCheckout()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 dark:hover:text-white text-lg" aria-label="Cerrar pago">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="pr-8">
+                <span class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-violet-600 dark:text-violet-400">
+                    <i class="fa-solid fa-shield-halved"></i> Pago pendiente de verificación
+                </span>
+                <h3 class="text-2xl font-black text-slate-900 dark:text-white mt-2">Finalizar pedido</h3>
+                <p class="text-xs text-slate-600 dark:text-slate-400 mt-2">Realiza el pago y adjunta el comprobante. Verificaremos la operación antes de preparar tu pedido.</p>
+            </div>
+
+            <div class="bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 mt-5">
+                <div class="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400">
+                    <span>Total referencial</span>
+                    <span id="payment-total-usd" class="font-bold">$0.00</span>
+                </div>
+                <div id="payment-total-ves" class="text-2xl font-black text-indigo-500 mt-1">Bs. 0,00</div>
+                <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-1">Tasa aplicada: Bs. <span id="payment-rate">0,00</span> por USD</div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 mt-5">
+                <label class="payment-method-option cursor-pointer">
+                    <input type="radio" name="payment-method" value="pago_movil" class="sr-only" checked onchange="updatePaymentMethod()">
+                    <span class="block rounded-2xl border border-slate-200 dark:border-slate-700 p-3 text-center text-xs font-bold text-slate-700 dark:text-slate-200">Pago Móvil</span>
+                </label>
+                <label class="payment-method-option cursor-pointer">
+                    <input type="radio" name="payment-method" value="transferencia" class="sr-only" onchange="updatePaymentMethod()">
+                    <span class="block rounded-2xl border border-slate-200 dark:border-slate-700 p-3 text-center text-xs font-bold text-slate-700 dark:text-slate-200">Transferencia</span>
+                </label>
+            </div>
+
+            <div id="payment-details" class="text-xs bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-500/30 rounded-2xl p-4 mt-3 text-slate-700 dark:text-slate-200"></div>
+
+            <form id="payment-form" class="space-y-3 mt-5" onsubmit="submitPaymentOrder(event)">
+                <input id="payment-customer-name" required maxlength="120" placeholder="Nombre completo" class="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-violet-500">
+                <input id="payment-customer-phone" required maxlength="40" placeholder="Teléfono de contacto" class="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-violet-500">
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-200">Comprobante de pago
+                    <input id="payment-receipt" required type="file" accept="image/jpeg,image/png,image/webp,application/pdf" class="block w-full mt-2 text-xs text-slate-500 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-200 file:px-3 file:py-2 file:text-xs file:font-bold dark:file:bg-slate-800">
+                </label>
+                <p id="payment-status" class="text-xs hidden"></p>
+                <button id="payment-submit" type="submit" class="w-full bg-[#E3CC9A] hover:bg-[#D3B06A] text-slate-900 font-bold py-3.5 rounded-2xl shadow-lg transition text-xs">
+                    Enviar comprobante para verificar
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="payment-success-modal" class="fixed inset-0 z-[70] hidden items-center justify-center p-4">
+        <div class="absolute inset-0 bg-slate-950/75"></div>
+        <div class="relative w-full max-w-md rounded-3xl border border-emerald-500/30 bg-white dark:bg-slate-900 p-7 text-center shadow-2xl">
+            <div class="mx-auto grid h-14 w-14 place-items-center rounded-full bg-emerald-500/15 text-emerald-500 text-2xl"><i class="fa-solid fa-clock"></i></div>
+            <h3 class="mt-5 text-2xl font-black text-slate-900 dark:text-white">Pago en proceso de verificación</h3>
+            <p class="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-400">Tu comprobante fue recibido correctamente. El pago se está procesando en nuestros servidores y en breve te notificaremos el estado por WhatsApp.</p>
+            <button onclick="closePaymentSuccess()" class="mt-6 w-full rounded-2xl bg-[#E3CC9A] py-3 text-sm font-black text-slate-900 hover:bg-[#D3B06A]">Entendido</button>
+        </div>
+    </div>
+
+    <!-- Quick View Product Modal -->
+    <div id="quickview-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+        <div onclick="closeQuickView()" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
+        <div class="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-lg w-full z-10 space-y-4 shadow-2xl">
+            <button onclick="closeQuickView()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-white text-lg">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div id="quickview-content"></div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed bottom-6 right-6 z-50 space-y-3 pointer-events-none"></div>
+
+    <!-- Footer -->
+    <footer class="bg-slate-950 text-slate-400 text-xs py-10 border-t border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-2">
+                <div class="w-6 h-6 rounded-lg bg-indigo-600 flex items-center justify-center text-white text-xs">
+                    <i class="fa-solid fa-print"></i>
+                </div>
+                <span class="font-extrabold text-white">INV. ARMIJHON</span>
+                <span>• Centro Profesional de Copiado, Elorza, Apure</span>
+            </div>
+            <p>&copy; 2026 INV. Armijhon. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+    <script src="assets/js/supabase-config.js"></script>
+    <script src="assets/js/payment-config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="assets/js/supabase-client.js"></script>
+    <script>
+        const CART_GIF = "assets/images/cart.gif";
+
+        // --- Catalog Data Source ---
+        const catImg = {
+            escolares: 'https://images.pexels.com/photos/159865/notepad-pencil-green-black-159865.jpeg?auto=compress&cs=tinysrgb&w=500',
+            lubricantes: 'https://images.unsplash.com/photo-1635437536607-b8572f443763?auto=format&fit=crop&w=500&q=60',
+            cuidado: 'https://images.unsplash.com/photo-1694101395787-516200bb2515?auto=format&fit=crop&w=500&q=60',
+            limpieza: 'https://images.unsplash.com/photo-1716625300720-b34970a2d890?auto=format&fit=crop&w=500&q=60'
+        };
+        const catLabel = { escolares: 'Papelería', lubricantes: 'Lubricantes', cuidado: 'Cuidado Personal', limpieza: 'Limpieza' };
+        const productsDB = [
+            { id: 'p1', name: 'FC Semisintético SAE 15W-40', category: 'lubricantes', price: 11.28, stock: 'Disponible', img: catImg.lubricantes, desc: 'Aceite semisintético para vehículos, presentación de un cuarto.' },
+            { id: 'p2', name: 'FC Aceite Mineral 20W-50', category: 'lubricantes', price: 9.66, stock: 'Disponible', img: catImg.lubricantes, desc: 'Aceite mineral para motor, uso general en carro y camioneta.' },
+            { id: 'p3', name: 'Mobil Super 15W50 Moto 4T MX', category: 'lubricantes', price: 11.28, stock: 'Disponible', img: catImg.lubricantes, desc: 'Aceite para motos de cuatro tiempos.' },
+            { id: 'p4', name: 'Marcador Sharpy Punta Fina Permanente Azul', category: 'escolares', price: 0.97, stock: 'Disponible', img: catImg.escolares, desc: 'Marcador permanente de punta fina, tinta azul.' },
+            { id: 'p5', name: 'Gel de Árnica Sunt Life', category: 'cuidado', price: 10.00, stock: 'Disponible', img: catImg.cuidado, desc: 'Gel de árnica para uso corporal.' },
+            { id: 'p6', name: 'FC API GL-1 Sincrónica 140', category: 'lubricantes', price: 9.99, stock: 'Disponible', img: catImg.lubricantes, desc: 'Aceite de transmisión sincrónica 140.' },
+            { id: 'p7', name: 'Silicón Líquido Pointer 30ml', category: 'escolares', price: 0.97, stock: 'Disponible', img: catImg.escolares, desc: 'Silicón líquido escolar, presentación de 30 ml.' },
+            { id: 'p8', name: 'Desodorante Ideal Roll-On 50g', category: 'cuidado', price: 4.51, stock: 'Disponible', img: catImg.cuidado, desc: 'Desodorante antitranspirante roll-on.' },
+            { id: 'p9', name: 'Marcador Sharpy Punta Media Azul', category: 'escolares', price: 0.97, stock: 'Disponible', img: catImg.escolares, desc: 'Marcador permanente de punta media, tinta azul.' },
+            { id: 'p10', name: 'Bolígrafo Semi Gel Offi-Esco Azul', category: 'escolares', price: 0.48, stock: 'Disponible', img: catImg.escolares, desc: 'Bolígrafo de punta fina, tinta azul.' },
+            { id: 'p11', name: 'Marcador Ofica Punta Media Azul', category: 'escolares', price: 0.97, stock: 'Disponible', img: catImg.escolares, desc: 'Marcador permanente de punta media.' },
+            { id: 'p12', name: 'Silicón Líquido Penmax 30ml', category: 'escolares', price: 0.97, stock: 'Disponible', img: catImg.escolares, desc: 'Silicón líquido escolar, presentación de 30 ml.' },
+            { id: 'p13', name: 'Pega Blanca Líquida 40ml', category: 'escolares', price: 0.81, stock: 'Disponible', img: catImg.escolares, desc: 'Pega blanca líquida escolar, 40 ml.' },
+            { id: 'p14', name: 'Marcador Sharpy Punta Fina Rojo', category: 'escolares', price: 0.97, stock: 'Disponible', img: catImg.escolares, desc: 'Marcador permanente de punta fina, tinta roja.' },
+            { id: 'p15', name: 'FC Semisintético SAE 20W-50', category: 'lubricantes', price: 11.28, stock: 'Disponible', img: catImg.lubricantes, desc: 'Aceite semisintético para vehículos.' },
+            { id: 'p16', name: 'Lápiz de Crayón HB Pointer', category: 'escolares', price: 0.32, stock: 'Disponible', img: catImg.escolares, desc: 'Lápiz de crayón HB para uso escolar.' },
+            { id: 'p17', name: 'Pega en Barra Marfil 10g', category: 'escolares', price: 0.64, stock: 'Disponible', img: catImg.escolares, desc: 'Pega en barra, presentación de 10 gramos.' },
+            { id: 'p18', name: 'Limpiador de Vidrios Dura Wash 500ml', category: 'limpieza', price: 4.83, stock: 'Disponible', img: catImg.limpieza, desc: 'Limpiador de vidrios, presentación de 500 ml.' },
+            { id: 'p19', name: 'Juego de Compás Escolar', category: 'escolares', price: 1.61, stock: 'Disponible', img: catImg.escolares, desc: 'Set de compás para geometría escolar.' },
+            { id: 'p20', name: 'Resaltador Sharpy Accent 3D Amarillo', category: 'escolares', price: 0.97, stock: 'Disponible', img: catImg.escolares, desc: 'Resaltador de tinta amarilla.' },
+            { id: 'p21', name: 'Tijera Escolar', category: 'escolares', price: 0.64, stock: 'Disponible', img: catImg.escolares, desc: 'Tijera de uso escolar.' },
+            { id: 'p22', name: 'Block Milimetrado N&G', category: 'escolares', price: 0.64, stock: 'Disponible', img: catImg.escolares, desc: 'Block de papel milimetrado.' },
+            { id: 'p23', name: 'Borrador de Nata Mayka', category: 'escolares', price: 0.64, stock: 'Disponible', img: catImg.escolares, desc: 'Borrador de nata, tamaño estándar.' },
+            { id: 'p24', name: 'Borrador de Nata Mayka Pequeño', category: 'escolares', price: 0.32, stock: 'Disponible', img: catImg.escolares, desc: 'Borrador de nata, tamaño pequeño.' },
+            { id: 'p25', name: 'Sacapuntas Fashion Klipp', category: 'escolares', price: 0.97, stock: 'Disponible', img: catImg.escolares, desc: 'Sacapuntas con depósito.' },
+            { id: 'p26', name: 'Papel Milimetrado', category: 'escolares', price: 0.64, stock: 'Disponible', img: catImg.escolares, desc: 'Hoja de papel milimetrado.' },
+            { id: 'p27', name: 'Block Milimetrado Grupo Cinco', category: 'escolares', price: 0.64, stock: 'Disponible', img: catImg.escolares, desc: 'Block de papel milimetrado.' },
+            { id: 'p28', name: 'Bolígrafo Semi Gel Offi-Esco Negro', category: 'escolares', price: 0.48, stock: 'Disponible', img: catImg.escolares, desc: 'Bolígrafo de punta fina, tinta negra.' },
+            { id: 'p29', name: 'Cinta Adhesiva Pequeña Celoven', category: 'escolares', price: 0.64, stock: 'Disponible', img: catImg.escolares, desc: 'Cinta adhesiva transparente, tamaño pequeño.' },
+            { id: 'p30', name: 'Block Rotulado Bond', category: 'escolares', price: 0.64, stock: 'Disponible', img: catImg.escolares, desc: 'Block de papel bond rotulado.' },
+            { id: 'p31', name: 'Bolígrafo Marfil Negro', category: 'escolares', price: 0.48, stock: 'Disponible', img: catImg.escolares, desc: 'Bolígrafo de tinta negra.' }
+        ];
+
+        // --- App Global State ---
+        let cart = [];
+        let currentCategory = 'todos';
+
+        // --- Dark/Light Theme Switcher Logic ---
+        function toggleTheme() {
+            const html = document.documentElement;
+            const themeIcon = document.getElementById('theme-icon');
+
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+                themeIcon.className = 'fa-solid fa-sun text-lg text-amber-500';
+            } else {
+                html.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+                themeIcon.className = 'fa-solid fa-moon text-lg text-indigo-400';
+            }
+        }
+
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            const html = document.documentElement;
+            const themeIcon = document.getElementById('theme-icon');
+
+            if (savedTheme === 'dark') {
+                html.classList.add('dark');
+                if (themeIcon) themeIcon.className = 'fa-solid fa-moon text-lg text-indigo-400';
+            } else {
+                html.classList.remove('dark');
+                if (themeIcon) themeIcon.className = 'fa-solid fa-sun text-lg text-amber-500';
+            }
+        }
+
+        // --- Catalog Functions ---
+        function renderCatalog(products) {
+            const grid = document.getElementById('product-grid');
+            grid.innerHTML = '';
+
+            products.forEach(p => {
+                const card = document.createElement('div');
+                card.className = 'catalog-card bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-5 flex flex-col justify-between hover:border-indigo-500 transition duration-300 group shadow-sm dark:shadow-none';
+                card.innerHTML = `
+                    <div>
+                        <div class="h-44 rounded-2xl bg-slate-100 dark:bg-slate-950 overflow-hidden relative mb-4">
+                            <img src="${p.img}" alt="${p.name}" loading="lazy" decoding="async" fetchpriority="low" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+                            <span class="absolute top-3 right-3 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md text-xs font-extrabold px-2.5 py-1 rounded-lg text-indigo-600 dark:text-indigo-400 border border-slate-200 dark:border-slate-800">${p.stock}</span>
+                        </div>
+                        <div class="text-[10px] font-bold uppercase tracking-widest text-violet-600 dark:text-violet-400 mb-1">${catLabel[p.category]}</div>
+                        <h4 class="font-bold text-slate-900 dark:text-white text-sm line-clamp-1 mb-2">${p.name}</h4>
+                        <p class="text-slate-600 dark:text-slate-400 text-xs line-clamp-2 mb-4 leading-relaxed">${p.desc}</p>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-xl font-black text-slate-900 dark:text-white">$${p.price.toFixed(2)}</span>
+                            <button onclick="openQuickView('${p.id}')" class="catalog-quick-view text-xs text-indigo-600 dark:text-indigo-400 font-bold">Vista Rápida</button>
+                        </div>
+                        <button onclick="addToCart('${p.id}', event)" class="catalog-product-action w-full bg-slate-100 dark:bg-slate-800 hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 text-slate-800 dark:text-white font-bold py-3 rounded-2xl transition border border-slate-200 dark:border-slate-700 flex items-center justify-center gap-2 text-xs">
+                            <i class="fa-solid fa-cart-plus"></i> Añadir al Carrito
+                        </button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function selectCategory(cat, btn) {
+            currentCategory = cat;
+            document.querySelectorAll('.cat-pill').forEach(b => {
+                b.className = 'cat-pill catalog-filter bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold px-5 py-2.5 rounded-2xl text-xs border border-slate-200 dark:border-slate-800 transition';
+            });
+            btn.className = 'cat-pill catalog-filter is-active bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold px-5 py-2.5 rounded-2xl text-xs transition';
+            filterCatalog();
+        }
+
+        function filterCatalog() {
+            const query = document.getElementById('catalog-search').value.toLowerCase();
+            const sort = document.getElementById('catalog-sort').value;
+
+            let filtered = productsDB.filter(p => {
+                const matchCat = currentCategory === 'todos' || p.category === currentCategory;
+                const matchQuery = p.name.toLowerCase().includes(query) || p.desc.toLowerCase().includes(query);
+                return matchCat && matchQuery;
+            });
+
+            if (sort === 'price-asc') filtered.sort((a, b) => a.price - b.price);
+            else if (sort === 'price-desc') filtered.sort((a, b) => b.price - a.price);
+
+            renderCatalog(filtered);
+        }
+
+        // --- Cart Management Logic ---
+        function addToCart(productId, evt) {
+            const item = productsDB.find(p => p.id === productId);
+            if (!item) return;
+
+            const existing = cart.find(i => i.id === productId);
+            if (existing) {
+                existing.qty++;
+            } else {
+                cart.push({ ...item, qty: 1 });
+            }
+
+            updateCartUI();
+            showToast(`${item.name} añadido al carrito.`);
+            if (evt) flyToCart(evt);
+        }
+
+        function flyToCart(evt) {
+            const cartBtn = document.getElementById('cart-toggle-btn');
+            if (!cartBtn) return;
+            const startRect = (evt.currentTarget || evt.target).getBoundingClientRect();
+            const endRect = cartBtn.getBoundingClientRect();
+
+            const startX = startRect.left + startRect.width / 2 - 28;
+            const startY = startRect.top + startRect.height / 2 - 28;
+            const endX = endRect.left + endRect.width / 2 - 28;
+            const endY = endRect.top + endRect.height / 2 - 28;
+
+            const flyer = document.createElement('img');
+            flyer.src = CART_GIF;
+            flyer.alt = '';
+            flyer.className = 'cart-fly-icon';
+            flyer.style.left = startX + 'px';
+            flyer.style.top = startY + 'px';
+            flyer.style.setProperty('--fly-x', (endX - startX) + 'px');
+            flyer.style.setProperty('--fly-y', (endY - startY) + 'px');
+            document.body.appendChild(flyer);
+
+            flyer.addEventListener('animationend', () => {
+                flyer.remove();
+                const icon = document.getElementById('cart-icon');
+                const badge = document.getElementById('cart-badge-count');
+                cartBtn.classList.remove('cart-bump');
+                void cartBtn.offsetWidth; // restart animation
+                cartBtn.classList.add('cart-bump');
+                if (icon) { icon.classList.remove('cart-bump'); void icon.offsetWidth; icon.classList.add('cart-bump'); }
+                if (badge) { badge.classList.remove('badge-pop'); void badge.offsetWidth; badge.classList.add('badge-pop'); }
+            });
+        }
+
+        function updateCartUI() {
+            const container = document.getElementById('cart-items-container');
+            const countBadge = document.getElementById('cart-badge-count');
+            container.innerHTML = '';
+
+            let subtotal = 0;
+            let totalItems = 0;
+
+            cart.forEach((item, index) => {
+                subtotal += item.price * item.qty;
+                totalItems += item.qty;
+
+                const div = document.createElement('div');
+                div.className = 'bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex justify-between items-center gap-3';
+                div.innerHTML = `
+                    <div class="flex-1">
+                        <div class="text-xs font-bold text-slate-800 dark:text-white line-clamp-1">${item.name}</div>
+                        <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">$${item.price.toFixed(2)} c/u</div>
+                        <div class="text-xs font-black text-indigo-500 mt-1">$${(item.price * item.qty).toFixed(2)}</div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="changeQty(${index}, -1)" class="w-7 h-7 bg-slate-200 dark:bg-slate-900 text-slate-800 dark:text-slate-300 rounded-lg text-xs font-bold">-</button>
+                        <span class="text-xs font-bold text-slate-800 dark:text-white">${item.qty}</span>
+                        <button onclick="changeQty(${index}, 1)" class="w-7 h-7 bg-slate-200 dark:bg-slate-900 text-slate-800 dark:text-slate-300 rounded-lg text-xs font-bold">+</button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+
+            if (cart.length === 0) {
+                container.innerHTML = `<div class="text-center text-slate-400 py-12 text-xs">Tu carrito está vacío.</div>`;
+            }
+
+            countBadge.textContent = totalItems;
+            document.getElementById('cart-subtotal').textContent = `$${subtotal.toFixed(2)}`;
+            document.getElementById('cart-total').textContent = `$${subtotal.toFixed(2)}`;
+        }
+
+        function changeQty(index, delta) {
+            cart[index].qty += delta;
+            if (cart[index].qty <= 0) cart.splice(index, 1);
+            updateCartUI();
+        }
+
+        function toggleCartDrawer() {
+            const drawer = document.getElementById('cart-drawer');
+            const panel = document.getElementById('cart-panel');
+
+            if (drawer.classList.contains('opacity-0')) {
+                drawer.classList.remove('opacity-0', 'pointer-events-none');
+                panel.classList.remove('translate-x-full');
+            } else {
+                drawer.classList.add('opacity-0', 'pointer-events-none');
+                panel.classList.add('translate-x-full');
+            }
+        }
+
+        function checkoutWhatsApp() {
+            if (cart.length === 0) {
+                showToast('Añade productos antes de finalizar la compra.');
+                return;
+            }
+
+            let summary = `*NUEVO PEDIDO DESDE LA WEB — INV. ARMIJHON*%0A%0A`;
+            cart.forEach(item => {
+                summary += `• ${item.qty}x ${item.name} - $${(item.price * item.qty).toFixed(2)}%0A`;
+            });
+
+            const total = document.getElementById('cart-total').textContent;
+            summary += `%0A*TOTAL REFERENCIAL: ${total}*%0A%0A¿Me confirman disponibilidad y precio final?`;
+
+            window.open(`https://wa.me/584264057916?text=${summary}`, '_blank');
+        }
+
+        function formatVes(value) {
+            return new Intl.NumberFormat('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+        }
+
+        function openPaymentCheckout() {
+            if (cart.length === 0) {
+                showToast('Añade productos antes de finalizar la compra.');
+                return;
+            }
+            const totalUsd = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+            const rate = window.PAYMENT_CONFIG?.exchangeRate || 0;
+            document.getElementById('payment-total-usd').textContent = `$${totalUsd.toFixed(2)}`;
+            document.getElementById('payment-total-ves').textContent = `Bs. ${formatVes(totalUsd * rate)}`;
+            document.getElementById('payment-rate').textContent = formatVes(rate);
+            updatePaymentMethod();
+            const modal = document.getElementById('payment-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closePaymentCheckout() {
+            const modal = document.getElementById('payment-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function closePaymentSuccess() {
+            const modal = document.getElementById('payment-success-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            closePaymentCheckout();
+        }
+
+        function updatePaymentMethod() {
+            const method = document.querySelector('input[name="payment-method"]:checked')?.value || 'pago_movil';
+            const details = document.getElementById('payment-details');
+            const config = window.PAYMENT_CONFIG?.paymentMethods?.[method === 'pago_movil' ? 'pagoMovil' : 'transferencia'];
+            if (!config) return;
+
+            const lines = method === 'pago_movil'
+                ? `<strong>Pago Móvil</strong><br>Banco: ${config.bank} (${config.bankCode})<br>Teléfono: ${config.phone}<br>Cédula/RIF: ${config.identity}`
+                : `<strong>Transferencia bancaria</strong><br>Banco: ${config.bank} (${config.bankCode})<br>Cuenta: ${config.accountNumber}<br>Cédula/RIF: ${config.identity}`;
+            details.innerHTML = lines;
+        }
+
+        function readReceipt(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(String(reader.result).split(',')[1]);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function submitPaymentOrder(event) {
+            event.preventDefault();
+            const status = document.getElementById('payment-status');
+            const submit = document.getElementById('payment-submit');
+            const file = document.getElementById('payment-receipt').files[0];
+            if (!file || file.size > 5 * 1024 * 1024) {
+                status.textContent = 'El comprobante debe pesar como máximo 5 MB.';
+                status.className = 'text-xs text-red-600 dark:text-red-400';
+                return;
+            }
+            if (!window.supabaseClient) {
+                status.textContent = 'El servicio de pagos aún no está disponible. Intenta nuevamente.';
+                status.className = 'text-xs text-red-600 dark:text-red-400';
+                return;
+            }
+
+            const totalUsd = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+            const rate = window.PAYMENT_CONFIG.exchangeRate;
+            const method = document.querySelector('input[name="payment-method"]:checked').value;
+            submit.disabled = true;
+            submit.textContent = 'Enviando comprobante...';
+            status.textContent = 'Guardando tu pedido de forma segura.';
+            status.className = 'text-xs text-slate-500 dark:text-slate-400';
+
+            try {
+                const { data, error } = await window.supabaseClient.functions.invoke('create-order', {
+                    body: {
+                        customerName: document.getElementById('payment-customer-name').value,
+                        customerPhone: document.getElementById('payment-customer-phone').value,
+                        paymentMethod: method,
+                        exchangeRate: rate,
+                        totalUsd,
+                        totalVes: totalUsd * rate,
+                        items: cart.map(item => ({
+                            id: item.id,
+                            name: item.name,
+                            quantity: item.qty,
+                            unitPriceUsd: item.price,
+                            lineTotalUsd: item.price * item.qty
+                        })),
+                        receipt: { name: file.name, type: file.type, base64: await readReceipt(file) }
+                    }
+                });
+                if (error) throw error;
+                status.textContent = `Pedido ${data.orderId.slice(0, 8)} recibido. Quedará pendiente de verificación.`;
+                status.className = 'text-xs text-emerald-600 dark:text-emerald-400';
+                cart = [];
+                updateCartUI();
+                submit.textContent = 'Comprobante enviado';
+                const successModal = document.getElementById('payment-success-modal');
+                successModal.classList.remove('hidden');
+                successModal.classList.add('flex');
+            } catch (error) {
+                console.error(error);
+                status.textContent = 'No pudimos enviar el pedido. Intenta nuevamente o usa WhatsApp.';
+                status.className = 'text-xs text-red-600 dark:text-red-400';
+                submit.disabled = false;
+                submit.textContent = 'Enviar comprobante para verificar';
+            }
+        }
+
+        // --- Modals & Utility Interactions ---
+        function openQuickView(id) {
+            const p = productsDB.find(item => item.id === id);
+            if (!p) return;
+
+            document.getElementById('quickview-content').innerHTML = `
+                <div class="h-56 rounded-2xl bg-slate-100 dark:bg-slate-950 overflow-hidden mb-4">
+                    <img src="${p.img}" alt="${p.name}" class="w-full h-full object-cover">
+                </div>
+                <h3 class="text-lg font-black text-slate-900 dark:text-white">${p.name}</h3>
+                <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed my-2">${p.desc}</p>
+                <div class="text-2xl font-black text-indigo-500 my-4">$${p.price.toFixed(2)}</div>
+                <button onclick="addToCart('${p.id}', event); closeQuickView();" class="catalog-product-action w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 rounded-2xl transition text-xs">
+                    <i class="fa-solid fa-cart-plus mr-2"></i> Añadir a mi Carrito
+                </button>
+            `;
+            document.getElementById('quickview-modal').classList.remove('hidden');
+        }
+
+        function closeQuickView() {
+            document.getElementById('quickview-modal').classList.add('hidden');
+        }
+
+        function showToast(msg) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'bg-slate-900 dark:bg-slate-800 border border-indigo-500/50 text-white text-xs font-bold px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2 animate-bounce pointer-events-auto';
+            toast.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400"></i> ${msg}`;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        function toggleFaq(card) {
+            const p = card.querySelector('p');
+            const icon = card.querySelector('i');
+            p.classList.toggle('hidden');
+            icon.classList.toggle('rotate-180');
+        }
+
+        function copyAddress() {
+            const addr = "Calle Pedro Telmo Ojeda, Mereyal, El Relleno, Elorza, Apure";
+            navigator.clipboard.writeText(addr).then(() => {
+                showToast('Dirección copiada al portapapeles');
+            });
+        }
+
+        // --- Cotizador de impresión (stepper) ---
+        const quoteState = { tamano: null, papel: null, acabado: null, cantidad: null };
+        let quoteStep = 0;
+
+        function quoteGoTo(n) {
+            quoteStep = n;
+            document.querySelectorAll('.quote-panel').forEach(p => {
+                p.classList.toggle('hidden', +p.dataset.panel !== n);
+            });
+            document.querySelectorAll('.quote-step-dot').forEach(d => {
+                const i = +d.dataset.step;
+                const dot = d.querySelector('.dot');
+                const label = d.querySelector('.label');
+                if (i < n) {
+                    dot.className = 'dot w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-emerald-500 text-white transition';
+                    dot.innerHTML = '<i class="fa-solid fa-check text-[10px]"></i>';
+                    label.className = 'label text-[11px] font-bold uppercase tracking-wider text-emerald-400 hidden sm:inline';
+                } else if (i === n) {
+                    dot.className = 'dot w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-indigo-500 text-white transition';
+                    dot.innerHTML = (i + 1);
+                    label.className = 'label text-[11px] font-bold uppercase tracking-wider text-white hidden sm:inline';
+                } else {
+                    dot.className = 'dot w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-slate-700 text-slate-400 transition';
+                    dot.innerHTML = (i + 1);
+                    label.className = 'label text-[11px] font-bold uppercase tracking-wider text-slate-400 hidden sm:inline';
+                }
+            });
+            document.querySelectorAll('.quote-line').forEach(l => {
+                l.classList.toggle('bg-emerald-500', +l.dataset.line < n);
+                l.classList.toggle('bg-slate-700', +l.dataset.line >= n);
+            });
+            document.getElementById('quote-back').classList.toggle('invisible', n === 0);
+            updateQuoteResume();
+        }
+
+        function selectQuoteOpt(key, value, btn) {
+            quoteState[key] = value;
+            const panel = btn.closest('.quote-panel');
+            panel.querySelectorAll('.quote-opt').forEach(o => o.classList.remove('bg-indigo-500/20', 'border-indigo-400'));
+            btn.classList.add('bg-indigo-500/20', 'border-indigo-400');
+            updateQuoteResume();
+            setTimeout(() => { if (quoteStep < 3) quoteGoTo(quoteStep + 1); }, 300);
+        }
+
+        function quoteBack() {
+            if (quoteStep > 0) quoteGoTo(quoteStep - 1);
+        }
+
+        function updateQuoteResume() {
+            const parts = [];
+            if (quoteState.tamano) parts.push(quoteState.tamano);
+            if (quoteState.papel) parts.push(quoteState.papel);
+            if (quoteState.acabado) parts.push(quoteState.acabado);
+            if (quoteStep === 3) {
+                const q = parseInt(document.getElementById('quote-qty').value) || 0;
+                quoteState.cantidad = q > 0 ? q : null;
+                if (quoteState.cantidad) parts.push(quoteState.cantidad + ' copias');
+            }
+            const resume = document.getElementById('quote-resume');
+            resume.textContent = parts.length ? parts.join(' · ') : 'Elegí una opción para continuar';
+
+            const ready = quoteState.tamano && quoteState.papel && quoteState.acabado && quoteStep === 3 && quoteState.cantidad;
+            const sendBtn = document.getElementById('quote-send');
+            sendBtn.style.display = ready ? 'inline-flex' : 'none';
+            if (ready) {
+                const msg = `Hola, quiero cotizar un trabajo de impresión:%0A%0A• Tamaño: ${quoteState.tamano}%0A• Papel: ${quoteState.papel}%0A• Acabado: ${quoteState.acabado}%0A• Cantidad: ${quoteState.cantidad} copias%0A%0A¿Cuánto saldría?`;
+                sendBtn.href = `https://wa.me/584264057916?text=${msg}`;
+            }
+        }
+
+        quoteGoTo(0);
+
+        // Movimiento parallax suave y sincronizado con el scroll.
+        function initScrollParallax() {
+            const floatingElements = document.querySelectorAll('[data-parallax-speed]');
+            const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+            const isSmallScreen = window.matchMedia('(max-width: 767px)').matches;
+            if (!floatingElements.length || reducedMotion.matches || isSmallScreen) return;
+
+            let animationFrame = null;
+
+            const updateParallax = () => {
+                animationFrame = null;
+                const viewportCenter = window.innerHeight / 2;
+
+                floatingElements.forEach(element => {
+                    const bounds = element.getBoundingClientRect();
+                    const speed = parseFloat(element.dataset.parallaxSpeed) || 0;
+                    const rotation = parseFloat(element.dataset.parallaxRotate) || 0;
+                    const distanceFromCenter = viewportCenter - (bounds.top + bounds.height / 2);
+                    const offsetY = element.hasAttribute('data-parallax-fixed')
+                        ? window.scrollY * speed * -0.35
+                        : distanceFromCenter * speed;
+                    const offsetX = Math.sin((bounds.top + window.scrollY) * 0.002) * speed * 10;
+                    const offsetRotation = element.hasAttribute('data-parallax-fixed')
+                        ? window.scrollY * rotation * 0.003
+                        : distanceFromCenter * rotation * 0.008;
+
+                    element.style.setProperty('--parallax-x', `${offsetX.toFixed(2)}px`);
+                    element.style.setProperty('--parallax-y', `${offsetY.toFixed(2)}px`);
+                    element.style.setProperty('--parallax-rotate', `${offsetRotation.toFixed(2)}deg`);
+                });
+            };
+
+            const requestParallaxUpdate = () => {
+                if (!animationFrame) animationFrame = requestAnimationFrame(updateParallax);
+            };
+
+            window.addEventListener('scroll', requestParallaxUpdate, { passive: true });
+            window.addEventListener('resize', requestParallaxUpdate, { passive: true });
+            requestParallaxUpdate();
+        }
+
+        initScrollParallax();
+
+        // Event Listeners for Mobile Navigation and Cart Button
+        document.getElementById('mobile-menu-btn').addEventListener('click', () => {
+            document.getElementById('mobile-menu').classList.toggle('hidden');
+        });
+
+        document.getElementById('cart-toggle-btn').addEventListener('click', toggleCartDrawer);
+
+        document.querySelectorAll('.mobile-nav-link').forEach(link => {
+            link.addEventListener('click', () => {
+                document.getElementById('mobile-menu').classList.add('hidden');
+            });
+        });
+
+        // --- Initialization ---
+        window.onload = function() {
+            initTheme();
+            renderCatalog(productsDB);
+        };
+    </script>
+</body>
+</html>
