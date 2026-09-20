@@ -37,6 +37,15 @@ Antes de activar el checkout se deben definir:
 - Tasa USD/VES y quien la actualiza.
 - Limite de comprobante, actualmente 5 MB.
 
+## 3.1 Tasas de cambio automaticas
+
+La pagina consulta gratuitamente `open.er-api.com` para obtener USD/COP y USD/VES.
+Se actualiza al abrir la pagina y cada 5 minutos. Si no hay internet, usa las tasas
+de respaldo definidas en `assets/js/payment-config.js` y muestra el estado al cliente.
+
+Esta fuente no requiere clave ni pago, pero no debe considerarse una cotizacion
+bancaria instantanea. Antes de confirmar un pago, verifica la tasa y el monto real.
+
 ## 4. Flujo previsto
 
 1. El cliente crea el pedido.

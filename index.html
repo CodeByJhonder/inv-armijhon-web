@@ -922,6 +922,15 @@
                         <span class="font-bold text-slate-900 dark:text-white">Total Final:</span>
                         <span id="cart-total" class="text-2xl font-black text-indigo-500">$0.00</span>
                     </div>
+                    <div class="flex justify-between text-slate-500 dark:text-slate-400">
+                        <span>Total en pesos:</span>
+                        <span id="cart-total-cop" class="font-bold text-slate-800 dark:text-white">$ 0,00 COP</span>
+                    </div>
+                    <div class="flex justify-between text-slate-500 dark:text-slate-400">
+                        <span>Total en bolívares:</span>
+                        <span id="cart-total-ves" class="font-bold text-slate-800 dark:text-white">Bs. 0,00</span>
+                    </div>
+                    <p id="cart-rate-status" class="text-[10px] text-slate-400 dark:text-slate-500">Cargando tasas...</p>
                 </div>
 
                 <button onclick="checkoutWhatsApp()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold py-4 rounded-2xl shadow-lg transition flex items-center justify-center gap-2 text-xs">
@@ -955,6 +964,7 @@
                     <span id="payment-total-usd" class="font-bold">$0.00</span>
                 </div>
                 <div id="payment-total-ves" class="text-2xl font-black text-indigo-500 mt-1">Bs. 0,00</div>
+                <div id="payment-total-cop" class="text-sm font-bold text-slate-700 dark:text-slate-200 mt-1">$ 0,00 COP</div>
                 <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-1">Tasa aplicada: Bs. <span id="payment-rate">0,00</span> por USD</div>
             </div>
 
@@ -1075,6 +1085,60 @@
         // --- App Global State ---
         let cart = [];
         let currentCategory = 'todos';
+        const exchangeRates = {
+            COP: Number(window.PAYMENT_CONFIG?.exchangeRates?.COP) || 4000,
+            VES: Number(window.PAYMENT_CONFIG?.exchangeRates?.VES || window.PAYMENT_CONFIG?.exchangeRate) || 849.564
+        };
+        let exchangeRateUpdatedAt = null;
+
+        function formatCop(value) {
+            return `${new Intl.NumberFormat('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)} COP`;
+        }
+
+        function formatRateDate() {
+            if (!exchangeRateUpdatedAt) return 'usando tasa de respaldo';
+            return `actualizado ${exchangeRateUpdatedAt.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })}`;
+        }
+
+        function renderExchangeTotals(totalUsd) {
+            document.getElementById('cart-total-cop').textContent = formatCop(totalUsd * exchangeRates.COP);
+            document.getElementById('cart-total-ves').textContent = `Bs. ${formatVes(totalUsd * exchangeRates.VES)}`;
+            document.getElementById('cart-rate-status').textContent = `Tasas USD/COP y USD/VES: ${formatRateDate()}`;
+        }
+
+        function renderPaymentTotals(totalUsd) {
+            document.getElementById('payment-total-usd').textContent = `$${totalUsd.toFixed(2)}`;
+            document.getElementById('payment-total-ves').textContent = `Bs. ${formatVes(totalUsd * exchangeRates.VES)}`;
+            document.getElementById('payment-total-cop').textContent = formatCop(totalUsd * exchangeRates.COP);
+            document.getElementById('payment-rate').textContent = formatVes(exchangeRates.VES);
+        }
+
+        function refreshDisplayedRates() {
+            updateCartUI();
+            if (!document.getElementById('payment-modal').classList.contains('hidden')) {
+                renderPaymentTotals(cart.reduce((sum, item) => sum + item.price * item.qty, 0));
+            }
+        }
+
+        async function refreshExchangeRates() {
+            const status = document.getElementById('cart-rate-status');
+            try {
+                const response = await fetch(`${window.PAYMENT_CONFIG.ratesApiUrl}?v=${Date.now()}`, { cache: 'no-store' });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                const cop = Number(data?.rates?.COP);
+                const ves = Number(data?.rates?.VES);
+                if (!Number.isFinite(cop) || cop <= 0 || !Number.isFinite(ves) || ves <= 0) throw new Error('Tasas incompletas');
+                exchangeRates.COP = cop;
+                exchangeRates.VES = ves;
+                window.PAYMENT_CONFIG.exchangeRate = ves;
+                exchangeRateUpdatedAt = new Date();
+                refreshDisplayedRates();
+            } catch (error) {
+                console.warn('No se pudieron actualizar las tasas:', error);
+                if (status) status.textContent = `No se pudo actualizar; ${formatRateDate()}.`;
+            }
+        }
 
         // --- Dark/Light Theme Switcher Logic ---
         function toggleTheme() {
@@ -1233,6 +1297,7 @@
                         <div class="text-xs font-bold text-slate-800 dark:text-white line-clamp-1">${item.name}</div>
                         <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">$${item.price.toFixed(2)} c/u</div>
                         <div class="text-xs font-black text-indigo-500 mt-1">$${(item.price * item.qty).toFixed(2)}</div>
+                        <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-1">${formatCop(item.price * item.qty * exchangeRates.COP)} · Bs. ${formatVes(item.price * item.qty * exchangeRates.VES)}</div>
                     </div>
                     <div class="flex items-center gap-2">
                         <button onclick="changeQty(${index}, -1)" class="w-7 h-7 bg-slate-200 dark:bg-slate-900 text-slate-800 dark:text-slate-300 rounded-lg text-xs font-bold">-</button>
@@ -1250,6 +1315,7 @@
             countBadge.textContent = totalItems;
             document.getElementById('cart-subtotal').textContent = `$${subtotal.toFixed(2)}`;
             document.getElementById('cart-total').textContent = `$${subtotal.toFixed(2)}`;
+            renderExchangeTotals(subtotal);
         }
 
         function changeQty(index, delta) {
@@ -1298,10 +1364,7 @@
                 return;
             }
             const totalUsd = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
-            const rate = window.PAYMENT_CONFIG?.exchangeRate || 0;
-            document.getElementById('payment-total-usd').textContent = `$${totalUsd.toFixed(2)}`;
-            document.getElementById('payment-total-ves').textContent = `Bs. ${formatVes(totalUsd * rate)}`;
-            document.getElementById('payment-rate').textContent = formatVes(rate);
+            renderPaymentTotals(totalUsd);
             updatePaymentMethod();
             const modal = document.getElementById('payment-modal');
             modal.classList.remove('hidden');
@@ -1359,7 +1422,7 @@
             }
 
             const totalUsd = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
-            const rate = window.PAYMENT_CONFIG.exchangeRate;
+            const rate = exchangeRates.VES;
             const method = document.querySelector('input[name="payment-method"]:checked').value;
             submit.disabled = true;
             submit.textContent = 'Enviando comprobante...';
@@ -1584,6 +1647,9 @@
         window.onload = function() {
             initTheme();
             renderCatalog(productsDB);
+            updateCartUI();
+            refreshExchangeRates();
+            setInterval(refreshExchangeRates, window.PAYMENT_CONFIG.ratesRefreshMs);
         };
     </script>
 </body>
