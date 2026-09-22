@@ -16,6 +16,7 @@
     </style>
     <script src="assets/js/supabase-config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 </head>
 <body class="min-h-screen bg-slate-950 text-slate-100 font-sans">
     <main class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
@@ -49,10 +50,40 @@
                     <h2 class="text-xl font-black">Pedidos recibidos</h2>
                     <p id="orders-summary" class="text-xs text-slate-400 mt-1"></p>
                 </div>
-                <button id="refresh-orders" class="rounded-xl border border-slate-700 px-4 py-2 text-xs font-bold hover:bg-slate-800"><i class="fa-solid fa-rotate mr-2"></i>Actualizar</button>
+                <div class="flex flex-wrap gap-2">
+                    <button id="export-receipts" class="rounded-xl bg-violet-500 px-4 py-2 text-xs font-bold text-white hover:bg-violet-400"><i class="fa-solid fa-file-zipper mr-2"></i>Exportar comprobantes</button>
+                    <button id="refresh-orders" class="rounded-xl border border-slate-700 px-4 py-2 text-xs font-bold hover:bg-slate-800"><i class="fa-solid fa-rotate mr-2"></i>Actualizar</button>
+                </div>
             </div>
             <p id="orders-status" class="text-xs text-slate-400 mb-4"></p>
             <div id="realtime-status" class="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[10px] font-bold text-emerald-300"><span class="h-2 w-2 rounded-full bg-emerald-400"></span> Actualización en tiempo real activa</div>
+            <div class="grid grid-cols-2 gap-3 mb-5 sm:grid-cols-4">
+                <div class="rounded-2xl border border-slate-800 bg-slate-900 p-4"><p class="text-xs text-slate-400">Total</p><strong id="total-count" class="text-2xl">0</strong></div>
+                <div class="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4"><p class="text-xs text-amber-300">Pendientes</p><strong id="pending-count" class="text-2xl">0</strong></div>
+                <div class="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4"><p class="text-xs text-emerald-300">Aprobados</p><strong id="approved-count" class="text-2xl">0</strong></div>
+                <div class="rounded-2xl border border-red-500/20 bg-red-500/10 p-4"><p class="text-xs text-red-300">Rechazados</p><strong id="rejected-count" class="text-2xl">0</strong></div>
+            </div>
+            <div class="mb-5 rounded-2xl border border-slate-800 bg-slate-900 p-4">
+                <div class="flex flex-wrap items-center gap-3">
+                    <label class="flex items-center gap-2 text-sm font-bold">
+                        <input id="select-all" type="checkbox" class="h-4 w-4">
+                        Seleccionar todos
+                    </label>
+                    <select id="status-filter" class="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs">
+                        <option value="all">Todos los estados</option>
+                        <option value="pending">Pendientes</option>
+                        <option value="approved">Aprobados</option>
+                        <option value="rejected">Rechazados</option>
+                        <option value="completed">Completados</option>
+                    </select>
+                    <span id="selected-count" class="text-xs text-slate-400">0 seleccionados</span>
+                    <div class="ml-auto flex flex-wrap gap-2">
+                        <button id="bulk-approve" class="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold hover:bg-emerald-500">Aprobar seleccionados</button>
+                        <button id="bulk-reject" class="rounded-lg border border-red-500/40 px-3 py-2 text-xs font-bold text-red-300 hover:bg-red-500/10">Rechazar seleccionados</button>
+                        <button id="bulk-delete" class="rounded-lg bg-red-700 px-3 py-2 text-xs font-bold hover:bg-red-600">Eliminar seleccionados</button>
+                    </div>
+                </div>
+            </div>
             <div id="orders-list" class="grid gap-4"></div>
         </section>
     </main>

@@ -4,6 +4,7 @@ if (!window.supabase || !config.url || !config.publishableKey) {
     loginStatus.textContent = 'No se pudo cargar la conexión con Supabase. Revisa tu conexión a internet.';
     throw new Error('Supabase no está disponible o falta la configuración pública.');
 }
+
 const supabaseClient = window.supabase.createClient(config.url, config.publishableKey);
 const loginView = document.getElementById('login-view');
 const ordersView = document.getElementById('orders-view');
@@ -13,16 +14,26 @@ const ordersSummary = document.getElementById('orders-summary');
 const logoutButton = document.getElementById('logout-button');
 const themeToggle = document.getElementById('theme-toggle');
 const realtimeStatus = document.getElementById('realtime-status');
+const selectedCount = document.getElementById('selected-count');
+const selectAll = document.getElementById('select-all');
+const statusFilter = document.getElementById('status-filter');
+let orders = [];
+let selectedOrderIds = new Set();
 let ordersChannel;
 
 const formatVes = value => new Intl.NumberFormat('es-VE', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
-}).format(value);
+}).format(Number(value || 0));
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, char => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
 }[char]));
+
+const visibleOrders = () => {
+    const filter = statusFilter.value;
+    return orders.filter(order => filter === 'all' || order.status === filter);
+};
 
 function showLogin() {
     loginView.classList.remove('hidden');
@@ -81,23 +92,31 @@ async function loadOrders() {
         return;
     }
 
-    ordersStatus.textContent = '';
-    ordersSummary.textContent = `${data.length} pedido${data.length === 1 ? '' : 's'}`;
-    const ordersWithReceipts = await Promise.all(data.map(async order => {
-        if (order.payment_receipts?.length) return order;
-        const { data: receipts } = await supabaseClient
+    orders = data || [];
+    const orderIds = orders.map(order => order.id);
+    if (orderIds.length) {
+        const { data: receipts, error: receiptsError } = await supabaseClient
             .from('payment_receipts')
             .select('*')
-            .eq('order_id', order.id)
-            .limit(1);
-        return { ...order, payment_receipts: receipts || [] };
-    }));
-
-    ordersList.innerHTML = ordersWithReceipts.length ? ordersWithReceipts.map(renderOrder).join('') : '<div class="rounded-2xl border border-slate-800 p-8 text-center text-sm text-slate-400">No hay pedidos todavía.</div>';
-
-    ordersList.querySelectorAll('[data-status]').forEach(button => {
-        button.addEventListener('click', () => updateOrderStatus(button.dataset.id, button.dataset.status));
-    });
+            .in('order_id', orderIds);
+        if (receiptsError) {
+            console.error('No se pudieron consultar los comprobantes:', receiptsError);
+        } else {
+            const receiptsByOrder = new Map((receipts || []).map(receipt => [receipt.order_id, receipt]));
+            orders = orders.map(order => ({
+                ...order,
+                payment_receipts: order.payment_receipts?.length
+                    ? order.payment_receipts
+                    : (receiptsByOrder.has(order.id) ? [receiptsByOrder.get(order.id)] : [])
+            }));
+        }
+    }
+    const currentIds = new Set(orders.map(order => order.id));
+    selectedOrderIds = new Set([...selectedOrderIds].filter(id => currentIds.has(id)));
+    ordersSummary.textContent = `${orders.length} pedido${orders.length === 1 ? '' : 's'}`;
+    renderCounters();
+    renderOrders();
+    ordersStatus.textContent = '';
 }
 
 function statusBadge(status) {
@@ -108,41 +127,152 @@ function statusBadge(status) {
         completed: 'bg-sky-500/15 text-sky-300 border-sky-500/30'
     };
     const labels = { pending: 'Pendiente', approved: 'Aprobado', rejected: 'Rechazado', completed: 'Completado' };
-    return `<span class="inline-flex rounded-full border px-2.5 py-1 text-[10px] font-black uppercase ${styles[status] || styles.pending}">${labels[status] || status}</span>`;
+    return `<span class="inline-flex rounded-full border px-2.5 py-1 text-[10px] font-black uppercase ${styles[status] || styles.pending}">${labels[status] || escapeHtml(status)}</span>`;
+}
+
+function renderCounters() {
+    document.getElementById('total-count').textContent = orders.length;
+    document.getElementById('pending-count').textContent = orders.filter(order => order.status === 'pending').length;
+    document.getElementById('approved-count').textContent = orders.filter(order => order.status === 'approved').length;
+    document.getElementById('rejected-count').textContent = orders.filter(order => order.status === 'rejected').length;
+    selectedCount.textContent = `${selectedOrderIds.size} seleccionado${selectedOrderIds.size === 1 ? '' : 's'}`;
+}
+
+function renderOrders() {
+    const filteredOrders = visibleOrders();
+    const visibleIds = filteredOrders.map(order => order.id);
+    const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedOrderIds.has(id));
+    selectAll.checked = allVisibleSelected;
+    selectAll.indeterminate = !allVisibleSelected && visibleIds.some(id => selectedOrderIds.has(id));
+
+    ordersList.innerHTML = filteredOrders.length ? filteredOrders.map(renderOrder).join('') :
+        '<div class="rounded-2xl border border-slate-800 p-8 text-center text-sm text-slate-400">No hay pedidos para mostrar.</div>';
 }
 
 function renderOrder(order) {
-    const items = (order.order_items || []).map(item => `<li>${item.quantity}x ${escapeHtml(item.product_name)} <span class="text-slate-500">($${Number(item.line_total_usd).toFixed(2)})</span></li>`).join('');
+    const items = (order.order_items || []).map(item =>
+        `<li>${item.quantity}x ${escapeHtml(item.product_name)} <span class="text-slate-500">($${Number(item.line_total_usd).toFixed(2)})</span></li>`
+    ).join('');
     const receipt = order.payment_receipts?.[0];
-    const receiptButton = receipt ? `<button class="receipt-link text-violet-300 hover:text-violet-200 text-xs font-bold" data-path="${escapeHtml(receipt.storage_path)}"><i class="fa-solid fa-paperclip mr-1"></i>Ver comprobante</button>` : '<span class="text-xs text-red-300">Sin comprobante</span>';
+    const receiptButton = receipt
+        ? `<button class="receipt-link text-violet-300 hover:text-violet-200 text-xs font-bold" data-path="${escapeHtml(receipt.storage_path)}"><i class="fa-solid fa-paperclip mr-1"></i>Ver comprobante</button>`
+        : '<span class="text-xs text-red-300">Sin comprobante</span>';
     const actions = order.status === 'pending' ? `
-        <button data-id="${order.id}" data-status="approved" class="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold hover:bg-emerald-500">Aprobar</button>
-        <button data-id="${order.id}" data-status="rejected" class="rounded-xl border border-red-500/40 px-3 py-2 text-xs font-bold text-red-300 hover:bg-red-500/10">Rechazar</button>` : order.status === 'approved' ? `<button data-id="${order.id}" data-status="completed" class="rounded-xl bg-sky-600 px-3 py-2 text-xs font-bold hover:bg-sky-500">Marcar completado</button>` : '';
+        <button data-id="${order.id}" data-status="approved" class="status-action rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold hover:bg-emerald-500">Aprobar</button>
+        <button data-id="${order.id}" data-status="rejected" class="status-action rounded-xl border border-red-500/40 px-3 py-2 text-xs font-bold text-red-300 hover:bg-red-500/10">Rechazar</button>` :
+        order.status === 'approved' ? `<button data-id="${order.id}" data-status="completed" class="status-action rounded-xl bg-sky-600 px-3 py-2 text-xs font-bold hover:bg-sky-500">Marcar completado</button>` : '';
 
     return `<article class="rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-xl">
-        <div class="flex flex-wrap items-start justify-between gap-3">
-            <div><div class="text-xs text-slate-500">${new Date(order.created_at).toLocaleString('es-VE')}</div><h3 class="font-black mt-1">${escapeHtml(order.customer_name)}</h3><div class="text-xs text-slate-400 mt-1">${escapeHtml(order.customer_phone)} · ${order.payment_method === 'pago_movil' ? 'Pago Móvil' : 'Transferencia'}</div></div>
-            <div class="text-right">${statusBadge(order.status)}<div class="text-xl font-black text-violet-300 mt-2">Bs. ${formatVes(order.total_ves)}</div><div class="text-[10px] text-slate-500">$${Number(order.total_usd).toFixed(2)} · tasa ${formatVes(order.exchange_rate)}</div></div>
+        <div class="flex flex-wrap items-start gap-3">
+            <label class="pt-1"><input type="checkbox" class="order-check h-5 w-5" data-id="${order.id}" ${selectedOrderIds.has(order.id) ? 'checked' : ''}></label>
+            <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div><div class="text-xs text-slate-500">${new Date(order.created_at).toLocaleString('es-VE')}</div><h3 class="font-black mt-1">${escapeHtml(order.customer_name)}</h3><div class="text-xs text-slate-400 mt-1">${escapeHtml(order.customer_phone)} · ${order.payment_method === 'pago_movil' ? 'Pago Móvil' : 'Transferencia'}</div></div>
+                    <div class="text-right">${statusBadge(order.status)}<div class="text-xl font-black text-violet-300 mt-2">Bs. ${formatVes(order.total_ves)}</div><div class="text-[10px] text-slate-500">$${Number(order.total_usd).toFixed(2)} · tasa ${formatVes(order.exchange_rate)}</div></div>
+                </div>
+                <ul class="border-t border-slate-800 mt-4 pt-4 space-y-1 text-xs text-slate-300">${items}</ul>
+                <div class="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 mt-4 pt-4">${receiptButton}<div class="flex flex-wrap gap-2">${actions}<button data-delete-id="${order.id}" class="delete-order rounded-xl border border-red-500/40 px-3 py-2 text-xs font-bold text-red-300 hover:bg-red-500/10">Eliminar</button></div></div>
+            </div>
         </div>
-        <ul class="border-t border-slate-800 mt-4 pt-4 space-y-1 text-xs text-slate-300">${items}</ul>
-        <div class="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 mt-4 pt-4">${receiptButton}<div class="flex gap-2">${actions}</div></div>
     </article>`;
 }
 
-async function updateOrderStatus(id, status) {
-    ordersStatus.textContent = 'Actualizando pedido...';
+async function updateOrderStatus(ids, status) {
+    if (!ids.length) {
+        alert('Selecciona al menos un pedido.');
+        return;
+    }
+    ordersStatus.textContent = 'Actualizando pedidos...';
     const { data: sessionData } = await supabaseClient.auth.getSession();
     const { error } = await supabaseClient.from('orders').update({
         status,
         reviewed_at: new Date().toISOString(),
         reviewed_by: sessionData.session?.user?.id || null
-    }).eq('id', id);
+    }).in('id', ids);
     if (error) {
-        ordersStatus.textContent = 'No se pudo actualizar el pedido.';
+        ordersStatus.textContent = 'No se pudieron actualizar los pedidos.';
         console.error(error);
         return;
     }
+    selectedOrderIds.clear();
     await loadOrders();
+}
+
+async function deleteOrders(ids) {
+    if (!ids.length) {
+        alert('Selecciona al menos un pedido.');
+        return;
+    }
+    if (!confirm(`¿Eliminar ${ids.length} pedido${ids.length === 1 ? '' : 's'} definitivamente?`)) return;
+
+    ordersStatus.textContent = 'Eliminando pedidos...';
+    const receipts = orders.filter(order => ids.includes(order.id))
+        .flatMap(order => (order.payment_receipts || []).map(receipt => receipt.storage_path));
+
+    const { error } = await supabaseClient.from('orders').delete().in('id', ids);
+    if (error) {
+        ordersStatus.textContent = 'No se pudieron eliminar los pedidos.';
+        console.error(error);
+        return;
+    }
+
+    if (receipts.length) {
+        const storageCleanup = supabaseClient.storage.from('payment-receipts').remove(receipts);
+        const timeout = new Promise(resolve => setTimeout(() => resolve({ error: new Error('Tiempo de espera agotado al borrar archivos.') }), 10000));
+        const { error: storageError } = await Promise.race([storageCleanup, timeout]);
+        if (storageError) {
+            console.error('El pedido se eliminó, pero no se pudo borrar el comprobante:', storageError);
+            ordersStatus.textContent = 'Pedido eliminado. Algunos archivos del comprobante requieren limpieza manual.';
+        }
+    }
+    selectedOrderIds.clear();
+    await loadOrders();
+}
+
+async function exportReceipts() {
+    if (!window.JSZip) {
+        ordersStatus.textContent = 'No se pudo cargar el exportador ZIP.';
+        return;
+    }
+    const { data: receipts, error } = await supabaseClient.from('payment_receipts')
+        .select('order_id, storage_path, original_name');
+    if (error) {
+        ordersStatus.textContent = 'No se pudieron consultar los comprobantes.';
+        console.error(error);
+        return;
+    }
+    if (!receipts?.length) {
+        alert('No hay comprobantes para exportar.');
+        return;
+    }
+
+    ordersStatus.textContent = 'Preparando archivo ZIP...';
+    const zip = new JSZip();
+    let exported = 0;
+    for (const receipt of receipts) {
+        const { data, error: signedError } = await supabaseClient.storage.from('payment-receipts')
+            .createSignedUrl(receipt.storage_path, 300);
+        if (signedError) {
+            console.error(signedError);
+            continue;
+        }
+        const response = await fetch(data.signedUrl);
+        if (!response.ok) continue;
+        zip.file(`${receipt.order_id}-${receipt.original_name}`, await response.blob());
+        exported++;
+    }
+    if (!exported) {
+        ordersStatus.textContent = 'No se pudo descargar ningún comprobante.';
+        return;
+    }
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `comprobantes-${new Date().toISOString().slice(0, 10)}.zip`;
+    link.click();
+    URL.revokeObjectURL(url);
+    ordersStatus.textContent = `${exported} comprobante${exported === 1 ? '' : 's'} exportado${exported === 1 ? '' : 's'}.`;
 }
 
 document.getElementById('login-form').addEventListener('submit', async event => {
@@ -150,18 +280,16 @@ document.getElementById('login-form').addEventListener('submit', async event => 
     loginStatus.textContent = 'Iniciando sesión...';
     try {
         const { error } = await supabaseClient.auth.signInWithPassword({
-            email: document.getElementById('login-email').value.trim(),
+            email: document.getElementById('login-email').value,
             password: document.getElementById('login-password').value
         });
         if (error) throw error;
+        loginStatus.textContent = '';
+        showOrders();
     } catch (error) {
         console.error('Error de inicio de sesión:', error);
         loginStatus.textContent = error.message || 'No se pudo iniciar sesión.';
-        loginStatus.className = 'text-xs text-red-400';
-        return;
     }
-    loginStatus.textContent = '';
-    showOrders();
 });
 
 logoutButton.addEventListener('click', async () => {
@@ -170,14 +298,41 @@ logoutButton.addEventListener('click', async () => {
 });
 
 document.getElementById('refresh-orders').addEventListener('click', loadOrders);
+document.getElementById('export-receipts').addEventListener('click', exportReceipts);
+document.getElementById('bulk-approve').addEventListener('click', () => updateOrderStatus([...selectedOrderIds], 'approved'));
+document.getElementById('bulk-reject').addEventListener('click', () => updateOrderStatus([...selectedOrderIds], 'rejected'));
+document.getElementById('bulk-delete').addEventListener('click', () => deleteOrders([...selectedOrderIds]));
+statusFilter.addEventListener('change', renderOrders);
+selectAll.addEventListener('change', () => {
+    visibleOrders().forEach(order => {
+        if (selectAll.checked) selectedOrderIds.add(order.id);
+        else selectedOrderIds.delete(order.id);
+    });
+    renderCounters();
+    renderOrders();
+});
 themeToggle.addEventListener('click', toggleAdminTheme);
 
-document.addEventListener('click', async event => {
-    const button = event.target.closest('.receipt-link');
-    if (!button) return;
-    const { data, error } = await supabaseClient.storage.from('payment-receipts').createSignedUrl(button.dataset.path, 300);
+ordersList.addEventListener('change', event => {
+    if (!event.target.classList.contains('order-check')) return;
+    if (event.target.checked) selectedOrderIds.add(event.target.dataset.id);
+    else selectedOrderIds.delete(event.target.dataset.id);
+    renderCounters();
+    renderOrders();
+});
+
+ordersList.addEventListener('click', async event => {
+    const statusButton = event.target.closest('.status-action');
+    const deleteButton = event.target.closest('.delete-order');
+    const receiptButton = event.target.closest('.receipt-link');
+    if (statusButton) await updateOrderStatus([statusButton.dataset.id], statusButton.dataset.status);
+    if (deleteButton) await deleteOrders([deleteButton.dataset.deleteId]);
+    if (!receiptButton) return;
+    const { data, error } = await supabaseClient.storage.from('payment-receipts')
+        .createSignedUrl(receiptButton.dataset.path, 300);
     if (error) {
         ordersStatus.textContent = 'No se pudo abrir el comprobante.';
+        console.error(error);
         return;
     }
     window.open(data.signedUrl, '_blank', 'noopener');
