@@ -34,8 +34,17 @@ create table if not exists public.payment_receipts (
     original_name text not null,
     mime_type text not null,
     file_size integer not null check (file_size > 0 and file_size <= 5242880),
-    uploaded_at timestamptz not null default now()
+    uploaded_at timestamptz not null default now(),
+    ocr_status text not null default 'pending' check (ocr_status in ('pending', 'completed', 'failed', 'skipped')),
+    ocr_text text,
+    reference_number text,
+    ocr_confidence numeric(5, 2)
 );
+
+alter table public.payment_receipts add column if not exists ocr_status text not null default 'pending';
+alter table public.payment_receipts add column if not exists ocr_text text;
+alter table public.payment_receipts add column if not exists reference_number text;
+alter table public.payment_receipts add column if not exists ocr_confidence numeric(5, 2);
 
 alter table public.orders enable row level security;
 alter table public.order_items enable row level security;

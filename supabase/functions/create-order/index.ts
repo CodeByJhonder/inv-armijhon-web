@@ -10,6 +10,59 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
 });
 
+const extractReference = (text: string) => {
+    const normalizedText = text
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\r/g, '');
+    const operationLabel = /operaci(?:on|en)|operation/i;
+    const invalidLabels = /identificacion|cedula|documento/i;
+    const lines = normalizedText.split('\n').map(line => line.trim()).filter(Boolean);
+
+    for (let index = 0; index < lines.length; index++) {
+        if (!operationLabel.test(lines[index])) continue;
+
+        const sameLine = lines[index].match(/operaci(?:on|en)\D{0,24}([0-9][0-9 -]{5,20})/i);
+        if (sameLine) return sameLine[1].replace(/\D/g, '');
+
+        for (const nextLine of lines.slice(index + 1, index + 4)) {
+            if (invalidLabels.test(nextLine)) continue;
+            const number = nextLine.match(/\b([0-9][0-9 -]{5,20})\b/);
+            if (number) return number[1].replace(/\D/g, '');
+        }
+    }
+
+    return null;
+};
+
+const runOcr = async (apiKey: string, base64: string, mimeType: string) => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 25000);
+    try {
+        const response = await fetch('https://api.ocr.space/parse/image', {
+            method: 'POST',
+            signal: controller.signal,
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+                apikey: apiKey,
+                base64Image: `data:${mimeType};base64,${base64}`,
+                language: 'spa',
+                isOverlayRequired: 'false',
+                detectOrientation: 'true',
+                scale: 'true',
+                OCREngine: '2'
+            })
+        });
+        if (!response.ok) throw new Error(`OCR HTTP ${response.status}`);
+        const result = await response.json();
+        if (result.IsErroredOnProcessing) throw new Error(result.ErrorMessage || 'OCR rechazó el archivo.');
+        const text = (result.ParsedResults || []).map((item: { ParsedText?: string }) => item.ParsedText || '').join('\n').trim();
+        return { text, reference: extractReference(text), confidence: null };
+    } finally {
+        clearTimeout(timeout);
+    }
+};
+
 Deno.serve(async request => {
     if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
     if (request.method !== 'POST') return json({ error: 'Método no permitido.' }, 405);
@@ -77,14 +130,32 @@ Deno.serve(async request => {
         const { error: itemsError } = await supabase.from('order_items').insert(itemRows);
         if (itemsError) return json({ error: 'No se pudieron guardar los productos.' }, 500);
 
-        const { error: receiptError } = await supabase.from('payment_receipts').insert({
+        const { data: receiptRow, error: receiptError } = await supabase.from('payment_receipts').insert({
             order_id: orderId,
             storage_path: storagePath,
             original_name: String(receipt.name).slice(0, 180),
             mime_type: receipt.type,
             file_size: binary.byteLength
-        });
+        }).select('id').single();
         if (receiptError) return json({ error: 'No se pudo registrar el comprobante.' }, 500);
+
+        const ocrApiKey = Deno.env.get('OCR_SPACE_API_KEY');
+        if (!ocrApiKey) {
+            await supabase.from('payment_receipts').update({ ocr_status: 'skipped' }).eq('id', receiptRow.id);
+        } else {
+            try {
+                const ocr = await runOcr(ocrApiKey, receipt.base64, receipt.type);
+                await supabase.from('payment_receipts').update({
+                    ocr_status: 'completed',
+                    ocr_text: ocr.text || null,
+                    reference_number: ocr.reference,
+                    ocr_confidence: ocr.confidence
+                }).eq('id', receiptRow.id);
+            } catch (ocrError) {
+                console.error('OCR fallido:', ocrError);
+                await supabase.from('payment_receipts').update({ ocr_status: 'failed' }).eq('id', receiptRow.id);
+            }
+        }
 
         return json({ orderId, status: 'pending' }, 201);
     } catch {

@@ -64,7 +64,29 @@
                 <div class="rounded-2xl border border-red-500/20 bg-red-500/10 p-4"><p class="text-xs text-red-300">Rechazados</p><strong id="rejected-count" class="text-2xl">0</strong></div>
             </div>
             <div class="mb-5 rounded-2xl border border-slate-800 bg-slate-900 p-4">
-                <div class="flex flex-wrap items-center gap-3">
+                <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <label class="text-xs font-bold text-slate-400">
+                        Buscar cliente, teléfono, ID o referencia
+                            <input id="search-filter" type="search" placeholder="Cliente, teléfono, ID o referencia..." class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-normal outline-none focus:border-violet-400">
+                    </label>
+                    <label class="text-xs font-bold text-slate-400">
+                        Desde
+                        <input id="date-from-filter" type="date" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-normal outline-none focus:border-violet-400">
+                    </label>
+                    <label class="text-xs font-bold text-slate-400">
+                        Hasta
+                        <input id="date-to-filter" type="date" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-normal outline-none focus:border-violet-400">
+                    </label>
+                    <label class="text-xs font-bold text-slate-400">
+                        Método de pago
+                        <select id="payment-method-filter" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-normal">
+                            <option value="all">Todos los métodos</option>
+                            <option value="pago_movil">Pago Móvil</option>
+                            <option value="transferencia">Transferencia</option>
+                        </select>
+                    </label>
+                </div>
+                <div class="mt-3 flex flex-wrap items-center gap-3 border-t border-slate-800 pt-3">
                     <label class="flex items-center gap-2 text-sm font-bold">
                         <input id="select-all" type="checkbox" class="h-4 w-4">
                         Seleccionar todos
@@ -76,7 +98,19 @@
                         <option value="rejected">Rechazados</option>
                         <option value="completed">Completados</option>
                     </select>
+                    <select id="receipt-filter" class="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs">
+                        <option value="all">Con y sin comprobante</option>
+                        <option value="with">Con comprobante</option>
+                        <option value="without">Sin comprobante</option>
+                    </select>
+                    <select id="sort-filter" class="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs">
+                        <option value="newest">Más recientes</option>
+                        <option value="oldest">Más antiguos</option>
+                        <option value="highest">Mayor importe</option>
+                        <option value="lowest">Menor importe</option>
+                    </select>
                     <span id="selected-count" class="text-xs text-slate-400">0 seleccionados</span>
+                    <button id="clear-filters" class="rounded-lg border border-slate-700 px-3 py-2 text-xs font-bold hover:bg-slate-800">Limpiar filtros</button>
                     <div class="ml-auto flex flex-wrap gap-2">
                         <button id="bulk-approve" class="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold hover:bg-emerald-500">Aprobar seleccionados</button>
                         <button id="bulk-reject" class="rounded-lg border border-red-500/40 px-3 py-2 text-xs font-bold text-red-300 hover:bg-red-500/10">Rechazar seleccionados</button>

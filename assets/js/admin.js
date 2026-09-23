@@ -17,6 +17,12 @@ const realtimeStatus = document.getElementById('realtime-status');
 const selectedCount = document.getElementById('selected-count');
 const selectAll = document.getElementById('select-all');
 const statusFilter = document.getElementById('status-filter');
+const searchFilter = document.getElementById('search-filter');
+const dateFromFilter = document.getElementById('date-from-filter');
+const dateToFilter = document.getElementById('date-to-filter');
+const paymentMethodFilter = document.getElementById('payment-method-filter');
+const receiptFilter = document.getElementById('receipt-filter');
+const sortFilter = document.getElementById('sort-filter');
 let orders = [];
 let selectedOrderIds = new Set();
 let ordersChannel;
@@ -30,9 +36,38 @@ const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, char => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
 }[char]));
 
+const normalizeSearchValue = value => String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[\s-]/g, '');
+
 const visibleOrders = () => {
-    const filter = statusFilter.value;
-    return orders.filter(order => filter === 'all' || order.status === filter);
+    const status = statusFilter.value;
+    const method = paymentMethodFilter.value;
+    const receipt = receiptFilter.value;
+    const search = normalizeSearchValue(searchFilter.value);
+    const from = dateFromFilter.value ? new Date(`${dateFromFilter.value}T00:00:00`) : null;
+    const to = dateToFilter.value ? new Date(`${dateToFilter.value}T23:59:59.999`) : null;
+
+    return orders.filter(order => {
+        const createdAt = new Date(order.created_at);
+        const receiptText = order.payment_receipts?.map(item => item.ocr_text || '').join(' ') || '';
+        const reference = order.payment_receipts?.map(item => item.reference_number || '').join(' ') || '';
+        const searchable = normalizeSearchValue(`${order.customer_name || ''} ${order.customer_phone || ''} ${order.id || ''} ${reference} ${receiptText}`);
+        const hasReceipt = Boolean(order.payment_receipts?.length);
+        return (status === 'all' || order.status === status)
+            && (method === 'all' || order.payment_method === method)
+            && (receipt === 'all' || (receipt === 'with' && hasReceipt) || (receipt === 'without' && !hasReceipt))
+            && (!search || searchable.includes(search))
+            && (!from || createdAt >= from)
+            && (!to || createdAt <= to);
+    }).sort((a, b) => {
+        if (sortFilter.value === 'oldest') return new Date(a.created_at) - new Date(b.created_at);
+        if (sortFilter.value === 'highest') return Number(b.total_ves || 0) - Number(a.total_ves || 0);
+        if (sortFilter.value === 'lowest') return Number(a.total_ves || 0) - Number(b.total_ves || 0);
+        return new Date(b.created_at) - new Date(a.created_at);
+    });
 };
 
 function showLogin() {
@@ -113,7 +148,7 @@ async function loadOrders() {
     }
     const currentIds = new Set(orders.map(order => order.id));
     selectedOrderIds = new Set([...selectedOrderIds].filter(id => currentIds.has(id)));
-    ordersSummary.textContent = `${orders.length} pedido${orders.length === 1 ? '' : 's'}`;
+    ordersSummary.textContent = `${orders.length} pedido${orders.length === 1 ? '' : 's'} · ${visibleOrders().length} visible${visibleOrders().length === 1 ? '' : 's'}`;
     renderCounters();
     renderOrders();
     ordersStatus.textContent = '';
@@ -146,7 +181,8 @@ function renderOrders() {
     selectAll.indeterminate = !allVisibleSelected && visibleIds.some(id => selectedOrderIds.has(id));
 
     ordersList.innerHTML = filteredOrders.length ? filteredOrders.map(renderOrder).join('') :
-        '<div class="rounded-2xl border border-slate-800 p-8 text-center text-sm text-slate-400">No hay pedidos para mostrar.</div>';
+        '<div class="rounded-2xl border border-slate-800 p-8 text-center text-sm text-slate-400">No hay pedidos que coincidan con los filtros.</div>';
+    ordersSummary.textContent = `${orders.length} pedido${orders.length === 1 ? '' : 's'} · ${filteredOrders.length} visible${filteredOrders.length === 1 ? '' : 's'}`;
 }
 
 function renderOrder(order) {
@@ -155,7 +191,7 @@ function renderOrder(order) {
     ).join('');
     const receipt = order.payment_receipts?.[0];
     const receiptButton = receipt
-        ? `<button class="receipt-link text-violet-300 hover:text-violet-200 text-xs font-bold" data-path="${escapeHtml(receipt.storage_path)}"><i class="fa-solid fa-paperclip mr-1"></i>Ver comprobante</button>`
+        ? `<div class="flex flex-wrap items-center gap-3"><button class="receipt-link text-violet-300 hover:text-violet-200 text-xs font-bold" data-path="${escapeHtml(receipt.storage_path)}"><i class="fa-solid fa-paperclip mr-1"></i>Ver comprobante</button>${receipt.reference_number ? `<span class="text-xs text-slate-400">Ref: <strong>${escapeHtml(receipt.reference_number)}</strong></span>` : `<span class="text-xs text-slate-500">OCR: ${escapeHtml(receipt.ocr_status || 'pendiente')}</span>`}</div>`
         : '<span class="text-xs text-red-300">Sin comprobante</span>';
     const actions = order.status === 'pending' ? `
         <button data-id="${order.id}" data-status="approved" class="status-action rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold hover:bg-emerald-500">Aprobar</button>
@@ -303,6 +339,20 @@ document.getElementById('bulk-approve').addEventListener('click', () => updateOr
 document.getElementById('bulk-reject').addEventListener('click', () => updateOrderStatus([...selectedOrderIds], 'rejected'));
 document.getElementById('bulk-delete').addEventListener('click', () => deleteOrders([...selectedOrderIds]));
 statusFilter.addEventListener('change', renderOrders);
+[searchFilter, dateFromFilter, dateToFilter, paymentMethodFilter, receiptFilter, sortFilter].forEach(filter => {
+    filter.addEventListener('input', renderOrders);
+    filter.addEventListener('change', renderOrders);
+});
+document.getElementById('clear-filters').addEventListener('click', () => {
+    searchFilter.value = '';
+    dateFromFilter.value = '';
+    dateToFilter.value = '';
+    paymentMethodFilter.value = 'all';
+    statusFilter.value = 'all';
+    receiptFilter.value = 'all';
+    sortFilter.value = 'newest';
+    renderOrders();
+});
 selectAll.addEventListener('change', () => {
     visibleOrders().forEach(order => {
         if (selectAll.checked) selectedOrderIds.add(order.id);
