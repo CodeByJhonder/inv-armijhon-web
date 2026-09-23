@@ -265,24 +265,34 @@ async function deleteOrders(ids) {
     await loadOrders();
 }
 
-async function exportReceipts() {
+async function exportReceipts(filtered = false) {
     if (!window.JSZip) {
         ordersStatus.textContent = 'No se pudo cargar el exportador ZIP.';
         return;
     }
-    const { data: receipts, error } = await supabaseClient.from('payment_receipts')
+    let { data: receipts, error } = await supabaseClient.from('payment_receipts')
         .select('order_id, storage_path, original_name');
     if (error) {
         ordersStatus.textContent = 'No se pudieron consultar los comprobantes.';
         console.error(error);
         return;
     }
+
+    if (filtered) {
+        const filteredOrderIds = new Set(visibleOrders().map(order => order.id));
+        receipts = (receipts || []).filter(receipt => filteredOrderIds.has(receipt.order_id));
+    }
+
     if (!receipts?.length) {
-        alert('No hay comprobantes para exportar.');
+        alert(filtered
+            ? 'No hay comprobantes que coincidan con los filtros actuales.'
+            : 'No hay comprobantes para exportar.');
         return;
     }
 
-    ordersStatus.textContent = 'Preparando archivo ZIP...';
+    ordersStatus.textContent = filtered
+        ? `Preparando ${receipts.length} comprobante${receipts.length === 1 ? '' : 's'} filtrado${receipts.length === 1 ? '' : 's'}...`
+        : 'Preparando archivo ZIP...';
     const zip = new JSZip();
     let exported = 0;
     for (const receipt of receipts) {
@@ -305,7 +315,8 @@ async function exportReceipts() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `comprobantes-${new Date().toISOString().slice(0, 10)}.zip`;
+    const suffix = filtered ? 'filtrados' : 'todos';
+    link.download = `comprobantes-${suffix}-${new Date().toISOString().slice(0, 10)}.zip`;
     link.click();
     URL.revokeObjectURL(url);
     ordersStatus.textContent = `${exported} comprobante${exported === 1 ? '' : 's'} exportado${exported === 1 ? '' : 's'}.`;
@@ -334,7 +345,8 @@ logoutButton.addEventListener('click', async () => {
 });
 
 document.getElementById('refresh-orders').addEventListener('click', loadOrders);
-document.getElementById('export-receipts').addEventListener('click', exportReceipts);
+document.getElementById('export-receipts').addEventListener('click', () => exportReceipts(false));
+document.getElementById('export-filtered-receipts').addEventListener('click', () => exportReceipts(true));
 document.getElementById('bulk-approve').addEventListener('click', () => updateOrderStatus([...selectedOrderIds], 'approved'));
 document.getElementById('bulk-reject').addEventListener('click', () => updateOrderStatus([...selectedOrderIds], 'rejected'));
 document.getElementById('bulk-delete').addEventListener('click', () => deleteOrders([...selectedOrderIds]));
