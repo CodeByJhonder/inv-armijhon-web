@@ -210,6 +210,22 @@
             content-visibility: auto;
             contain-intrinsic-size: 360px;
         }
+        .catalog-image-preview {
+            cursor: zoom-in;
+        }
+        .catalog-image-preview .catalog-image-overlay {
+            opacity: 0;
+            transition: opacity 180ms ease;
+        }
+        .catalog-image-preview:hover .catalog-image-overlay,
+        .catalog-image-preview:focus-visible .catalog-image-overlay {
+            opacity: 1;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .catalog-image-preview .catalog-image-overlay {
+                transition: none;
+            }
+        }
         @media (prefers-reduced-motion: reduce) {
             .catalog-filter,
             .catalog-product-action,
@@ -964,6 +980,16 @@
         </div>
     </div>
 
+    <div id="image-viewer-modal" class="fixed inset-0 z-[60] hidden items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Vista completa de la imagen">
+        <div onclick="closeImageViewer()" class="absolute inset-0 bg-slate-950/90 backdrop-blur-sm"></div>
+        <div class="relative z-10 flex max-h-[90vh] w-full max-w-5xl items-center justify-center">
+            <img id="image-viewer-image" src="" alt="" class="max-h-[85vh] max-w-full rounded-2xl object-contain shadow-2xl">
+            <button onclick="closeImageViewer()" class="absolute right-2 top-2 grid h-11 w-11 place-items-center rounded-full bg-slate-950/80 text-xl text-white shadow-lg hover:bg-red-600" aria-label="Cerrar imagen">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+    </div>
+
     <!-- Toast Notification Container -->
     <div id="toast-container" class="fixed bottom-6 right-6 z-50 space-y-3 pointer-events-none"></div>
 
@@ -1118,6 +1144,16 @@
             }
         }
 
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>'"]/g, char => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                "'": '&#39;',
+                '"': '&quot;'
+            }[char]));
+        }
+
         // --- Catalog Functions ---
         function renderCatalog(products) {
             const grid = document.getElementById('product-grid');
@@ -1128,10 +1164,11 @@
                 card.className = 'catalog-card bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-5 flex flex-col justify-between hover:border-indigo-500 transition duration-300 group shadow-sm dark:shadow-none';
                 card.innerHTML = `
                     <div>
-                        <div class="h-44 rounded-2xl bg-slate-100 dark:bg-slate-950 overflow-hidden relative mb-4">
+                        <button type="button" class="catalog-image-preview group/image h-44 w-full rounded-2xl bg-slate-100 dark:bg-slate-950 overflow-hidden relative mb-4 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#E3CC9A] focus-visible:outline-offset-2" data-image="${escapeHtml(p.img)}" data-image-name="${escapeHtml(p.name)}" aria-label="Ver imagen completa de ${escapeHtml(p.name)}">
                             <img src="${p.img}" alt="${p.name}" loading="lazy" decoding="async" fetchpriority="low" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+                            <span class="catalog-image-overlay absolute inset-0 flex items-center justify-center bg-slate-950/55 px-3 text-center text-xs font-black uppercase tracking-wide text-white">Ver imagen completa</span>
                             <span class="absolute top-3 right-3 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md text-xs font-extrabold px-2.5 py-1 rounded-lg text-indigo-600 dark:text-indigo-400 border border-slate-200 dark:border-slate-800">${p.stock}</span>
-                        </div>
+                        </button>
                         <div class="text-[10px] font-bold uppercase tracking-widest text-violet-600 dark:text-violet-400 mb-1">${catLabel[p.category]}</div>
                         <h4 class="font-bold text-slate-900 dark:text-white text-sm line-clamp-1 mb-2">${p.name}</h4>
                         <p class="text-slate-600 dark:text-slate-400 text-xs line-clamp-2 mb-4 leading-relaxed">${p.desc}</p>
@@ -1441,6 +1478,36 @@
         function closeQuickView() {
             document.getElementById('quickview-modal').classList.add('hidden');
         }
+
+        function openImageViewer(src, name) {
+            const modal = document.getElementById('image-viewer-modal');
+            const image = document.getElementById('image-viewer-image');
+            image.src = src;
+            image.alt = name;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.body.classList.add('overflow-hidden');
+        }
+
+        function closeImageViewer() {
+            const modal = document.getElementById('image-viewer-modal');
+            const image = document.getElementById('image-viewer-image');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            image.src = '';
+            image.alt = '';
+            document.body.classList.remove('overflow-hidden');
+        }
+
+        document.addEventListener('click', event => {
+            const preview = event.target.closest('.catalog-image-preview');
+            if (!preview) return;
+            openImageViewer(preview.dataset.image, preview.dataset.imageName);
+        });
+
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape') closeImageViewer();
+        });
 
         function showToast(msg) {
             const container = document.getElementById('toast-container');
