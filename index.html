@@ -769,7 +769,7 @@
                         <i class="fa-solid fa-chevron-down text-indigo-500 transition transform"></i>
                     </div>
                     <p class="text-xs text-slate-600 dark:text-slate-400 mt-3 hidden leading-relaxed">
-                        Son referenciales. Los precios pueden variar según la tasa del día, así que antes de cerrar cualquier pedido te confirmamos el monto final por WhatsApp.
+                        Los precios en bolívares se calculan según la tasa de referencia del BCV; te confirmamos el monto final antes de cerrar tu pedido.
                     </p>
                 </div>
 
@@ -982,8 +982,8 @@
 
     <div id="image-viewer-modal" class="fixed inset-0 z-[60] hidden items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Vista completa de la imagen">
         <div onclick="closeImageViewer()" class="absolute inset-0 bg-slate-950/90 backdrop-blur-sm"></div>
-        <div class="relative z-10 flex max-h-[90vh] w-full max-w-5xl items-center justify-center">
-            <img id="image-viewer-image" src="" alt="" class="max-h-[85vh] max-w-full rounded-2xl object-contain shadow-2xl">
+        <div class="relative z-10 flex max-h-[calc(100vh-2rem)] max-w-[calc(100vw-2rem)] items-center justify-center">
+            <img id="image-viewer-image" src="" alt="" class="block h-auto max-h-[calc(100vh-2rem)] w-auto max-w-[calc(100vw-2rem)] rounded-2xl object-contain shadow-2xl">
             <button onclick="closeImageViewer()" class="absolute right-2 top-2 grid h-11 w-11 place-items-center rounded-full bg-slate-950/80 text-xl text-white shadow-lg hover:bg-red-600" aria-label="Cerrar imagen">
                 <i class="fa-solid fa-xmark"></i>
             </button>
@@ -1023,12 +1023,12 @@
         };
         const catLabel = { escolares: 'Papelería', lubricantes: 'Lubricantes', cuidado: 'Cuidado Personal', limpieza: 'Limpieza' };
         const productsDB = [
-            { id: 'p1', name: 'FC Semisintético SAE 15W-40', category: 'lubricantes', price: 11.28, stock: 'Disponible', img: catImg.lubricantes, desc: 'Aceite semisintético para vehículos, presentación de un cuarto.' },
-            { id: 'p2', name: 'FC Aceite Mineral 20W-50', category: 'lubricantes', price: 9.66, stock: 'Disponible', img: catImg.lubricantes, desc: 'Aceite mineral para motor, uso general en carro y camioneta.' },
-            { id: 'p3', name: 'Mobil Super 15W50 Moto 4T MX', category: 'lubricantes', price: 11.28, stock: 'Disponible', img: catImg.lubricantes, desc: 'Aceite para motos de cuatro tiempos.' },
+            { id: 'p1', name: 'FC Semisintético SAE 15W-40', category: 'lubricantes', price: 11.28, stock: 'Disponible', img: 'img/fc-semisintetico-sae-15w-40.jpeg', desc: 'Aceite semisintético para vehículos, presentación de 946 ml.' },
+            { id: 'p2', name: 'FC Aceite Mineral 20W-50', category: 'lubricantes', price: 9.66, stock: 'Disponible', img: 'img/fc-aceite-mineral-20w-50.jpeg', desc: 'Aceite mineral para motor, presentación de 946 ml.' },
+            { id: 'p3', name: 'Mobil Super 15W50 Moto 4T MX', category: 'lubricantes', price: 11.28, stock: 'Disponible', img: 'img/mobil-super-15w50-moto-4t-mx.jpeg', desc: 'Aceite para motos de cuatro tiempos, presentación de 1 L.' },
             { id: 'p4', name: 'Marcador Sharpy Punta Fina Permanente Azul', category: 'escolares', price: 0.97, stock: 'Disponible', img: 'img/Marcador Sharpy Punta Fina Permanente AZUL.png', desc: 'Marcador permanente de punta fina, tinta azul.' },
             { id: 'p5', name: 'Gel de Árnica Sunt Life', category: 'cuidado', price: 10.00, stock: 'Disponible', img: 'img/ARNICA gel de arnica sunt life.jpg', desc: 'Gel de árnica para uso corporal.' },
-            { id: 'p6', name: 'FC API GL-1 Sincrónica 140', category: 'lubricantes', price: 9.99, stock: 'Disponible', img: catImg.lubricantes, desc: 'Aceite de transmisión sincrónica 140.' },
+            { id: 'p6', name: 'FC API GL-1 Sincrónica 140', category: 'lubricantes', price: 9.99, stock: 'Disponible', img: catImg.lubricantes, desc: 'Aceite de transmisión sincrónica 140, presentación de 946 ml.' },
             { id: 'p7', name: 'Silicón Líquido Pointer 30ml', category: 'escolares', price: 0.97, stock: 'Disponible', img: 'img/Silicon Liquido Pointer 30ML.png', desc: 'Silicón líquido escolar, presentación de 30 ml.' },
             { id: 'p8', name: 'Desodorante Ideal Roll-On 50g', category: 'cuidado', price: 4.51, stock: 'Disponible', img: 'img/desodorante y antitranspirante ideal roll-on 50g.webp', desc: 'Desodorante antitranspirante roll-on.' },
             { id: 'p9', name: 'Marcador Sharpy Punta Media Azul', category: 'escolares', price: 0.97, stock: 'Disponible', img: 'img/Marcador Sharpy Punta Media Permanente AZUL.jpg', desc: 'Marcador permanente de punta media, tinta azul.' },
@@ -1037,7 +1037,7 @@
             { id: 'p12', name: 'Silicón Líquido Penmax 30ml', category: 'escolares', price: 0.97, stock: 'Disponible', img: 'img/Silicon liquido Penmax 30ml.webp', desc: 'Silicón líquido escolar, presentación de 30 ml.' },
             { id: 'p13', name: 'Pega Blanca Líquida 40ml', category: 'escolares', price: 0.81, stock: 'Disponible', img: 'img/Pega Blanca Liquida White craft glue 40ml.png', desc: 'Pega blanca líquida escolar, 40 ml.' },
             { id: 'p14', name: 'Marcador Sharpy Punta Fina Rojo', category: 'escolares', price: 0.97, stock: 'Disponible', img: 'img/Marcador Sharpy Punta Fina Rojo.png', desc: 'Marcador permanente de punta fina, tinta roja.' },
-            { id: 'p15', name: 'FC Semisintético SAE 20W-50', category: 'lubricantes', price: 11.28, stock: 'Disponible', img: catImg.lubricantes, desc: 'Aceite semisintético para vehículos.' },
+            { id: 'p15', name: 'FC Semisintético SAE 20W-50', category: 'lubricantes', price: 11.28, stock: 'Disponible', img: catImg.lubricantes, desc: 'Aceite semisintético para vehículos, presentación de 946 ml.' },
             { id: 'p16', name: 'Lápiz de Crayón HB Pointer', category: 'escolares', price: 0.32, stock: 'Disponible', img: 'img/Lapiz de crayon HB Pointer.webp', desc: 'Lápiz de crayón HB para uso escolar.' },
             { id: 'p17', name: 'Pega en Barra Marfil 10g', category: 'escolares', price: 0.64, stock: 'Disponible', img: 'img/Pega en barra MARFIL 10g.webp', desc: 'Pega en barra, presentación de 10 gramos.' },
             { id: 'p18', name: 'Limpiador de Vidrios Dura Wash 500ml', category: 'limpieza', price: 4.83, stock: 'Disponible', img: 'img/limpiador dura wash limpiador de vidros 500ml.png', desc: 'Limpiador de vidrios, presentación de 500 ml.' },
