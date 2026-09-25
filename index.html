@@ -148,6 +148,154 @@
             }
         }
 
+        /* ===== Footer: animaciones ===== */
+        .footer-reveal {
+            opacity: 0;
+            transform: translateY(24px);
+            transition: opacity 700ms cubic-bezier(.22,1,.36,1), transform 700ms cubic-bezier(.22,1,.36,1);
+        }
+        .footer-reveal.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Línea divisoria que se "dibuja" al entrar en pantalla */
+        .footer-draw-line {
+            position: relative;
+            overflow: hidden;
+        }
+        .footer-draw-line::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, transparent, rgba(129,140,248,0.9), rgba(167,139,250,0.9), transparent);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 1100ms cubic-bezier(.22,1,.36,1);
+        }
+        .footer-draw-line.is-visible::after {
+            transform: scaleX(1);
+        }
+
+        /* Subrayado animado en los links del footer */
+        .footer-link {
+            position: relative;
+        }
+        .footer-link .footer-link-underline {
+            position: absolute;
+            left: 0;
+            bottom: -2px;
+            height: 1px;
+            width: 100%;
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 300ms ease;
+            background: currentColor;
+        }
+        .footer-link:hover .footer-link-underline {
+            transform: scaleX(1);
+        }
+
+        /* Íconos sociales */
+        .footer-social {
+            transition: transform 250ms cubic-bezier(.34,1.56,.64,1), background-color 250ms ease, border-color 250ms ease, color 250ms ease, box-shadow 250ms ease;
+        }
+        .footer-social:hover {
+            transform: translateY(-4px) scale(1.08);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.25);
+        }
+
+        /* Pulso suave en el botón de WhatsApp del footer */
+        @keyframes footer-whatsapp-pulse {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.45); }
+            70% { box-shadow: 0 0 0 12px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+        .footer-whatsapp-pulse {
+            animation: footer-whatsapp-pulse 2.4s infinite;
+        }
+
+        /* Celebración al enviar comprobante */
+        .receipt-celebration {
+            position: absolute;
+            inset: 0;
+            z-index: 20;
+            overflow: hidden;
+            pointer-events: none;
+        }
+        .receipt-celebration-item {
+            position: absolute;
+            top: -3rem;
+            left: var(--receipt-x);
+            color: var(--receipt-color);
+            font-size: var(--receipt-size);
+            opacity: 0;
+            filter: drop-shadow(0 5px 8px rgba(0, 0, 0, 0.2));
+            animation: receipt-fall var(--receipt-duration) var(--receipt-delay) cubic-bezier(.2,.75,.35,1) forwards;
+        }
+        .receipt-celebration-item.sheet {
+            width: var(--receipt-size);
+            height: calc(var(--receipt-size) * 1.25);
+            border-radius: 0.15rem;
+            background: var(--receipt-color);
+            transform: rotate(var(--receipt-rotate));
+        }
+        @keyframes receipt-fall {
+            0% {
+                opacity: 0;
+                transform: translate3d(0, -1rem, 0) rotate(0deg) scale(.6);
+            }
+            12% { opacity: 1; }
+            72% { opacity: 1; }
+            100% {
+                opacity: 0;
+                transform: translate3d(var(--receipt-drift), 19rem, 0) rotate(var(--receipt-rotate)) scale(1);
+            }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .receipt-celebration { display: none; }
+        }
+
+        /* Botón "volver arriba" */
+        #back-to-top {
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(16px) scale(0.9);
+            transition: opacity 300ms ease, transform 300ms cubic-bezier(.34,1.56,.64,1), visibility 300ms;
+        }
+        #back-to-top.is-shown {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0) scale(1);
+        }
+        #back-to-top:hover {
+            transform: translateY(-4px) scale(1.05);
+        }
+
+        /* Métodos de pago */
+        .footer-payment-badge {
+            transition: transform 200ms ease, border-color 200ms ease, background-color 200ms ease;
+        }
+        .footer-payment-badge:hover {
+            transform: translateY(-2px);
+            border-color: rgba(201, 166, 107, 0.6);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .footer-reveal,
+            .footer-draw-line::after,
+            .footer-link .footer-link-underline,
+            .footer-social,
+            .footer-whatsapp-pulse,
+            #back-to-top,
+            .footer-payment-badge {
+                animation: none !important;
+                transition: none !important;
+            }
+            .footer-reveal { opacity: 1; transform: none; }
+            .footer-draw-line::after { transform: scaleX(1); }
+        }
+
         /* Catalogo: controles con respuesta tactil y jerarquia clara */
         .catalog-filter,
         .catalog-product-action,
@@ -583,7 +731,7 @@
             <!-- Category Pills -->
             <div class="flex flex-wrap gap-2 mb-10 overflow-x-auto pb-2 scrollbar-none">
                 <button onclick="selectCategory('todos', this)" class="cat-pill catalog-filter is-active bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold px-5 py-2.5 rounded-2xl text-xs transition">Todos</button>
-                <button onclick="selectCategory('escolares', this)" class="cat-pill catalog-filter bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold px-5 py-2.5 rounded-2xl text-xs border border-slate-200 dark:border-slate-800 transition">Papelería</button>
+                <button onclick="selectCategory('escolares', this)" class="cat-pill catalog-filter bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold px-5 py-2.5 rounded-2xl text-xs border border-slate-200 dark:border-slate-800 transition">Papelería y Útiles</button>
                 <button onclick="selectCategory('lubricantes', this)" class="cat-pill catalog-filter bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold px-5 py-2.5 rounded-2xl text-xs border border-slate-200 dark:border-slate-800 transition">Lubricantes</button>
                 <button onclick="selectCategory('cuidado', this)" class="cat-pill catalog-filter bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold px-5 py-2.5 rounded-2xl text-xs border border-slate-200 dark:border-slate-800 transition">Cuidado Personal</button>
                 <button onclick="selectCategory('limpieza', this)" class="cat-pill catalog-filter bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold px-5 py-2.5 rounded-2xl text-xs border border-slate-200 dark:border-slate-800 transition">Limpieza</button>
@@ -961,7 +1109,8 @@
 
     <div id="payment-success-modal" class="fixed inset-0 z-[70] hidden items-center justify-center p-4">
         <div class="absolute inset-0 bg-slate-950/75"></div>
-        <div class="relative w-full max-w-md rounded-3xl border border-emerald-500/30 bg-white dark:bg-slate-900 p-7 text-center shadow-2xl">
+        <div class="relative w-full max-w-md overflow-hidden rounded-3xl border border-emerald-500/30 bg-white dark:bg-slate-900 p-7 text-center shadow-2xl">
+            <div id="receipt-celebration" class="receipt-celebration" aria-hidden="true"></div>
             <div class="mx-auto grid h-14 w-14 place-items-center rounded-full bg-emerald-500/15 text-emerald-500 text-2xl"><i class="fa-solid fa-clock"></i></div>
             <h3 class="mt-5 text-2xl font-black text-slate-900 dark:text-white">Pago en proceso de verificación</h3>
             <p class="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-400">Tu comprobante fue recibido correctamente. El pago se está procesando en nuestros servidores y en breve te notificaremos el estado por WhatsApp.</p>
@@ -994,17 +1143,115 @@
     <div id="toast-container" class="fixed bottom-6 right-6 z-50 space-y-3 pointer-events-none"></div>
 
     <!-- Footer -->
-    <footer class="bg-slate-950 text-slate-400 text-xs py-10 border-t border-slate-800">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div class="flex items-center gap-2">
-                <div class="w-6 h-6 rounded-lg bg-indigo-600 flex items-center justify-center text-white text-xs">
-                    <i class="fa-solid fa-print"></i>
+    <footer class="relative overflow-hidden border-t border-slate-800 bg-slate-950 text-slate-400">
+        <div class="pointer-events-none absolute -left-24 -top-24 h-64 w-64 rounded-full bg-indigo-600/10 blur-3xl"></div>
+        <div class="pointer-events-none absolute -bottom-32 right-0 h-72 w-72 rounded-full bg-violet-600/10 blur-3xl"></div>
+
+        <!-- Línea superior que se "dibuja" al entrar en pantalla -->
+        <div class="footer-draw-line footer-reveal absolute inset-x-0 top-0 h-px bg-slate-800"></div>
+
+        <div class="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+            <div class="footer-reveal mb-12 flex flex-col gap-4 border-b border-slate-800/80 pb-8 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                    <span class="mb-2 inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.24em] text-indigo-400">
+                        <span class="h-1.5 w-1.5 rounded-full bg-indigo-400 shadow-[0_0_12px_rgba(129,140,248,0.9)]"></span>
+                        Tu aliado de confianza
+                    </span>
+                    <h2 class="text-2xl font-black tracking-tight text-white sm:text-3xl">Todo lo que necesitas, en un solo lugar.</h2>
                 </div>
-                <span class="font-extrabold text-white">INV. ARMIJHON</span>
-                <span>• Centro Profesional de Copiado, Elorza, Apure</span>
+                <p class="max-w-sm text-xs leading-relaxed text-slate-500 sm:text-right">Calidad, atención cercana y soluciones prácticas para tu día a día.</p>
             </div>
-            <p>&copy; 2026 INV. Armijhon. Todos los derechos reservados.</p>
+
+            <div class="grid grid-cols-1 gap-14 sm:grid-cols-2 sm:gap-12 lg:grid-cols-4 lg:gap-8">
+                <div class="footer-reveal space-y-5 sm:col-span-2 lg:col-span-1" style="transition-delay:60ms">
+                    <a href="#" class="inline-flex items-center gap-3 rounded-2xl transition duration-300 hover:-translate-y-1 hover:brightness-125">
+                        <img src="assets/images/logo.png" alt="INV. Armijhon" class="h-12 w-auto">
+                    </a>
+                    <p class="max-w-xs text-xs leading-relaxed text-slate-400">
+                        Centro Profesional de Copiado, Papelería y Servicios en Elorza, Apure.
+                    </p>
+                    <p class="flex items-start gap-2 text-xs leading-relaxed text-slate-500">
+                        <i class="fa-solid fa-location-dot mt-0.5 text-indigo-400"></i>
+                        <span>Calle Pedro Telmo Ojeda, Mereyal, El Relleno.</span>
+                    </p>
+
+                    <!-- Redes sociales -->
+                    <div class="flex items-center gap-3 pt-1">
+                        <a href="#" aria-label="Facebook" class="footer-social flex h-9 w-9 items-center justify-center rounded-full border border-slate-800 bg-slate-900 text-slate-400 hover:border-indigo-400/70 hover:text-indigo-300">
+                            <i class="fa-brands fa-facebook-f text-sm"></i>
+                        </a>
+                        <a href="#" aria-label="Instagram" class="footer-social flex h-9 w-9 items-center justify-center rounded-full border border-slate-800 bg-slate-900 text-slate-400 hover:border-violet-400/70 hover:text-violet-300">
+                            <i class="fa-brands fa-instagram text-sm"></i>
+                        </a>
+                        <a href="https://wa.me/584264057916" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" class="footer-social flex h-9 w-9 items-center justify-center rounded-full border border-slate-800 bg-slate-900 text-slate-400 hover:border-emerald-400/70 hover:text-emerald-300">
+                            <i class="fa-brands fa-whatsapp text-sm"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="footer-reveal" style="transition-delay:120ms">
+                    <h3 class="mb-5 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-white"><i class="fa-solid fa-layer-group text-indigo-400"></i> Servicios</h3>
+                    <ul class="space-y-4 text-xs">
+                        <li><a href="#servicios" class="footer-link inline-flex items-center gap-2 transition duration-200 hover:translate-x-1 hover:text-white"><i class="fa-solid fa-angle-right text-[9px] text-indigo-400"></i><span>Copiado e Impresión<span class="footer-link-underline"></span></span></a></li>
+                        <li><a href="#catalogo" class="footer-link inline-flex items-center gap-2 transition duration-200 hover:translate-x-1 hover:text-white"><i class="fa-solid fa-angle-right text-[9px] text-indigo-400"></i><span>Papelería y Útiles<span class="footer-link-underline"></span></span></a></li>
+                        <li><a href="#servicios" class="footer-link inline-flex items-center gap-2 transition duration-200 hover:translate-x-1 hover:text-white"><i class="fa-solid fa-angle-right text-[9px] text-indigo-400"></i><span>Multiservicios<span class="footer-link-underline"></span></span></a></li>
+                        <li><a href="#express" class="footer-link inline-flex items-center gap-2 transition duration-200 hover:translate-x-1 hover:text-white"><i class="fa-solid fa-angle-right text-[9px] text-indigo-400"></i><span>Pedidos personalizados<span class="footer-link-underline"></span></span></a></li>
+                    </ul>
+                </div>
+
+                <div class="footer-reveal" style="transition-delay:180ms">
+                    <h3 class="mb-5 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-white"><i class="fa-solid fa-compass text-violet-400"></i> Enlaces</h3>
+                    <ul class="space-y-4 text-xs">
+                        <li><a href="#catalogo" class="footer-link inline-flex items-center gap-2 transition duration-200 hover:translate-x-1 hover:text-white"><i class="fa-solid fa-angle-right text-[9px] text-violet-400"></i><span>Catálogo de productos<span class="footer-link-underline"></span></span></a></li>
+                        <li><a href="#faq" class="footer-link inline-flex items-center gap-2 transition duration-200 hover:translate-x-1 hover:text-white"><i class="fa-solid fa-angle-right text-[9px] text-violet-400"></i><span>Preguntas frecuentes<span class="footer-link-underline"></span></span></a></li>
+                        <li><a href="#contacto" class="footer-link inline-flex items-center gap-2 transition duration-200 hover:translate-x-1 hover:text-white"><i class="fa-solid fa-angle-right text-[9px] text-violet-400"></i><span>Ubicación y atención<span class="footer-link-underline"></span></span></a></li>
+                        <li><a href="#" class="footer-link inline-flex items-center gap-2 transition duration-200 hover:translate-x-1 hover:text-white"><i class="fa-solid fa-angle-right text-[9px] text-violet-400"></i><span>Volver al inicio<span class="footer-link-underline"></span></span></a></li>
+                        <li><a href="politica-privacidad.html" class="footer-link inline-flex items-center gap-2 transition duration-200 hover:translate-x-1 hover:text-white"><i class="fa-solid fa-angle-right text-[9px] text-violet-400"></i><span>Política de privacidad<span class="footer-link-underline"></span></span></a></li>
+                        <li><a href="terminos-servicio.html" class="footer-link inline-flex items-center gap-2 transition duration-200 hover:translate-x-1 hover:text-white"><i class="fa-solid fa-angle-right text-[9px] text-violet-400"></i><span>Términos de servicio<span class="footer-link-underline"></span></span></a></li>
+                        <li><a href="politica-cookies.html" class="footer-link inline-flex items-center gap-2 transition duration-200 hover:translate-x-1 hover:text-white"><i class="fa-solid fa-angle-right text-[9px] text-violet-400"></i><span>Política de cookies<span class="footer-link-underline"></span></span></a></li>
+                    </ul>
+                </div>
+
+                <div class="footer-reveal" style="transition-delay:240ms">
+                    <h3 class="mb-5 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-white"><i class="fa-solid fa-comments text-emerald-400"></i> Contacto</h3>
+                    <div class="space-y-5 text-xs">
+                        <p class="flex items-start gap-2">
+                            <i class="fa-solid fa-clock mt-0.5 text-violet-400"></i>
+                            <span>Lunes a sábado:<br>8:00 am – 6:00 pm</span>
+                        </p>
+                        <a href="https://wa.me/584264057916?text=Hola%2C%20quiero%20hacer%20una%20consulta" target="_blank" rel="noopener noreferrer" class="footer-whatsapp-pulse inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 font-bold text-white shadow-lg shadow-emerald-950/30 transition duration-300 hover:-translate-y-0.5 hover:bg-emerald-400 hover:shadow-emerald-500/20">
+                            <i class="fa-brands fa-whatsapp"></i> Escribir por WhatsApp
+                        </a>
+
+                        <!-- Métodos de pago -->
+                        <div>
+                            <p class="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Métodos de pago</p>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="footer-payment-badge flex h-8 items-center justify-center rounded-lg border border-slate-800 bg-slate-900 px-2.5 text-[10px] font-bold text-slate-400" title="Efectivo">
+                                    <i class="fa-solid fa-money-bill-wave mr-1.5 text-emerald-400"></i>Efectivo
+                                </span>
+                                <span class="footer-payment-badge flex h-8 items-center justify-center rounded-lg border border-slate-800 bg-slate-900 px-2.5 text-[10px] font-bold text-slate-400" title="Pago móvil">
+                                    <i class="fa-solid fa-mobile-screen mr-1.5 text-indigo-400"></i>Pago móvil
+                                </span>
+                                <span class="footer-payment-badge flex h-8 items-center justify-center rounded-lg border border-slate-800 bg-slate-900 px-2.5 text-[10px] font-bold text-slate-400" title="Transferencia">
+                                    <i class="fa-solid fa-building-columns mr-1.5 text-violet-400"></i>Transferencia
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="footer-reveal mt-16 flex flex-col gap-4 border-t border-slate-800/80 pt-7 text-[11px] sm:flex-row sm:items-center sm:justify-between" style="transition-delay:300ms">
+                <p>&copy; <span id="footer-year">2026</span> INV. Armijhon. Todos los derechos reservados.</p>
+                <p class="text-slate-500">Precios en bolívares según la tasa de referencia del BCV.</p>
+            </div>
         </div>
+
+        <!-- Botón volver arriba -->
+        <button id="back-to-top" aria-label="Volver arriba" class="fixed bottom-6 right-6 z-[150] flex h-11 w-11 items-center justify-center rounded-full bg-indigo-500 text-white shadow-lg shadow-indigo-950/40 hover:bg-indigo-400">
+            <i class="fa-solid fa-arrow-up"></i>
+        </button>
     </footer>
 
     <script src="assets/js/supabase-config.js"></script>
@@ -1021,7 +1268,8 @@
             cuidado: 'https://images.unsplash.com/photo-1694101395787-516200bb2515?auto=format&fit=crop&w=500&q=60',
             limpieza: 'https://images.unsplash.com/photo-1716625300720-b34970a2d890?auto=format&fit=crop&w=500&q=60'
         };
-        const catLabel = { escolares: 'Papelería', lubricantes: 'Lubricantes', cuidado: 'Cuidado Personal', limpieza: 'Limpieza' };
+        const catLabel = { escolares: 'Papelería y Útiles', lubricantes: 'Lubricantes', cuidado: 'Cuidado Personal', limpieza: 'Limpieza' };
+        const categoryOrder = { copiado: 1, escolares: 2 };
         const productsDB = [
             { id: 'p1', name: 'FC Semisintético SAE 15W-40', category: 'lubricantes', price: 11.28, stock: 'Disponible', img: 'img/fc-semisintetico-sae-15w-40.jpeg', desc: 'Aceite semisintético para vehículos, presentación de 946 ml.' },
             { id: 'p2', name: 'FC Aceite Mineral 20W-50', category: 'lubricantes', price: 9.66, stock: 'Disponible', img: 'img/fc-aceite-mineral-20w-50.jpeg', desc: 'Aceite mineral para motor, presentación de 946 ml.' },
@@ -1209,6 +1457,10 @@
 
             if (sort === 'price-asc') filtered.sort((a, b) => a.price - b.price);
             else if (sort === 'price-desc') filtered.sort((a, b) => b.price - a.price);
+            else filtered.sort((a, b) => {
+                const categoryDifference = (categoryOrder[a.category] || 3) - (categoryOrder[b.category] || 3);
+                return categoryDifference || productsDB.indexOf(a) - productsDB.indexOf(b);
+            });
 
             renderCatalog(filtered);
         }
@@ -1418,7 +1670,6 @@
             submit.textContent = 'Enviando comprobante...';
             status.textContent = 'Guardando tu pedido de forma segura.';
             status.className = 'text-xs text-slate-500 dark:text-slate-400';
-
             try {
                 const { data, error } = await window.supabaseClient.functions.invoke('create-order', {
                     body: {
@@ -1447,6 +1698,7 @@
                 const successModal = document.getElementById('payment-success-modal');
                 successModal.classList.remove('hidden');
                 successModal.classList.add('flex');
+                launchReceiptCelebration();
             } catch (error) {
                 console.error(error);
                 status.textContent = 'No pudimos enviar el pedido. Intenta nuevamente o usa WhatsApp.';
@@ -1454,6 +1706,43 @@
                 submit.disabled = false;
                 submit.textContent = 'Enviar comprobante para verificar';
             }
+        }
+
+        function launchReceiptCelebration() {
+            const celebration = document.getElementById('receipt-celebration');
+            if (!celebration || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+            const icons = ['fa-scissors', 'fa-file-lines', 'fa-print', 'fa-star', 'fa-paperclip'];
+            const colors = ['#E3CC9A', '#818CF8', '#A78BFA', '#34D399', '#FBBF24'];
+            celebration.innerHTML = '';
+            let index = 0;
+            const addReceiptItems = () => {
+                for (let batchIndex = 0; batchIndex < 4; batchIndex += 1) {
+                    const item = document.createElement('span');
+                    const isSheet = index % 5 === 0;
+                    item.className = `receipt-celebration-item${isSheet ? ' sheet' : ''}`;
+                    item.style.setProperty('--receipt-x', `${5 + Math.random() * 90}%`);
+                    item.style.setProperty('--receipt-drift', `${-5 + Math.random() * 10}rem`);
+                    item.style.setProperty('--receipt-rotate', `${-180 + Math.random() * 360}deg`);
+                    item.style.setProperty('--receipt-size', isSheet ? `${0.65 + Math.random() * 0.35}rem` : `${0.8 + Math.random() * 0.65}rem`);
+                    item.style.setProperty('--receipt-color', colors[index % colors.length]);
+                    item.style.setProperty('--receipt-duration', `${3.2 + Math.random() * 0.8}s`);
+                    item.style.setProperty('--receipt-delay', `${Math.random() * 0.2}s`);
+                    if (!isSheet) item.innerHTML = `<i class="fa-solid ${icons[index % icons.length]}"></i>`;
+                    celebration.appendChild(item);
+                    index += 1;
+                }
+            };
+
+            addReceiptItems();
+            const rainInterval = window.setInterval(addReceiptItems, 140);
+            window.setTimeout(() => {
+                window.clearInterval(rainInterval);
+            }, 3200);
+
+            window.setTimeout(() => {
+                celebration.innerHTML = '';
+            }, 6800);
         }
 
         // --- Modals & Utility Interactions ---
@@ -1663,13 +1952,43 @@
             });
         });
 
+        // --- Footer: año dinámico, reveal al hacer scroll y botón "volver arriba" ---
+        function initFooter() {
+            const yearEl = document.getElementById('footer-year');
+            if (yearEl) yearEl.textContent = new Date().getFullYear();
+
+            const revealEls = document.querySelectorAll('.footer-reveal');
+            if (revealEls.length) {
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('is-visible');
+                            observer.unobserve(entry.target);
+                        }
+                    });
+                }, { threshold: 0.15 });
+                revealEls.forEach(el => observer.observe(el));
+            }
+
+            const backToTop = document.getElementById('back-to-top');
+            if (backToTop) {
+                window.addEventListener('scroll', () => {
+                    backToTop.classList.toggle('is-shown', window.scrollY > 500);
+                }, { passive: true });
+                backToTop.addEventListener('click', () => {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                });
+            }
+        }
+
         // --- Initialization ---
         window.onload = function() {
             initTheme();
-            renderCatalog(productsDB);
+            filterCatalog();
             updateCartUI();
             refreshExchangeRates();
             setInterval(refreshExchangeRates, window.PAYMENT_CONFIG.ratesRefreshMs);
+            initFooter();
         };
     </script>
 </body>
