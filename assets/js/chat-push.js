@@ -92,7 +92,14 @@
             throw new Error('No se concedió permiso para mostrar notificaciones.');
         }
 
-        const registration = await navigator.serviceWorker.register(getServiceWorkerUrl().href);
+        const workerUrl = getServiceWorkerUrl();
+        await navigator.serviceWorker.register(workerUrl.href);
+        await navigator.serviceWorker.ready;
+        const registration = await navigator.serviceWorker.getRegistration(workerUrl.href);
+        if (!registration?.active) {
+            throw new Error('El service worker todavía no está activo. Recarga el panel e intenta de nuevo.');
+        }
+
         let subscription = await registration.pushManager.getSubscription();
         let createdHere = false;
         if (!subscription) {
