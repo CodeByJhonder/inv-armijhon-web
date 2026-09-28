@@ -120,6 +120,42 @@
                 </div>
             </div>
             <div id="orders-list" class="grid gap-4"></div>
+
+            <section class="mt-10 border-t border-slate-800 pt-8">
+                <div class="mb-5 flex flex-wrap items-end justify-between gap-3">
+                    <div>
+                        <h2 class="text-xl font-black"><i class="fa-solid fa-comments mr-2 text-violet-300"></i>Atención por chat</h2>
+                        <p class="mt-1 text-xs text-slate-400">Conversaciones de clientes con actualización en tiempo real.</p>
+                    </div>
+                    <button id="refresh-chats" type="button" class="rounded-xl border border-slate-700 px-4 py-2 text-xs font-bold hover:bg-slate-800"><i class="fa-solid fa-rotate mr-2"></i>Actualizar chats</button>
+                </div>
+                <p id="chats-status" class="mb-3 min-h-4 text-xs text-slate-400" role="status"></p>
+                <div class="grid min-h-[32rem] overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 lg:grid-cols-[minmax(16rem,0.8fr)_minmax(0,1.6fr)]">
+                    <aside class="flex min-h-64 flex-col border-b border-slate-800 lg:border-b-0 lg:border-r">
+                        <div class="flex items-center justify-between border-b border-slate-800 px-4 py-3">
+                            <h3 class="text-sm font-black">Conversaciones</h3>
+                            <span id="chat-count" class="rounded-full bg-violet-500/15 px-2 py-1 text-[10px] font-black text-violet-200">0</span>
+                        </div>
+                        <div id="chat-conversation-list" class="max-h-72 flex-1 divide-y divide-slate-800 overflow-y-auto lg:max-h-[36rem]">
+                            <p class="p-5 text-xs text-slate-500">Cargando conversaciones...</p>
+                        </div>
+                    </aside>
+                    <section class="flex min-h-[28rem] flex-col" aria-label="Conversación seleccionada">
+                        <header id="chat-thread-header" class="border-b border-slate-800 px-4 py-3">
+                            <h3 id="chat-thread-title" class="text-sm font-black">Selecciona una conversación</h3>
+                            <p id="chat-thread-subtitle" class="mt-1 text-[11px] text-slate-400"></p>
+                        </header>
+                        <div id="admin-chat-messages" class="flex flex-1 flex-col gap-3 overflow-y-auto bg-slate-950/40 p-4">
+                            <p class="m-auto max-w-xs text-center text-xs leading-relaxed text-slate-500">Cuando un cliente inicie un chat, podrás leer y responder desde aquí.</p>
+                        </div>
+                        <form id="admin-chat-reply-form" class="hidden items-end gap-2 border-t border-slate-800 p-3">
+                            <label class="sr-only" for="admin-chat-reply">Escribe una respuesta</label>
+                            <textarea id="admin-chat-reply" required maxlength="1500" rows="2" placeholder="Escribe una respuesta..." class="max-h-32 min-h-11 flex-1 resize-y rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-white outline-none focus:border-violet-400"></textarea>
+                            <button id="admin-chat-send" type="submit" class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-violet-500 text-white transition hover:bg-violet-400 disabled:opacity-50" aria-label="Enviar respuesta"><i class="fa-solid fa-paper-plane"></i></button>
+                        </form>
+                    </section>
+                </div>
+            </section>
         </section>
     </main>
     <script src="assets/js/admin.js"></script>

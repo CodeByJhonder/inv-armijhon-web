@@ -70,3 +70,55 @@ supabase functions deploy create-order
 ```
 
 La funcion usa automaticamente `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` en el entorno seguro de Supabase.
+
+## 6. Activar el chat de atención
+
+El chat guarda el nombre, teléfono y mensajes del cliente en Supabase. El cliente retoma
+su conversación desde el mismo navegador y dispositivo; si borra los datos del navegador,
+perderá la credencial local para acceder al historial. La clave `service_role` nunca debe
+añadirse al sitio ni compartirse.
+
+1. En Supabase **SQL Editor**, ejecutar `supabase/chat-migration.sql` una sola vez.
+   Esto crea las tablas, activa RLS y habilita los cambios necesarios para Realtime.
+2. Autorizar explícitamente al usuario administrativo del panel para que pueda acceder
+   al chat. Reemplazar el correo del ejemplo por el correo exacto que aparece en
+   **Authentication > Users** y ejecutar:
+
+   ```sql
+   insert into public.chat_admins (user_id)
+   select id from auth.users where email = 'CORREO_ADMINISTRADOR'
+   on conflict (user_id) do nothing;
+   ```
+
+   Verificar que se agregó una fila:
+
+   ```sql
+   select user_id from public.chat_admins;
+   ```
+
+   Solo los usuarios agregados a `chat_admins` pueden leer conversaciones mediante
+   Realtime o usar las acciones administrativas de la función.
+3. Desde la raíz del proyecto, vincular el CLI al proyecto correcto si aún no está vinculado:
+
+   ```bash
+   supabase link --project-ref ygfzwqhelhpfxtknybra
+   ```
+
+4. Desplegar la función:
+
+   ```bash
+   supabase functions deploy customer-chat
+   ```
+
+   La función usa `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` del entorno administrado
+   de Supabase. `supabase/config.toml` desactiva la verificación JWT automática para esta
+   función; la propia función valida las sesiones administrativas y el token secreto de
+   cada conversación de cliente.
+5. Publicar los archivos del sitio actualizados. Iniciar sesión en `admin.html` con el
+   usuario administrativo existente para recibir y contestar los chats.
+6. Probar el flujo desde una ventana/navegador de cliente y confirmar que el mensaje
+   aparece en la sección **Atención por chat** del panel. Mantener la página del panel
+   abierta para recibir los eventos Realtime.
+
+No habilitar acceso anónimo directo a las tablas del chat ni copiar la clave `service_role`
+en archivos JavaScript, HTML o configuración pública.

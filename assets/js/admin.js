@@ -26,6 +26,15 @@ const sortFilter = document.getElementById('sort-filter');
 let orders = [];
 let selectedOrderIds = new Set();
 let ordersChannel;
+let chatChannel;
+let chatRefreshTimer;
+let adminChatConversations = [];
+let selectedChatId = null;
+let chatMessagesRequest = 0;
+const chatConversationList = document.getElementById('chat-conversation-list');
+const adminChatMessages = document.getElementById('admin-chat-messages');
+const adminChatReplyForm = document.getElementById('admin-chat-reply-form');
+const chatsStatus = document.getElementById('chats-status');
 
 const formatVes = value => new Intl.NumberFormat('es-VE', {
     minimumFractionDigits: 2,
@@ -74,6 +83,14 @@ function showLogin() {
     loginView.classList.remove('hidden');
     ordersView.classList.add('hidden');
     logoutButton.classList.add('hidden');
+    if (chatChannel) {
+        supabaseClient.removeChannel(chatChannel);
+        chatChannel = null;
+    }
+    if (chatRefreshTimer) {
+        clearTimeout(chatRefreshTimer);
+        chatRefreshTimer = null;
+    }
 }
 
 function showOrders() {
@@ -82,6 +99,8 @@ function showOrders() {
     logoutButton.classList.remove('hidden');
     loadOrders();
     subscribeToOrders();
+    loadAdminChats();
+    subscribeToAdminChats();
 }
 
 function initTheme() {
@@ -112,6 +131,145 @@ function subscribeToOrders() {
                 ordersStatus.textContent = 'Realtime no está activo. Usa Actualizar para consultar manualmente.';
             }
         });
+}
+
+async function invokeAdminChat(action, extra = {}) {
+    const { data, error } = await supabaseClient.functions.invoke('customer-chat', {
+        body: { action, ...extra }
+    });
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+    return data;
+}
+
+function scheduleAdminChatRefresh() {
+    if (chatRefreshTimer) clearTimeout(chatRefreshTimer);
+    chatRefreshTimer = setTimeout(async () => {
+        chatRefreshTimer = null;
+        await loadAdminChats();
+        if (selectedChatId) await loadAdminChatMessages(selectedChatId);
+    }, 250);
+}
+
+function subscribeToAdminChats() {
+    if (chatChannel) return;
+    chatChannel = supabaseClient.channel('admin-chat-realtime')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_conversations' }, scheduleAdminChatRefresh)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, scheduleAdminChatRefresh)
+        .subscribe(status => {
+            if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                chatsStatus.textContent = 'El chat en tiempo real no está disponible. Usa “Actualizar chats” para consultar manualmente.';
+            }
+        });
+}
+
+function renderAdminChatConversations() {
+    document.getElementById('chat-count').textContent = adminChatConversations.length;
+    chatConversationList.replaceChildren();
+    if (!adminChatConversations.length) {
+        const empty = document.createElement('p');
+        empty.className = 'p-5 text-xs text-slate-500';
+        empty.textContent = 'Aún no hay conversaciones.';
+        chatConversationList.append(empty);
+        return;
+    }
+
+    adminChatConversations.forEach(conversation => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.dataset.chatId = conversation.id;
+        button.className = `block w-full px-4 py-4 text-left transition hover:bg-slate-800 ${selectedChatId === conversation.id ? 'bg-violet-500/10' : ''}`;
+        const top = document.createElement('div');
+        top.className = 'flex items-start justify-between gap-3';
+        const name = document.createElement('span');
+        name.className = 'truncate text-sm font-black text-slate-100';
+        name.textContent = conversation.customer_name;
+        const right = document.createElement('span');
+        right.className = 'flex shrink-0 items-center gap-2';
+        const date = document.createElement('time');
+        date.className = 'text-[9px] text-slate-500';
+        date.dateTime = conversation.last_message_at;
+        date.textContent = new Date(conversation.last_message_at).toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit' });
+        right.append(date);
+        if (conversation.admin_unread > 0) {
+            const unread = document.createElement('span');
+            unread.className = 'grid h-5 min-w-5 place-items-center rounded-full bg-violet-500 px-1 text-[9px] font-black text-white';
+            unread.textContent = conversation.admin_unread > 99 ? '99+' : conversation.admin_unread;
+            right.append(unread);
+        }
+        top.append(name, right);
+        const phone = document.createElement('p');
+        phone.className = 'mt-1 text-[10px] text-slate-500';
+        phone.textContent = conversation.customer_phone;
+        const preview = document.createElement('p');
+        preview.className = 'mt-2 truncate text-xs text-slate-400';
+        preview.textContent = conversation.last_message_preview || 'Conversación iniciada';
+        button.append(top, phone, preview);
+        chatConversationList.append(button);
+    });
+}
+
+async function loadAdminChats() {
+    chatsStatus.textContent = 'Cargando conversaciones...';
+    try {
+        const data = await invokeAdminChat('admin_list');
+        adminChatConversations = data.conversations || [];
+        if (selectedChatId && !adminChatConversations.some(item => item.id === selectedChatId)) selectedChatId = null;
+        renderAdminChatConversations();
+        chatsStatus.textContent = '';
+        if (selectedChatId) {
+            const active = adminChatConversations.find(item => item.id === selectedChatId);
+            if (active) updateAdminChatHeader(active);
+        }
+    } catch (error) {
+        chatsStatus.textContent = error.message || 'No se pudieron cargar las conversaciones.';
+        console.error('Error cargando conversaciones de chat:', error);
+    }
+}
+
+function updateAdminChatHeader(conversation) {
+    document.getElementById('chat-thread-title').textContent = conversation.customer_name;
+    document.getElementById('chat-thread-subtitle').textContent = `${conversation.customer_phone} · ${conversation.status === 'open' ? 'Chat activo' : 'Conversación cerrada'}`;
+    adminChatReplyForm.classList.toggle('hidden', conversation.status !== 'open');
+    adminChatReplyForm.classList.toggle('flex', conversation.status === 'open');
+}
+
+async function loadAdminChatMessages(conversationId) {
+    const requestId = ++chatMessagesRequest;
+    try {
+        const data = await invokeAdminChat('admin_messages', { conversationId });
+        if (requestId !== chatMessagesRequest || conversationId !== selectedChatId) return;
+        adminChatMessages.replaceChildren();
+        if (!data.messages?.length) {
+            const empty = document.createElement('p');
+            empty.className = 'm-auto max-w-xs text-center text-xs text-slate-500';
+            empty.textContent = 'Envía un saludo para iniciar la conversación.';
+            adminChatMessages.append(empty);
+        } else {
+            data.messages.forEach(message => {
+                const row = document.createElement('div');
+                row.className = `flex ${message.sender === 'admin' ? 'justify-end' : 'justify-start'}`;
+                const bubble = document.createElement('div');
+                bubble.className = `max-w-[85%] rounded-2xl px-3 py-2 ${message.sender === 'admin' ? 'rounded-br-md bg-violet-600 text-white' : 'rounded-bl-md bg-slate-800 text-slate-100'}`;
+                const body = document.createElement('p');
+                body.className = 'whitespace-pre-wrap break-words text-xs leading-relaxed';
+                body.textContent = message.body;
+                const time = document.createElement('time');
+                time.className = 'mt-1 block text-right text-[9px] opacity-60';
+                time.dateTime = message.created_at;
+                time.textContent = new Date(message.created_at).toLocaleString('es-VE', { dateStyle: 'short', timeStyle: 'short' });
+                bubble.append(body, time);
+                row.append(bubble);
+                adminChatMessages.append(row);
+            });
+        }
+        adminChatMessages.scrollTop = adminChatMessages.scrollHeight;
+    } catch (error) {
+        if (requestId === chatMessagesRequest) {
+            chatsStatus.textContent = error.message || 'No se pudieron cargar los mensajes de esta conversación.';
+            console.error('Error cargando mensajes del chat:', error);
+        }
+    }
 }
 
 async function loadOrders() {
@@ -345,6 +503,10 @@ logoutButton.addEventListener('click', async () => {
 });
 
 document.getElementById('refresh-orders').addEventListener('click', loadOrders);
+document.getElementById('refresh-chats').addEventListener('click', async () => {
+    await loadAdminChats();
+    if (selectedChatId) await loadAdminChatMessages(selectedChatId);
+});
 document.getElementById('export-receipts').addEventListener('click', () => exportReceipts(false));
 document.getElementById('export-filtered-receipts').addEventListener('click', () => exportReceipts(true));
 document.getElementById('bulk-approve').addEventListener('click', () => updateOrderStatus([...selectedOrderIds], 'approved'));
@@ -374,6 +536,42 @@ selectAll.addEventListener('change', () => {
     renderOrders();
 });
 themeToggle.addEventListener('click', toggleAdminTheme);
+
+chatConversationList.addEventListener('click', async event => {
+    const button = event.target.closest('[data-chat-id]');
+    if (!button) return;
+    selectedChatId = button.dataset.chatId;
+    const conversation = adminChatConversations.find(item => item.id === selectedChatId);
+    if (!conversation) return;
+    renderAdminChatConversations();
+    updateAdminChatHeader(conversation);
+    await loadAdminChatMessages(selectedChatId);
+    await loadAdminChats();
+});
+
+adminChatReplyForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (!selectedChatId) return;
+    const input = document.getElementById('admin-chat-reply');
+    const sendButton = document.getElementById('admin-chat-send');
+    const body = input.value.trim();
+    if (!body || sendButton.disabled) return;
+    sendButton.disabled = true;
+    chatsStatus.textContent = 'Enviando respuesta...';
+    try {
+        await invokeAdminChat('admin_reply', { conversationId: selectedChatId, body });
+        input.value = '';
+        await loadAdminChatMessages(selectedChatId);
+        await loadAdminChats();
+        chatsStatus.textContent = '';
+    } catch (error) {
+        chatsStatus.textContent = error.message || 'No se pudo enviar la respuesta.';
+        console.error('Error enviando respuesta del chat:', error);
+    } finally {
+        sendButton.disabled = false;
+        input.focus();
+    }
+});
 
 ordersList.addEventListener('change', event => {
     if (!event.target.classList.contains('order-check')) return;
