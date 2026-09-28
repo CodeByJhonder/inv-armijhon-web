@@ -1,4 +1,15 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  ApplicationServer,
+  exportApplicationServerKey,
+  importVapidKeys,
+  PushMessageError,
+  Urgency,
+} from "jsr:@negrel/webpush@0.5.0";
+
+declare const EdgeRuntime: {
+  waitUntil(promise: Promise<unknown>): void;
+};
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -21,6 +32,7 @@ if (!serviceUrl || !serviceRoleKey) {
 const adminClient = createClient(serviceUrl, serviceRoleKey, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
+let pushServerPromise: Promise<{ server: ApplicationServer; publicKey: string }> | undefined;
 
 async function hashToken(token: string): Promise<string> {
   const bytes = new TextEncoder().encode(token);
@@ -36,18 +48,134 @@ function validConversationId(id: unknown): id is string {
   return typeof id === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 }
 
-async function requireAdmin(request: Request): Promise<boolean> {
+async function getPushServer(): Promise<{ server: ApplicationServer; publicKey: string }> {
+  if (!pushServerPromise) {
+    pushServerPromise = (async () => {
+      const keysValue = Deno.env.get("VAPID_KEYS");
+      const contactInformation = Deno.env.get("VAPID_SUBJECT");
+      if (!keysValue || !contactInformation) {
+        throw new Error("Configura VAPID_KEYS y VAPID_SUBJECT para activar las notificaciones.");
+      }
+      if (!contactInformation.startsWith("mailto:") && !contactInformation.startsWith("https://")) {
+        throw new Error("VAPID_SUBJECT debe ser una dirección mailto: o una URL HTTPS.");
+      }
+      const vapidKeys = await importVapidKeys(JSON.parse(keysValue));
+      const server = await ApplicationServer.new({ contactInformation, vapidKeys });
+      return { server, publicKey: await exportApplicationServerKey(vapidKeys) };
+    })();
+  }
+
+  try {
+    return await pushServerPromise;
+  } catch (error) {
+    pushServerPromise = undefined;
+    throw error;
+  }
+}
+
+async function requireAdmin(request: Request): Promise<string | null> {
   const authorization = request.headers.get("Authorization");
-  if (!authorization?.startsWith("Bearer ")) return false;
+  if (!authorization?.startsWith("Bearer ")) return null;
   const { data, error } = await adminClient.auth.getUser(authorization.slice(7));
-  if (error || !data.user) return false;
+  if (error || !data.user) return null;
   const { data: admin, error: adminError } = await adminClient
     .from("chat_admins")
     .select("user_id")
     .eq("user_id", data.user.id)
     .maybeSingle();
   if (adminError) throw adminError;
-  return Boolean(admin);
+  return admin ? data.user.id : null;
+}
+
+function isAllowedPushEndpoint(value: unknown): value is string {
+  if (typeof value !== "string" || value.length > 2048) return false;
+  try {
+    const url = new URL(value);
+    const host = url.hostname.toLowerCase();
+    return url.protocol === "https:" && !url.username && !url.password && !url.port
+      && (host === "fcm.googleapis.com"
+        || host === "push.services.mozilla.com"
+        || host.endsWith(".push.services.mozilla.com")
+        || host === "push.apple.com"
+        || host.endsWith(".push.apple.com")
+        || host === "notify.windows.com"
+        || host.endsWith(".notify.windows.com"));
+  } catch {
+    return false;
+  }
+}
+
+function validPushSubscription(value: unknown): value is {
+  endpoint: string;
+  keys: { p256dh: string; auth: string };
+} {
+  const subscription = value as { endpoint?: unknown; keys?: { p256dh?: unknown; auth?: unknown } } | null;
+  return Boolean(
+    subscription
+      && isAllowedPushEndpoint(subscription.endpoint)
+      && typeof subscription.keys?.p256dh === "string"
+      && /^[A-Za-z0-9_-]{16,200}$/.test(subscription.keys.p256dh)
+      && typeof subscription.keys?.auth === "string"
+      && /^[A-Za-z0-9_-]{16,200}$/.test(subscription.keys.auth),
+  );
+}
+
+async function sendChatPush(sender: "admin" | "customer", conversationId: string): Promise<void> {
+  const audience = sender === "customer" ? "admin" : "customer";
+  let query = adminClient
+    .from("chat_push_subscriptions")
+    .select("id, endpoint, p256dh, auth, admin_user_id")
+    .eq("audience", audience);
+  if (audience === "customer") query = query.eq("conversation_id", conversationId);
+  const { data: subscriptions, error } = await query;
+  if (error) throw error;
+  if (!subscriptions?.length) return;
+
+  let subscriptionsToNotify = subscriptions;
+  if (audience === "admin") {
+    const { data: admins, error: adminsError } = await adminClient
+      .from("chat_admins")
+      .select("user_id");
+    if (adminsError) throw adminsError;
+    const authorizedAdminIds = new Set((admins ?? []).map(admin => admin.user_id));
+    subscriptionsToNotify = subscriptions.filter(subscription =>
+      authorizedAdminIds.has(subscription.admin_user_id)
+    );
+    if (!subscriptionsToNotify.length) return;
+  }
+
+  const { server } = await getPushServer();
+  const payload = JSON.stringify({
+    title: sender === "customer" ? "Nuevo mensaje en atención al cliente" : "Nueva respuesta de atención al cliente",
+    body: sender === "customer" ? "Hay un nuevo mensaje para responder." : "Tienes una nueva respuesta en tu chat.",
+    url: sender === "customer" ? `admin.html#chat/${conversationId}` : "index.html#support-chat",
+    tag: `chat-${conversationId}`
+  });
+
+  await Promise.all(subscriptionsToNotify.map(async subscription => {
+    try {
+      await server.subscribe({
+        endpoint: subscription.endpoint,
+        keys: { p256dh: subscription.p256dh, auth: subscription.auth }
+      }).pushTextMessage(payload, { urgency: Urgency.High, ttl: 86400 });
+    } catch (error) {
+      if (error instanceof PushMessageError && (error.isGone() || error.response.status === 404)) {
+        const { error: deleteError } = await adminClient
+          .from("chat_push_subscriptions")
+          .delete()
+          .eq("id", subscription.id);
+        if (deleteError) console.error("No se pudo eliminar una suscripción push vencida:", deleteError);
+      } else {
+        console.error("No se pudo enviar una notificación push:", error);
+      }
+    }
+  }));
+}
+
+function scheduleChatPush(sender: "admin" | "customer", conversationId: string): void {
+  EdgeRuntime.waitUntil(sendChatPush(sender, conversationId).catch(error => {
+    console.error("Error preparando notificaciones del chat:", error);
+  }));
 }
 
 async function requireConversation(id: unknown, token: unknown) {
@@ -75,6 +203,64 @@ Deno.serve(async (request) => {
     const payload = await request.json();
     const action = payload?.action;
 
+    if (action === "push_public_key") {
+      try {
+        const { publicKey } = await getPushServer();
+        return jsonResponse({ publicKey });
+      } catch (error) {
+        console.error("Las notificaciones push todavía no están configuradas:", error);
+        return jsonResponse({ error: "Las notificaciones todavía no están configuradas en el servidor." }, 503);
+      }
+    }
+
+    if (action === "push_subscribe" || action === "push_unsubscribe") {
+      const audience = payload.audience;
+      let adminUserId: string | null = null;
+      let conversationId: string | null = null;
+      if (audience === "admin") {
+        adminUserId = await requireAdmin(request);
+        if (!adminUserId) return jsonResponse({ error: "Se requiere una sesión administrativa autorizada." }, 401);
+      } else if (audience === "customer") {
+        const session = await requireConversation(payload.conversationId, payload.sessionToken);
+        if (session.error || !session.conversation) return jsonResponse({ error: session.error }, 403);
+        if (session.conversation.status !== "open") return jsonResponse({ error: "Esta conversación fue cerrada." }, 409);
+        conversationId = session.conversation.id;
+      } else {
+        return jsonResponse({ error: "El tipo de suscripción no es válido." }, 400);
+      }
+
+      if (action === "push_subscribe") {
+        if (!validPushSubscription(payload.subscription)) {
+          return jsonResponse({ error: "La suscripción del navegador no es válida o no usa un servicio push compatible." }, 400);
+        }
+        const { error } = await adminClient.from("chat_push_subscriptions").upsert({
+          endpoint: payload.subscription.endpoint,
+          p256dh: payload.subscription.keys.p256dh,
+          auth: payload.subscription.keys.auth,
+          audience,
+          admin_user_id: adminUserId,
+          conversation_id: conversationId
+        }, { onConflict: "endpoint" });
+        if (error) throw error;
+        return jsonResponse({ ok: true });
+      }
+
+      if (!isAllowedPushEndpoint(payload.endpoint)) {
+        return jsonResponse({ error: "El endpoint de notificación no es válido." }, 400);
+      }
+      let deleteQuery = adminClient
+        .from("chat_push_subscriptions")
+        .delete()
+        .eq("endpoint", payload.endpoint)
+        .eq("audience", audience);
+      deleteQuery = audience === "admin"
+        ? deleteQuery.eq("admin_user_id", adminUserId)
+        : deleteQuery.eq("conversation_id", conversationId);
+      const { error } = await deleteQuery;
+      if (error) throw error;
+      return jsonResponse({ ok: true });
+    }
+
     if (action === "start") {
       const name = typeof payload.name === "string" ? payload.name.trim() : "";
       const phone = typeof payload.phone === "string" ? payload.phone.trim() : "";
@@ -96,7 +282,8 @@ Deno.serve(async (request) => {
     }
 
     if (action === "admin_list" || action === "admin_messages" || action === "admin_reply") {
-      if (!await requireAdmin(request)) return jsonResponse({ error: "Se requiere una sesión administrativa." }, 401);
+      const adminUserId = await requireAdmin(request);
+      if (!adminUserId) return jsonResponse({ error: "Se requiere una sesión administrativa autorizada." }, 401);
       if (action === "admin_list") {
         const { data, error } = await adminClient
           .from("chat_conversations")
@@ -151,6 +338,7 @@ Deno.serve(async (request) => {
         .select("id, conversation_id, sender, body, created_at")
         .single();
       if (error) throw error;
+      scheduleChatPush("admin", conversationId);
       return jsonResponse({ message: data });
     }
 
@@ -195,6 +383,7 @@ Deno.serve(async (request) => {
         .select("id, conversation_id, sender, body, created_at")
         .single();
       if (error) throw error;
+      scheduleChatPush("customer", conversation.id);
       return jsonResponse({ message: data });
     }
 

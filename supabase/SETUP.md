@@ -122,3 +122,66 @@ añadirse al sitio ni compartirse.
 
 No habilitar acceso anónimo directo a las tablas del chat ni copiar la clave `service_role`
 en archivos JavaScript, HTML o configuración pública.
+
+## 7. Activar notificaciones push para clientes y administradores
+
+Las notificaciones son opcionales: cada cliente y cada navegador administrador debe
+habilitarlas explícitamente desde su botón. Los avisos no contienen el texto del chat.
+GitHub Pages y Vercel son orígenes diferentes, por lo que cada uno requiere una
+suscripción/permiso independiente.
+
+Esta implementación usa `@negrel/webpush@0.5.0` desde JSR, compatible con el runtime
+Deno de Supabase Edge Functions y con Web Crypto. Su mantenedor advierte que la
+implementación criptográfica no ha sido revisada por especialistas; se aceptó esta
+advertencia para evitar añadir otro proveedor. Evalúa ese riesgo antes de usarla con
+información sensible.
+
+1. Desde la raíz del proyecto, genera un par VAPID localmente:
+
+   ```powershell
+   node supabase\generate-vapid-keys.cjs
+   ```
+
+   El resultado incluye `applicationServerKey` y `vapidKeys`. Conserva el resultado
+   solo temporalmente. Copiarás el objeto completo `vapidKeys` a Supabase; no lo
+   compartas ni lo subas a GitHub. No generes un par diferente después de activar
+   suscripciones existentes.
+2. En el panel de Supabase, abre **Project Settings → Edge Functions → Secrets** y
+   agrega:
+   - `VAPID_KEYS`: el objeto JSON `vapidKeys` que imprimió el generador, incluyendo
+     `publicKey` y `privateKey`.
+   - `VAPID_SUBJECT`: un contacto válido, por ejemplo `mailto:TU_CORREO_DE_CONTACTO`.
+
+   La clave privada queda en los secretos del servidor. La función entrega al navegador
+   solamente la clave pública.
+3. En **SQL Editor**, ejecuta `supabase/chat-push-migration.sql`. Esta migración requiere
+   que `chat-migration.sql` ya se haya ejecutado. Las suscripciones quedan privadas y
+   solo la Edge Function puede consultarlas.
+4. Desde la raíz del proyecto, despliega la función actualizada:
+
+   ```powershell
+   npx --yes supabase functions deploy customer-chat
+   ```
+
+   Debe estar vinculada al proyecto correcto con `supabase link`. No ejecutes este
+   comando con una clave VAPID en sus argumentos.
+5. Publica las nuevas versiones de los archivos web en GitHub y espera el despliegue de
+   Vercel/GitHub Pages:
+   - `index.html`, `admin.html`, `politica-privacidad.html`
+   - `service-worker.js`, `manifest.webmanifest`
+   - `assets/js/admin.js`, `assets/js/chat-push.js`
+   - `assets/css/tailwind.min.css`
+   - `assets/images/pwa-icon-180.png`, `pwa-icon-192.png` y `pwa-icon-512.png`
+6. En el panel, inicia sesión y pulsa **Activar avisos**. En una conversación de cliente,
+   pulsa **Activar avisos** y acepta el permiso cuando el navegador lo solicite. La
+   conversación debe haberse iniciado en ese mismo dominio/navegador.
+
+### Compatibilidad
+
+- Se detecta la disponibilidad de HTTPS, Service Worker, Push API y Notifications API;
+  si falta soporte, el chat seguirá funcionando mientras la página esté abierta.
+- En iPhone/iPad se requiere iOS/iPadOS 16.4 o posterior: abre el sitio en Safari,
+  usa **Compartir → Añadir a pantalla de inicio** y luego abre el sitio desde ese icono
+  antes de activar las notificaciones.
+- Si el permiso se bloquea, hay que cambiarlo desde los ajustes del sitio en el navegador
+  o dispositivo. El sitio no volverá a mostrar el diálogo automáticamente.

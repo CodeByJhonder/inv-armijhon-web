@@ -35,6 +35,8 @@ const chatConversationList = document.getElementById('chat-conversation-list');
 const adminChatMessages = document.getElementById('admin-chat-messages');
 const adminChatReplyForm = document.getElementById('admin-chat-reply-form');
 const chatsStatus = document.getElementById('chats-status');
+const adminChatPushButton = document.getElementById('admin-chat-push-toggle');
+const adminChatPushStatus = document.getElementById('admin-chat-push-status');
 
 const formatVes = value => new Intl.NumberFormat('es-VE', {
     minimumFractionDigits: 2,
@@ -101,6 +103,7 @@ function showOrders() {
     subscribeToOrders();
     loadAdminChats();
     subscribeToAdminChats();
+    refreshAdminChatPushControl();
 }
 
 function initTheme() {
@@ -147,7 +150,6 @@ function scheduleAdminChatRefresh() {
     chatRefreshTimer = setTimeout(async () => {
         chatRefreshTimer = null;
         await loadAdminChats();
-        if (selectedChatId) await loadAdminChatMessages(selectedChatId);
     }, 250);
 }
 
@@ -214,17 +216,87 @@ async function loadAdminChats() {
     try {
         const data = await invokeAdminChat('admin_list');
         adminChatConversations = data.conversations || [];
+        const linkedChatId = window.location.hash.match(/^#chat\/([0-9a-f-]{36})$/i)?.[1];
+        if (linkedChatId && adminChatConversations.some(item => item.id === linkedChatId)) {
+            selectedChatId = linkedChatId;
+        }
         if (selectedChatId && !adminChatConversations.some(item => item.id === selectedChatId)) selectedChatId = null;
         renderAdminChatConversations();
         chatsStatus.textContent = '';
         if (selectedChatId) {
             const active = adminChatConversations.find(item => item.id === selectedChatId);
-            if (active) updateAdminChatHeader(active);
+            if (active) {
+                updateAdminChatHeader(active);
+                await loadAdminChatMessages(selectedChatId);
+            }
         }
     } catch (error) {
         chatsStatus.textContent = error.message || 'No se pudieron cargar las conversaciones.';
         console.error('Error cargando conversaciones de chat:', error);
     }
+}
+
+async function refreshAdminChatPushControl() {
+    const compatibility = window.ChatPush.getCompatibility();
+    if (!compatibility.supported) {
+        adminChatPushButton.disabled = true;
+        adminChatPushStatus.textContent = compatibility.reason;
+        adminChatPushStatus.classList.remove('hidden');
+        return;
+    }
+
+    adminChatPushButton.disabled = true;
+    try {
+        await window.ChatPush.prepare(supabaseClient);
+        const subscription = await window.ChatPush.getExistingSubscription();
+        adminChatPushButton.innerHTML = subscription
+            ? '<i class="fa-solid fa-bell-slash mr-2"></i>Desactivar avisos'
+            : '<i class="fa-regular fa-bell mr-2"></i>Activar avisos';
+        adminChatPushButton.disabled = false;
+        adminChatPushStatus.textContent = Notification.permission === 'denied'
+            ? 'El permiso está bloqueado. Habilítalo en los ajustes del navegador.'
+            : 'Recibe avisos de mensajes nuevos aunque el panel esté cerrado.';
+        adminChatPushStatus.classList.remove('hidden');
+    } catch (error) {
+        adminChatPushStatus.textContent = error.message || 'No se pudieron preparar las notificaciones.';
+        adminChatPushStatus.classList.remove('hidden');
+        adminChatPushButton.disabled = true;
+    }
+}
+
+async function toggleAdminChatPush() {
+    if (adminChatPushButton.disabled) return;
+    adminChatPushButton.disabled = true;
+    adminChatPushStatus.textContent = 'Actualizando la preferencia de notificaciones...';
+    adminChatPushStatus.classList.remove('hidden');
+    try {
+        const subscription = await window.ChatPush.getExistingSubscription();
+        if (subscription) {
+            await window.ChatPush.disable({ client: supabaseClient, audience: 'admin' });
+            adminChatPushStatus.textContent = 'Notificaciones desactivadas para este navegador.';
+        } else {
+            await window.ChatPush.enable({ client: supabaseClient, audience: 'admin' });
+            adminChatPushStatus.textContent = 'Notificaciones activadas para este navegador.';
+        }
+        await refreshAdminChatPushControl();
+    } catch (error) {
+        adminChatPushStatus.textContent = error.message || 'No se pudo actualizar la notificación.';
+        adminChatPushStatus.classList.remove('hidden');
+    } finally {
+        adminChatPushButton.disabled = false;
+    }
+}
+
+async function openAdminChatFromHash() {
+    const chatId = window.location.hash.match(/^#chat\/([0-9a-f-]{36})$/i)?.[1];
+    if (!chatId) return;
+    if (!adminChatConversations.some(item => item.id === chatId)) await loadAdminChats();
+    const conversation = adminChatConversations.find(item => item.id === chatId);
+    if (!conversation) return;
+    selectedChatId = conversation.id;
+    renderAdminChatConversations();
+    updateAdminChatHeader(conversation);
+    await loadAdminChatMessages(conversation.id);
 }
 
 function updateAdminChatHeader(conversation) {
@@ -505,8 +577,8 @@ logoutButton.addEventListener('click', async () => {
 document.getElementById('refresh-orders').addEventListener('click', loadOrders);
 document.getElementById('refresh-chats').addEventListener('click', async () => {
     await loadAdminChats();
-    if (selectedChatId) await loadAdminChatMessages(selectedChatId);
 });
+adminChatPushButton.addEventListener('click', toggleAdminChatPush);
 document.getElementById('export-receipts').addEventListener('click', () => exportReceipts(false));
 document.getElementById('export-filtered-receipts').addEventListener('click', () => exportReceipts(true));
 document.getElementById('bulk-approve').addEventListener('click', () => updateOrderStatus([...selectedOrderIds], 'approved'));
@@ -548,6 +620,7 @@ chatConversationList.addEventListener('click', async event => {
     await loadAdminChatMessages(selectedChatId);
     await loadAdminChats();
 });
+window.addEventListener('hashchange', openAdminChatFromHash);
 
 adminChatReplyForm.addEventListener('submit', async event => {
     event.preventDefault();

@@ -3,6 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#100F0C">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="INV. Armijhon">
+    <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/images/pwa-icon-180.png">
     <title>INV. Armijhon — Centro Profesional de Copiado | Elorza, Apure</title>
     <meta name="description" content="Copiado e impresión, papelería y multiservicios en Elorza, Apure. Conoce el catálogo de INV. Armijhon y contáctanos por WhatsApp.">
     <link rel="canonical" href="https://inv-armijhon-web.vercel.app/">
@@ -1163,7 +1168,13 @@
             <button id="support-chat-start-button" type="submit" class="rounded-xl bg-indigo-600 px-4 py-3 text-sm font-black text-white transition hover:bg-indigo-500 disabled:cursor-wait disabled:opacity-60"><i class="fa-solid fa-comment-dots mr-2"></i>Iniciar chat</button>
         </form>
         <div id="support-chat-thread" class="hidden min-h-0 flex-1 flex-col">
-            <div id="support-chat-session-label" class="border-b border-slate-800 px-4 py-2 text-[10px] text-slate-400"></div>
+            <div class="flex items-center justify-between gap-2 border-b border-slate-800 px-4 py-2">
+                <div id="support-chat-session-label" class="truncate text-[10px] text-slate-400"></div>
+                <button id="support-chat-push-toggle" type="button" disabled class="shrink-0 rounded-lg border border-slate-700 px-2.5 py-1.5 text-[10px] font-bold text-slate-300 transition hover:border-indigo-400 hover:text-white disabled:cursor-not-allowed disabled:opacity-50">
+                    <i class="fa-regular fa-bell mr-1"></i>Activar avisos
+                </button>
+            </div>
+            <p id="support-chat-push-status" class="hidden px-4 pt-2 text-[10px] text-slate-400" role="status"></p>
             <p id="support-chat-thread-status" class="hidden px-4 pt-2 text-xs text-red-300" role="alert"></p>
             <div id="support-chat-messages" class="flex-1 space-y-3 overflow-y-auto bg-slate-950/60 p-4" aria-live="polite"></div>
             <form id="support-chat-message-form" class="flex items-end gap-2 border-t border-slate-700 bg-slate-900 p-3">
@@ -1377,6 +1388,7 @@
     <script src="assets/js/payment-config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="assets/js/supabase-client.js"></script>
+    <script src="assets/js/chat-push.js"></script>
     <script>
         const CART_GIF = "assets/images/cart.gif";
 
@@ -2091,6 +2103,8 @@
         const supportChatMessages = document.getElementById('support-chat-messages');
         const supportChatStartError = document.getElementById('support-chat-start-error');
         const supportChatThreadStatus = document.getElementById('support-chat-thread-status');
+        const supportChatPushButton = document.getElementById('support-chat-push-toggle');
+        const supportChatPushStatus = document.getElementById('support-chat-push-status');
         let supportChatSession = null;
         let supportChatPoll = null;
         let supportChatRequestPending = false;
@@ -2175,6 +2189,35 @@
             }
         }
 
+        async function refreshSupportChatPushControl() {
+            if (!supportChatSession) return;
+            const compatibility = window.ChatPush.getCompatibility();
+            if (!compatibility.supported) {
+                supportChatPushButton.disabled = true;
+                supportChatPushStatus.textContent = compatibility.reason;
+                supportChatPushStatus.classList.remove('hidden');
+                return;
+            }
+
+            supportChatPushButton.disabled = true;
+            try {
+                await window.ChatPush.prepare(window.supabaseClient);
+                const subscription = await window.ChatPush.getExistingSubscription();
+                supportChatPushButton.innerHTML = subscription
+                    ? '<i class="fa-solid fa-bell-slash mr-1"></i>Desactivar avisos'
+                    : '<i class="fa-regular fa-bell mr-1"></i>Activar avisos';
+                supportChatPushButton.disabled = false;
+                supportChatPushStatus.textContent = Notification.permission === 'denied'
+                    ? 'El permiso está bloqueado. Puedes habilitarlo en los ajustes del navegador.'
+                    : 'Recibe un aviso cuando el equipo responda, incluso con la página cerrada.';
+                supportChatPushStatus.classList.remove('hidden');
+            } catch (error) {
+                supportChatPushStatus.textContent = error.message || 'No se pudo preparar las notificaciones.';
+                supportChatPushStatus.classList.remove('hidden');
+                supportChatPushButton.disabled = true;
+            }
+        }
+
         function openSupportChat() {
             supportChatPanel.classList.remove('hidden');
             supportChatPanel.classList.add('flex');
@@ -2185,6 +2228,7 @@
                 supportChatThread.classList.add('flex');
                 document.getElementById('support-chat-session-label').textContent = `Conversación de ${supportChatSession.name}`;
                 refreshSupportChat();
+                refreshSupportChatPushControl();
                 if (!supportChatPoll) supportChatPoll = window.setInterval(refreshSupportChat, 3500);
             } else {
                 supportChatStartForm.classList.remove('hidden');
@@ -2208,6 +2252,34 @@
             else closeSupportChat();
         });
         document.getElementById('support-chat-close').addEventListener('click', closeSupportChat);
+        supportChatPushButton.addEventListener('click', async () => {
+            if (!supportChatSession || supportChatPushButton.disabled) return;
+            supportChatPushButton.disabled = true;
+            supportChatPushStatus.textContent = 'Actualizando la preferencia de notificaciones...';
+            supportChatPushStatus.classList.remove('hidden');
+            try {
+                const options = {
+                    client: window.supabaseClient,
+                    audience: 'customer',
+                    conversationId: supportChatSession.conversationId,
+                    sessionToken: supportChatSession.sessionToken
+                };
+                const subscription = await window.ChatPush.getExistingSubscription();
+                if (subscription) {
+                    await window.ChatPush.disable(options);
+                    supportChatPushStatus.textContent = 'Notificaciones desactivadas para este navegador.';
+                } else {
+                    await window.ChatPush.enable(options);
+                    supportChatPushStatus.textContent = 'Notificaciones activadas para este navegador.';
+                }
+                await refreshSupportChatPushControl();
+            } catch (error) {
+                supportChatPushStatus.textContent = error.message || 'No se pudo actualizar la notificación.';
+                supportChatPushStatus.classList.remove('hidden');
+            } finally {
+                supportChatPushButton.disabled = false;
+            }
+        });
         supportChatStartForm.addEventListener('submit', async event => {
             event.preventDefault();
             supportChatStartError.classList.add('hidden');
@@ -2302,6 +2374,7 @@
             setInterval(refreshExchangeRates, window.PAYMENT_CONFIG.ratesRefreshMs);
             initFooter();
             supportChatSession = readSupportChatSession();
+            if (window.location.hash === '#support-chat' && supportChatSession) openSupportChat();
         };
     </script>
 </body>

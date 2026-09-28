@@ -3,6 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#100F0C">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="INV. Armijhon">
+    <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/images/pwa-icon-180.png">
     <title>Panel de pedidos | INV. Armijhon</title>
     <link rel="stylesheet" href="assets/css/tailwind.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -128,8 +133,10 @@
                         <p class="mt-1 text-xs text-slate-400">Conversaciones de clientes con actualización en tiempo real.</p>
                     </div>
                     <button id="refresh-chats" type="button" class="rounded-xl border border-slate-700 px-4 py-2 text-xs font-bold hover:bg-slate-800"><i class="fa-solid fa-rotate mr-2"></i>Actualizar chats</button>
+                    <button id="admin-chat-push-toggle" type="button" disabled class="rounded-xl border border-violet-400/40 px-4 py-2 text-xs font-bold text-violet-200 hover:bg-violet-500/10 disabled:cursor-not-allowed disabled:opacity-50"><i class="fa-regular fa-bell mr-2"></i>Activar avisos</button>
                 </div>
                 <p id="chats-status" class="mb-3 min-h-4 text-xs text-slate-400" role="status"></p>
+                <p id="admin-chat-push-status" class="mb-3 hidden text-xs text-slate-400" role="status"></p>
                 <div class="grid min-h-[32rem] overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 lg:grid-cols-[minmax(16rem,0.8fr)_minmax(0,1.6fr)]">
                     <aside class="flex min-h-64 flex-col border-b border-slate-800 lg:border-b-0 lg:border-r">
                         <div class="flex items-center justify-between border-b border-slate-800 px-4 py-3">
@@ -158,6 +165,7 @@
             </section>
         </section>
     </main>
+    <script src="assets/js/chat-push.js"></script>
     <script src="assets/js/admin.js"></script>
     <script>
         if (!window.supabaseClient && !window.supabase) {
