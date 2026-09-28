@@ -36,13 +36,27 @@
         return Uint8Array.from(raw, character => character.charCodeAt(0));
     }
 
+    async function invokeChatFunction(client, body) {
+        const { data, error } = await client.functions.invoke(notificationEndpoint, { body });
+        if (error) {
+            let message = error.message || 'La función de notificaciones rechazó la solicitud.';
+            if (error.context && typeof error.context.clone === 'function') {
+                try {
+                    const responseBody = await error.context.clone().json();
+                    if (typeof responseBody?.error === 'string') message = responseBody.error;
+                } catch (parseError) {
+                    console.warn('No se pudo interpretar el error de la función push:', parseError);
+                }
+            }
+            throw new Error(message);
+        }
+        if (data?.error) throw new Error(data.error);
+        return data;
+    }
+
     function prepare(client) {
         if (!publicKeyRequest) {
-            publicKeyRequest = client.functions.invoke(notificationEndpoint, {
-                body: { action: 'push_public_key' }
-            }).then(({ data, error }) => {
-                if (error) throw error;
-                if (data?.error) throw new Error(data.error);
+            publicKeyRequest = invokeChatFunction(client, { action: 'push_public_key' }).then(data => {
                 if (typeof data?.publicKey !== 'string' || !data.publicKey) {
                     throw new Error('Las notificaciones aún no están configuradas en el servidor.');
                 }
@@ -95,10 +109,11 @@
             subscription: subscription.toJSON(),
             ...(audience === 'customer' ? { conversationId, sessionToken } : {})
         };
-        const { data, error } = await client.functions.invoke(notificationEndpoint, { body });
-        if (error || data?.error) {
+        try {
+            await invokeChatFunction(client, body);
+        } catch (error) {
             if (createdHere) await subscription.unsubscribe();
-            throw error || new Error(data.error);
+            throw error;
         }
         return subscription;
     }
@@ -112,8 +127,7 @@
             endpoint: subscription.endpoint,
             ...(audience === 'customer' ? { conversationId, sessionToken } : {})
         };
-        const { data, error } = await client.functions.invoke(notificationEndpoint, { body });
-        if (error || data?.error) throw error || new Error(data.error);
+        await invokeChatFunction(client, body);
         const removed = await subscription.unsubscribe();
         if (!removed) throw new Error('No se pudo desactivar la suscripción del navegador.');
     }
