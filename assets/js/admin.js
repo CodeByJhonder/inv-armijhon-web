@@ -31,6 +31,7 @@ let chatRefreshTimer;
 let adminChatConversations = [];
 let selectedChatId = null;
 let chatMessagesRequest = 0;
+let adminChatSelectedFiles = [];
 const chatConversationList = document.getElementById('chat-conversation-list');
 const adminChatMessages = document.getElementById('admin-chat-messages');
 const adminChatReplyForm = document.getElementById('admin-chat-reply-form');
@@ -218,6 +219,10 @@ async function loadAdminChats() {
         adminChatConversations = data.conversations || [];
         const linkedChatId = window.location.hash.match(/^#chat\/([0-9a-f-]{36})$/i)?.[1];
         if (linkedChatId && adminChatConversations.some(item => item.id === linkedChatId)) {
+            if (selectedChatId !== linkedChatId) {
+                adminChatSelectedFiles.length = 0;
+                renderAdminChatSelectedFiles();
+            }
             selectedChatId = linkedChatId;
         }
         if (selectedChatId && !adminChatConversations.some(item => item.id === selectedChatId)) selectedChatId = null;
@@ -323,14 +328,18 @@ async function loadAdminChatMessages(conversationId) {
                 row.className = `flex ${message.sender === 'admin' ? 'justify-end' : 'justify-start'}`;
                 const bubble = document.createElement('div');
                 bubble.className = `max-w-[85%] rounded-2xl px-3 py-2 ${message.sender === 'admin' ? 'rounded-br-md bg-violet-600 text-white' : 'rounded-bl-md bg-slate-800 text-slate-100'}`;
-                const body = document.createElement('p');
-                body.className = 'whitespace-pre-wrap break-words text-xs leading-relaxed';
-                body.textContent = message.body;
+                if (message.body) {
+                    const body = document.createElement('p');
+                    body.className = 'whitespace-pre-wrap break-words text-xs leading-relaxed';
+                    body.textContent = message.body;
+                    bubble.append(body);
+                }
+                window.ChatAttachments.renderAttachments(bubble, message.attachments);
                 const time = document.createElement('time');
                 time.className = 'mt-1 block text-right text-[9px] opacity-60';
                 time.dateTime = message.created_at;
                 time.textContent = new Date(message.created_at).toLocaleString('es-VE', { dateStyle: 'short', timeStyle: 'short' });
-                bubble.append(body, time);
+                bubble.append(time);
                 row.append(bubble);
                 adminChatMessages.append(row);
             });
@@ -612,6 +621,14 @@ themeToggle.addEventListener('click', toggleAdminTheme);
 chatConversationList.addEventListener('click', async event => {
     const button = event.target.closest('[data-chat-id]');
     if (!button) return;
+    if (document.getElementById('admin-chat-send').disabled) {
+        chatsStatus.textContent = 'Espera a que termine el envío antes de cambiar de conversación.';
+        return;
+    }
+    if (selectedChatId !== button.dataset.chatId) {
+        adminChatSelectedFiles.length = 0;
+        renderAdminChatSelectedFiles();
+    }
     selectedChatId = button.dataset.chatId;
     const conversation = adminChatConversations.find(item => item.id === selectedChatId);
     if (!conversation) return;
@@ -622,25 +639,81 @@ chatConversationList.addEventListener('click', async event => {
 });
 window.addEventListener('hashchange', openAdminChatFromHash);
 
+const adminChatFileInput = document.getElementById('admin-chat-file-input');
+const adminChatCameraInput = document.getElementById('admin-chat-camera-input');
+const adminChatSelectedFilesElement = document.getElementById('admin-chat-selected-files');
+const adminChatUploadStatus = document.getElementById('admin-chat-upload-status');
+function renderAdminChatSelectedFiles() {
+    window.ChatAttachments.renderSelectedFiles(adminChatSelectedFilesElement, adminChatSelectedFiles, index => {
+        adminChatSelectedFiles.splice(index, 1);
+        renderAdminChatSelectedFiles();
+    });
+}
+function addAdminChatFiles(files) {
+    const selected = Array.from(files || []);
+    const error = window.ChatAttachments.validateFiles(adminChatSelectedFiles, selected);
+    if (error) {
+        chatsStatus.textContent = error;
+        return;
+    }
+    chatsStatus.textContent = '';
+    adminChatSelectedFiles.push(...selected);
+    renderAdminChatSelectedFiles();
+}
+document.getElementById('admin-chat-attach').addEventListener('click', () => adminChatFileInput.click());
+document.getElementById('admin-chat-camera').addEventListener('click', () => adminChatCameraInput.click());
+[adminChatFileInput, adminChatCameraInput].forEach(input => input.addEventListener('change', () => {
+    addAdminChatFiles(input.files);
+    input.value = '';
+}));
+
 adminChatReplyForm.addEventListener('submit', async event => {
     event.preventDefault();
     if (!selectedChatId) return;
+    const conversationId = selectedChatId;
+    const filesToSend = [...adminChatSelectedFiles];
     const input = document.getElementById('admin-chat-reply');
     const sendButton = document.getElementById('admin-chat-send');
     const body = input.value.trim();
-    if (!body || sendButton.disabled) return;
+    if ((!body && !filesToSend.length) || sendButton.disabled) return;
     sendButton.disabled = true;
-    chatsStatus.textContent = 'Enviando respuesta...';
+    let uploadedAttachments = [];
     try {
-        await invokeAdminChat('admin_reply', { conversationId: selectedChatId, body });
+        if (filesToSend.length) {
+            adminChatUploadStatus.classList.remove('hidden');
+            uploadedAttachments = await window.ChatAttachments.uploadFiles({
+                client: supabaseClient,
+                audience: 'admin',
+                conversationId,
+                files: filesToSend,
+                onProgress: message => { adminChatUploadStatus.textContent = message; }
+            });
+        }
+        chatsStatus.textContent = 'Enviando respuesta...';
+        await invokeAdminChat('admin_reply', { conversationId, body, attachments: uploadedAttachments });
         input.value = '';
-        await loadAdminChatMessages(selectedChatId);
+        adminChatSelectedFiles.length = 0;
+        renderAdminChatSelectedFiles();
+        await loadAdminChatMessages(conversationId);
         await loadAdminChats();
         chatsStatus.textContent = '';
     } catch (error) {
+        if (uploadedAttachments.length) {
+            try {
+                await window.ChatAttachments.cleanupFiles({
+                    client: supabaseClient,
+                    audience: 'admin',
+                    conversationId,
+                    attachments: uploadedAttachments
+                });
+            } catch (cleanupError) {
+                console.error('No se pudieron limpiar los adjuntos no enviados:', cleanupError);
+            }
+        }
         chatsStatus.textContent = error.message || 'No se pudo enviar la respuesta.';
         console.error('Error enviando respuesta del chat:', error);
     } finally {
+        adminChatUploadStatus.classList.add('hidden');
         sendButton.disabled = false;
         input.focus();
     }

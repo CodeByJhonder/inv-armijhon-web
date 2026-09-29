@@ -142,14 +142,13 @@ información sensible.
    node supabase\generate-vapid-keys.cjs
    ```
 
-   El resultado incluye `applicationServerKey` y `vapidKeys`. Conserva el resultado
-   solo temporalmente. Copiarás el objeto completo `vapidKeys` a Supabase; no lo
-   compartas ni lo subas a GitHub. No generes un par diferente después de activar
-   suscripciones existentes.
+   El resultado es directamente el valor JSON de `VAPID_KEYS`. Conserva la salida solo
+   temporalmente; no la compartas ni la subas a GitHub. No generes un par diferente
+   después de activar suscripciones existentes.
 2. En el panel de Supabase, abre **Project Settings → Edge Functions → Secrets** y
    agrega:
-   - `VAPID_KEYS`: el objeto JSON `vapidKeys` que imprimió el generador, incluyendo
-     `publicKey` y `privateKey`.
+   - `VAPID_KEYS`: copia el resultado completo del generador tal como aparece, desde la
+     primera `{` hasta la última `}`. Debe incluir `publicKey` y `privateKey`.
    - `VAPID_SUBJECT`: un contacto válido, por ejemplo `mailto:TU_CORREO_DE_CONTACTO`.
 
    La clave privada queda en los secretos del servidor. La función entrega al navegador
@@ -185,3 +184,29 @@ información sensible.
   antes de activar las notificaciones.
 - Si el permiso se bloquea, hay que cambiarlo desde los ajustes del sitio en el navegador
   o dispositivo. El sitio no volverá a mostrar el diálogo automáticamente.
+
+## 8. Activar archivos adjuntos en el chat
+
+El chat admite hasta 5 archivos por mensaje. Cada archivo puede ser una imagen (`image/*`)
+o un PDF y debe pesar como máximo 10 MB. En dispositivos compatibles, el botón de cámara
+abre la captura de fotos. Los archivos se guardan en el bucket privado `chat-attachments`;
+el navegador recibe enlaces firmados de corta duración solo después de autorizar la
+conversación. Nunca habilitar el bucket como público.
+
+1. En Supabase **SQL Editor**, ejecutar `supabase/chat-attachments-migration.sql` después
+   de las migraciones `chat-migration.sql` y `chat-push-migration.sql`. La migración crea
+   el bucket privado, aplica el límite de tamaño/MIME y agrega metadatos de adjuntos a
+   los mensajes.
+2. Desde la raíz del proyecto, desplegar la Edge Function actualizada:
+
+   ```powershell
+   npx --yes supabase functions deploy customer-chat
+   ```
+
+3. Publicar los archivos actualizados del sitio en GitHub Pages/Vercel:
+   - `index.html`, `admin.html` y `politica-privacidad.html`
+   - `assets/js/admin.js` y `assets/js/chat-attachments.js`
+   - `assets/css/tailwind.min.css`
+4. Probar desde una conversación de cliente enviando una imagen, un PDF y una foto tomada
+   con la cámara del teléfono; comprobar que el administrador puede verlos y responder
+   con un adjunto. Repetir si el administrador debe enviar archivos a clientes.

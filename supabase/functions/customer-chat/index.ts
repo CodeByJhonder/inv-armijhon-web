@@ -33,6 +33,16 @@ const adminClient = createClient(serviceUrl, serviceRoleKey, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 let pushServerPromise: Promise<{ server: ApplicationServer; publicKey: string }> | undefined;
+const chatAttachmentBucket = "chat-attachments";
+const maxChatAttachmentBytes = 10 * 1024 * 1024;
+const maxChatAttachments = 5;
+
+type ChatAttachment = {
+  path: string;
+  name: string;
+  mimeType: string;
+  size: number;
+};
 
 async function hashToken(token: string): Promise<string> {
   const bytes = new TextEncoder().encode(token);
@@ -46,6 +56,121 @@ function validSessionToken(token: unknown): token is string {
 
 function validConversationId(id: unknown): id is string {
   return typeof id === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+}
+
+function cleanAttachmentName(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const name = value.replace(/\\/g, "/").split("/").pop()?.replace(/[\u0000-\u001f\u007f]/g, "").trim();
+  if (!name || name.length > 180 || name === "." || name === "..") return null;
+  return name;
+}
+
+function validAttachmentType(name: string, mimeType: unknown): mimeType is string {
+  if (typeof mimeType !== "string" || mimeType.length > 128) return false;
+  const extension = name.includes(".") ? name.split(".").pop()?.toLowerCase() : "";
+  if (mimeType === "application/pdf") return extension === "pdf";
+  return mimeType.startsWith("image/")
+    && typeof extension === "string"
+    && /^[a-z0-9]{1,12}$/.test(extension);
+}
+
+function validateAttachmentDescriptors(value: unknown, conversationId: string): ChatAttachment[] | null {
+  if (!Array.isArray(value) || value.length > maxChatAttachments) return null;
+  const attachments: ChatAttachment[] = [];
+  const uniquePaths = new Set<string>();
+  for (const item of value) {
+    const name = cleanAttachmentName(item?.name);
+    const { path, mimeType, size } = item ?? {};
+    if (
+      !name
+      || typeof path !== "string"
+      || !path.startsWith(`${conversationId}/`)
+      || !new RegExp(`^${conversationId}/[0-9a-f-]{36}\\.[a-z0-9]{1,12}$`, "i").test(path)
+      || uniquePaths.has(path)
+      || !validAttachmentType(name, mimeType)
+      || !Number.isSafeInteger(size)
+      || size <= 0
+      || size > maxChatAttachmentBytes
+    ) return null;
+    uniquePaths.add(path);
+    attachments.push({ path, name, mimeType, size });
+  }
+  return attachments;
+}
+
+async function authorizeAttachmentAudience(request: Request, payload: Record<string, unknown>) {
+  if (payload.audience === "admin") {
+    const adminUserId = await requireAdmin(request);
+    if (!adminUserId) return { error: "Se requiere una sesión administrativa autorizada.", conversationId: null, adminUserId: null };
+    if (!validConversationId(payload.conversationId)) return { error: "La conversación no es válida.", conversationId: null, adminUserId };
+    const { data: conversation, error } = await adminClient
+      .from("chat_conversations")
+      .select("id, status")
+      .eq("id", payload.conversationId)
+      .maybeSingle();
+    if (error) throw error;
+    if (!conversation || conversation.status !== "open") {
+      return { error: "Esta conversación no está disponible.", conversationId: null, adminUserId };
+    }
+    return { error: null, conversationId: conversation.id, adminUserId };
+  }
+
+  if (payload.audience === "customer") {
+    const session = await requireConversation(payload.conversationId, payload.sessionToken);
+    if (session.error || !session.conversation) {
+      return { error: session.error, conversationId: null, adminUserId: null };
+    }
+    if (session.conversation.status !== "open") {
+      return { error: "Esta conversación fue cerrada.", conversationId: null, adminUserId: null };
+    }
+    return { error: null, conversationId: session.conversation.id, adminUserId: null };
+  }
+  return { error: "El tipo de chat no es válido.", conversationId: null, adminUserId: null };
+}
+
+async function validateUploadedAttachments(conversationId: string, attachments: ChatAttachment[]): Promise<boolean> {
+  for (const attachment of attachments) {
+    const fileName = attachment.path.slice(conversationId.length + 1);
+    const { data, error } = await adminClient.storage.from(chatAttachmentBucket).list(conversationId, {
+      search: fileName,
+      limit: 10
+    });
+    if (error) throw error;
+    const storedFile = data?.find(file => file.name === fileName);
+    const storedSize = Number(storedFile?.metadata?.size);
+    const storedMimeType = storedFile?.metadata?.mimetype;
+    if (
+      !storedFile
+      || storedSize !== attachment.size
+      || storedMimeType !== attachment.mimeType
+      || storedSize > maxChatAttachmentBytes
+    ) return false;
+  }
+  return true;
+}
+
+async function messagesWithSignedAttachments(messages: Array<Record<string, unknown>>) {
+  return Promise.all(messages.map(async message => {
+    const attachments = Array.isArray(message.attachments) ? message.attachments : [];
+    const signedAttachments = await Promise.all(attachments.map(async raw => {
+      const attachment = raw as Partial<ChatAttachment>;
+      if (
+        typeof attachment.path !== "string"
+        || typeof attachment.name !== "string"
+        || typeof attachment.mimeType !== "string"
+        || typeof attachment.size !== "number"
+      ) return null;
+      const forceDownload = attachment.mimeType === "application/pdf" || attachment.mimeType === "image/svg+xml";
+      const { data, error } = await adminClient.storage.from(chatAttachmentBucket).createSignedUrl(
+        attachment.path,
+        300,
+        forceDownload ? { download: attachment.name } : undefined
+      );
+      if (error) throw error;
+      return { ...attachment, url: data.signedUrl, download: forceDownload };
+    }));
+    return { ...message, attachments: signedAttachments.filter(Boolean) };
+  }));
 }
 
 async function getPushServer(): Promise<{ server: ApplicationServer; publicKey: string }> {
@@ -203,6 +328,49 @@ Deno.serve(async (request) => {
     const payload = await request.json();
     const action = payload?.action;
 
+    if (action === "attachment_upload_url" || action === "attachment_cleanup") {
+      const access = await authorizeAttachmentAudience(request, payload);
+      if (access.error || !access.conversationId) {
+        return jsonResponse({ error: access.error ?? "No se pudo autorizar esta conversación." }, 403);
+      }
+
+      if (action === "attachment_upload_url") {
+        const name = cleanAttachmentName(payload.name);
+        const mimeType = payload.mimeType;
+        const size = payload.size;
+        if (!name || !validAttachmentType(name, mimeType)) {
+          return jsonResponse({ error: "Solo se permiten archivos de imagen o PDF válidos." }, 400);
+        }
+        if (!Number.isSafeInteger(size) || size <= 0 || size > maxChatAttachmentBytes) {
+          return jsonResponse({ error: "Cada archivo debe pesar como máximo 10 MB." }, 413);
+        }
+        const extension = name.split(".").pop()?.toLowerCase() || "img";
+        const path = `${access.conversationId}/${crypto.randomUUID()}.${extension}`;
+        const { data, error } = await adminClient.storage
+          .from(chatAttachmentBucket)
+          .createSignedUploadUrl(path, { upsert: false });
+        if (error) throw error;
+        return jsonResponse({ path, token: data.token });
+      }
+
+      if (!Array.isArray(payload.paths) || payload.paths.length > maxChatAttachments) {
+        return jsonResponse({ error: "La lista de archivos no es válida." }, 400);
+      }
+      const paths = payload.paths;
+      if (paths.some((path: unknown) =>
+        typeof path !== "string"
+        || !path.startsWith(`${access.conversationId}/`)
+        || !new RegExp(`^${access.conversationId}/[0-9a-f-]{36}\\.[a-z0-9]{1,12}$`, "i").test(path)
+      )) {
+        return jsonResponse({ error: "Los archivos no pertenecen a esta conversación." }, 400);
+      }
+      if (paths.length) {
+        const { error } = await adminClient.storage.from(chatAttachmentBucket).remove(paths);
+        if (error) throw error;
+      }
+      return jsonResponse({ ok: true });
+    }
+
     if (action === "push_public_key") {
       try {
         const { publicKey } = await getPushServer();
@@ -302,7 +470,7 @@ Deno.serve(async (request) => {
       if (action === "admin_messages") {
         const { data, error } = await adminClient
           .from("chat_messages")
-          .select("id, conversation_id, sender, body, created_at")
+          .select("id, conversation_id, sender, body, attachments, created_at")
           .eq("conversation_id", conversationId)
           .order("created_at", { ascending: false })
           .limit(200);
@@ -320,11 +488,15 @@ Deno.serve(async (request) => {
             .eq("id", conversationId);
           if (readError) throw readError;
         }
-        return jsonResponse({ messages: (data ?? []).reverse() });
+        return jsonResponse({ messages: await messagesWithSignedAttachments((data ?? []).reverse()) });
       }
 
       const body = typeof payload.body === "string" ? payload.body.trim() : "";
-      if (!body || body.length > 1500) return jsonResponse({ error: "El mensaje debe tener entre 1 y 1500 caracteres." }, 400);
+      const attachments = validateAttachmentDescriptors(payload.attachments ?? [], conversationId);
+      if (!attachments) return jsonResponse({ error: "Los archivos adjuntos no son válidos." }, 400);
+      if ((!body && !attachments.length) || body.length > 1500) {
+        return jsonResponse({ error: "Escribe un mensaje o adjunta al menos un archivo (máximo 1500 caracteres)." }, 400);
+      }
       const { data: conversation, error: conversationError } = await adminClient
         .from("chat_conversations")
         .select("id, status")
@@ -332,10 +504,13 @@ Deno.serve(async (request) => {
         .maybeSingle();
       if (conversationError) throw conversationError;
       if (!conversation || conversation.status !== "open") return jsonResponse({ error: "Esta conversación no está disponible." }, 404);
+      if (!await validateUploadedAttachments(conversationId, attachments)) {
+        return jsonResponse({ error: "Uno o más archivos aún no se cargaron correctamente. Intenta adjuntarlos de nuevo." }, 400);
+      }
       const { data, error } = await adminClient
         .from("chat_messages")
-        .insert({ conversation_id: conversationId, sender: "admin", body })
-        .select("id, conversation_id, sender, body, created_at")
+        .insert({ conversation_id: conversationId, sender: "admin", body, attachments })
+        .select("id, conversation_id, sender, body, attachments, created_at")
         .single();
       if (error) throw error;
       scheduleChatPush("admin", conversationId);
@@ -350,7 +525,7 @@ Deno.serve(async (request) => {
       if (action === "client_list") {
         const { data, error } = await adminClient
           .from("chat_messages")
-          .select("id, conversation_id, sender, body, created_at")
+          .select("id, conversation_id, sender, body, attachments, created_at")
           .eq("conversation_id", conversation.id)
           .order("created_at", { ascending: false })
           .limit(200);
@@ -362,11 +537,15 @@ Deno.serve(async (request) => {
             .eq("id", conversation.id);
           if (readError) throw readError;
         }
-        return jsonResponse({ messages: (data ?? []).reverse() });
+        return jsonResponse({ messages: await messagesWithSignedAttachments((data ?? []).reverse()) });
       }
 
       const body = typeof payload.body === "string" ? payload.body.trim() : "";
-      if (!body || body.length > 1500) return jsonResponse({ error: "El mensaje debe tener entre 1 y 1500 caracteres." }, 400);
+      const attachments = validateAttachmentDescriptors(payload.attachments ?? [], conversation.id);
+      if (!attachments) return jsonResponse({ error: "Los archivos adjuntos no son válidos." }, 400);
+      if ((!body && !attachments.length) || body.length > 1500) {
+        return jsonResponse({ error: "Escribe un mensaje o adjunta al menos un archivo (máximo 1500 caracteres)." }, 400);
+      }
       const { data: recentMessages, error: recentError } = await adminClient
         .from("chat_messages")
         .select("created_at")
@@ -377,10 +556,13 @@ Deno.serve(async (request) => {
       if (recentMessages?.[0] && Date.now() - new Date(recentMessages[0].created_at).getTime() < 700) {
         return jsonResponse({ error: "Espera un momento antes de enviar otro mensaje." }, 429);
       }
+      if (!await validateUploadedAttachments(conversation.id, attachments)) {
+        return jsonResponse({ error: "Uno o más archivos aún no se cargaron correctamente. Intenta adjuntarlos de nuevo." }, 400);
+      }
       const { data, error } = await adminClient
         .from("chat_messages")
-        .insert({ conversation_id: conversation.id, sender: "customer", body })
-        .select("id, conversation_id, sender, body, created_at")
+        .insert({ conversation_id: conversation.id, sender: "customer", body, attachments })
+        .select("id, conversation_id, sender, body, attachments, created_at")
         .single();
       if (error) throw error;
       scheduleChatPush("customer", conversation.id);

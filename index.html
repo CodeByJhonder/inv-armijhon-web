@@ -1177,10 +1177,21 @@
             <p id="support-chat-push-status" class="hidden px-4 pt-2 text-[10px] text-slate-400" role="status"></p>
             <p id="support-chat-thread-status" class="hidden px-4 pt-2 text-xs text-red-300" role="alert"></p>
             <div id="support-chat-messages" class="flex-1 space-y-3 overflow-y-auto bg-slate-950/60 p-4" aria-live="polite"></div>
-            <form id="support-chat-message-form" class="flex items-end gap-2 border-t border-slate-700 bg-slate-900 p-3">
+            <div id="support-chat-selected-files" class="hidden flex flex-wrap gap-2 border-t border-slate-800 px-3 pt-3"></div>
+            <p id="support-chat-upload-status" class="hidden px-3 pt-2 text-[10px] text-slate-400" role="status"></p>
+            <form id="support-chat-message-form" class="border-t border-slate-700 bg-slate-900 p-3">
+                <div class="mb-2 flex items-center gap-2">
+                    <input id="support-chat-file-input" class="hidden" type="file" accept="image/*,application/pdf" multiple>
+                    <input id="support-chat-camera-input" class="hidden" type="file" accept="image/*" capture="environment">
+                    <button id="support-chat-attach" type="button" class="grid h-9 w-9 place-items-center rounded-lg border border-slate-700 text-slate-300 transition hover:border-indigo-400 hover:text-white" aria-label="Adjuntar imágenes o PDF"><i class="fa-solid fa-paperclip"></i></button>
+                    <button id="support-chat-camera" type="button" class="grid h-9 w-9 place-items-center rounded-lg border border-slate-700 text-slate-300 transition hover:border-indigo-400 hover:text-white" aria-label="Tomar una foto"><i class="fa-solid fa-camera"></i></button>
+                    <span class="text-[10px] text-slate-500">Imágenes o PDF · máx. 10 MB c/u · hasta 5 archivos</span>
+                </div>
+                <div class="flex items-end gap-2">
                 <label class="sr-only" for="support-chat-message">Escribe tu mensaje</label>
-                <textarea id="support-chat-message" required maxlength="1500" rows="1" placeholder="Escribe tu mensaje..." class="max-h-28 min-h-11 flex-1 resize-y rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-white outline-none focus:border-indigo-400"></textarea>
+                <textarea id="support-chat-message" maxlength="1500" rows="1" placeholder="Escribe un mensaje o adjunta archivos..." class="max-h-28 min-h-11 flex-1 resize-y rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-white outline-none focus:border-indigo-400"></textarea>
                 <button id="support-chat-send" type="submit" class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-indigo-600 text-white transition hover:bg-indigo-500 disabled:opacity-50" aria-label="Enviar mensaje"><i class="fa-solid fa-paper-plane"></i></button>
+                </div>
             </form>
         </div>
     </section>
@@ -1389,6 +1400,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="assets/js/supabase-client.js"></script>
     <script src="assets/js/chat-push.js"></script>
+    <script src="assets/js/chat-attachments.js"></script>
     <script>
         const CART_GIF = "assets/images/cart.gif";
 
@@ -2108,6 +2120,7 @@
         let supportChatSession = null;
         let supportChatPoll = null;
         let supportChatRequestPending = false;
+        let supportChatSelectedFiles = [];
 
         function readSupportChatSession() {
             try {
@@ -2154,14 +2167,18 @@
                 row.className = `flex ${message.sender === 'customer' ? 'justify-end' : 'justify-start'}`;
                 const bubble = document.createElement('div');
                 bubble.className = `max-w-[85%] rounded-2xl px-3 py-2 ${message.sender === 'customer' ? 'rounded-br-md bg-indigo-600 text-white' : 'rounded-bl-md bg-slate-800 text-slate-100'}`;
-                const body = document.createElement('p');
-                body.className = 'whitespace-pre-wrap break-words text-xs leading-relaxed';
-                body.textContent = message.body;
+                if (message.body) {
+                    const body = document.createElement('p');
+                    body.className = 'whitespace-pre-wrap break-words text-xs leading-relaxed';
+                    body.textContent = message.body;
+                    bubble.append(body);
+                }
+                window.ChatAttachments.renderAttachments(bubble, message.attachments);
                 const time = document.createElement('time');
                 time.className = 'mt-1 block text-right text-[9px] opacity-60';
                 time.dateTime = message.created_at;
                 time.textContent = new Date(message.created_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
-                bubble.append(body, time);
+                bubble.append(time);
                 row.append(bubble);
                 supportChatMessages.append(row);
             });
@@ -2252,6 +2269,36 @@
             else closeSupportChat();
         });
         document.getElementById('support-chat-close').addEventListener('click', closeSupportChat);
+        const supportChatFileInput = document.getElementById('support-chat-file-input');
+        const supportChatCameraInput = document.getElementById('support-chat-camera-input');
+        const supportChatSelectedFilesElement = document.getElementById('support-chat-selected-files');
+        const supportChatUploadStatus = document.getElementById('support-chat-upload-status');
+        const renderSupportChatSelectedFiles = () => window.ChatAttachments.renderSelectedFiles(
+            supportChatSelectedFilesElement,
+            supportChatSelectedFiles,
+            index => {
+                supportChatSelectedFiles.splice(index, 1);
+                renderSupportChatSelectedFiles();
+            }
+        );
+        const addSupportChatFiles = files => {
+            const selected = Array.from(files || []);
+            const error = window.ChatAttachments.validateFiles(supportChatSelectedFiles, selected);
+            if (error) {
+                supportChatThreadStatus.textContent = error;
+                supportChatThreadStatus.classList.remove('hidden');
+            } else {
+                supportChatThreadStatus.classList.add('hidden');
+                supportChatSelectedFiles.push(...selected);
+                renderSupportChatSelectedFiles();
+            }
+        };
+        document.getElementById('support-chat-attach').addEventListener('click', () => supportChatFileInput.click());
+        document.getElementById('support-chat-camera').addEventListener('click', () => supportChatCameraInput.click());
+        [supportChatFileInput, supportChatCameraInput].forEach(input => input.addEventListener('change', () => {
+            addSupportChatFiles(input.files);
+            input.value = '';
+        }));
         supportChatPushButton.addEventListener('click', async () => {
             if (!supportChatSession || supportChatPushButton.disabled) return;
             supportChatPushButton.disabled = true;
@@ -2307,17 +2354,45 @@
             const input = document.getElementById('support-chat-message');
             const sendButton = document.getElementById('support-chat-send');
             const body = input.value.trim();
-            if (!body || sendButton.disabled) return;
+            if ((!body && !supportChatSelectedFiles.length) || sendButton.disabled) return;
             sendButton.disabled = true;
             supportChatThreadStatus.classList.add('hidden');
+            let uploadedAttachments = [];
             try {
-                await callCustomerChat('client_send', { body });
+                if (supportChatSelectedFiles.length) {
+                    supportChatUploadStatus.classList.remove('hidden');
+                    uploadedAttachments = await window.ChatAttachments.uploadFiles({
+                        client: window.supabaseClient,
+                        audience: 'customer',
+                        conversationId: supportChatSession.conversationId,
+                        sessionToken: supportChatSession.sessionToken,
+                        files: supportChatSelectedFiles,
+                        onProgress: message => { supportChatUploadStatus.textContent = message; }
+                    });
+                }
+                await callCustomerChat('client_send', { body, attachments: uploadedAttachments });
                 input.value = '';
+                supportChatSelectedFiles.length = 0;
+                renderSupportChatSelectedFiles();
                 await refreshSupportChat();
             } catch (error) {
+                if (uploadedAttachments.length) {
+                    try {
+                        await window.ChatAttachments.cleanupFiles({
+                            client: window.supabaseClient,
+                            audience: 'customer',
+                            conversationId: supportChatSession.conversationId,
+                            sessionToken: supportChatSession.sessionToken,
+                            attachments: uploadedAttachments
+                        });
+                    } catch (cleanupError) {
+                        console.error('No se pudieron limpiar los adjuntos no enviados:', cleanupError);
+                    }
+                }
                 supportChatThreadStatus.textContent = error.message || 'No se pudo enviar el mensaje. Intenta de nuevo.';
                 supportChatThreadStatus.classList.remove('hidden');
             } finally {
+                supportChatUploadStatus.classList.add('hidden');
                 sendButton.disabled = false;
                 input.focus();
             }
