@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" role="img" aria-labelledby="title desc">
+  <title id="title">Imagen referencial: Pinturas al frío Black Color</title>
+  <desc id="desc">Ilustración provisional de frascos de pintura para manualidades.</desc>
+  <rect width="640" height="480" rx="36" fill="#eff6ff"/>
+  <text x="320" y="78" fill="#0f172a" font-family="Arial,sans-serif" font-size="27" font-weight="700" text-anchor="middle">BLACK COLOR · PINTURA AL FRÍO</text>
+  <g stroke="#334155" stroke-width="7">
+    <path d="M155 168h112l14 42v142H141V210z" fill="#f8fafc"/>
+    <path d="M264 168h112l14 42v142H250V210z" fill="#f8fafc"/>
+    <path d="M373 168h112l14 42v142H359V210z" fill="#f8fafc"/>
+    <path d="M172 142h78v31h-78zM281 142h78v31h-78zM390 142h78v31h-78z" fill="#1e293b"/>
+    <path d="M144 266h132v65H144z" fill="#ef4444" stroke="none"/>
+    <path d="M253 266h132v65H253z" fill="#3b82f6" stroke="none"/>
+    <path d="M362 266h132v65H362z" fill="#22c55e" stroke="none"/>
+  </g>
+  <rect x="112" y="420" width="416" height="34" rx="17" fill="#dbeafe"/>
+  <text x="320" y="443" fill="#1e3a8a" font-family="Arial,sans-serif" font-size="17" font-weight="700" text-anchor="middle">IMAGEN REFERENCIAL · TEMPORAL</text>
+</svg>
