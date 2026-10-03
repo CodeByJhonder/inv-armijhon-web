@@ -8,6 +8,9 @@ if (!window.supabase || !config.url || !config.publishableKey) {
 const supabaseClient = window.supabase.createClient(config.url, config.publishableKey);
 const loginView = document.getElementById('login-view');
 const ordersView = document.getElementById('orders-view');
+const adminNavigation = document.getElementById('admin-navigation');
+const adminPageButtons = [...adminNavigation.querySelectorAll('[data-admin-page]')];
+const adminPageViews = [...ordersView.querySelectorAll('[data-admin-page-view]')];
 const ordersList = document.getElementById('orders-list');
 const ordersStatus = document.getElementById('orders-status');
 const inventoryList = document.getElementById('inventory-list');
@@ -103,6 +106,7 @@ function showLogin() {
 function showOrders() {
     loginView.classList.add('hidden');
     ordersView.classList.remove('hidden');
+    showAdminPage('orders');
     logoutButton.classList.remove('hidden');
     loadOrders();
     loadAdminInventory();
@@ -110,6 +114,23 @@ function showOrders() {
     loadAdminChats();
     subscribeToAdminChats();
     refreshAdminChatPushControl();
+}
+
+function showAdminPage(page) {
+    adminPageViews.forEach(view => {
+        view.classList.toggle('hidden', view.id !== `admin-page-${page}`);
+    });
+
+    adminPageButtons.forEach(button => {
+        const isActive = button.dataset.adminPage === page;
+        button.classList.toggle('bg-violet-500/15', isActive);
+        button.classList.toggle('text-violet-200', isActive);
+        button.classList.toggle('text-slate-400', !isActive);
+        button.classList.toggle('hover:bg-violet-500/20', isActive);
+        button.classList.toggle('hover:bg-slate-800', !isActive);
+        button.classList.toggle('hover:text-white', !isActive);
+        button.setAttribute('aria-current', isActive ? 'page' : 'false');
+    });
 }
 
 function initTheme() {
@@ -701,6 +722,11 @@ logoutButton.addEventListener('click', async () => {
 
 document.getElementById('refresh-orders').addEventListener('click', loadOrders);
 document.getElementById('refresh-inventory').addEventListener('click', loadAdminInventory);
+adminNavigation.addEventListener('click', event => {
+    const button = event.target.closest('[data-admin-page]');
+    if (!button) return;
+    showAdminPage(button.dataset.adminPage);
+});
 inventorySearch.addEventListener('input', renderAdminInventory);
 inventoryList.addEventListener('submit', event => {
     const form = event.target.closest('.inventory-product');
