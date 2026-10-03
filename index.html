@@ -1447,6 +1447,8 @@
             { id: 'p36', name: 'Pinceles Artist Brushes', category: 'escolares', price: 0.44, stock: 'Disponible', img: 'img/artist-brushes.webp', desc: 'Pinceles para aplicar pintura y realizar trazos en trabajos artísticos.' },
             { id: 'p37', name: 'Lápices Pointer con Agarre Suave', category: 'escolares', price: 0.43, stock: 'Disponible', img: 'img/lapices-pointer-agarre-suave.webp', desc: 'Lápices de madera HB N.º 2 con agarre suave, ideales para escribir, dibujar y realizar tareas escolares.' }
         ];
+        const productInventory = new Map();
+        let inventoryLoadState = 'loading';
 
         // --- App Global State ---
         let cart = [];
@@ -1545,11 +1547,69 @@
         }
 
         // --- Catalog Functions ---
+        function productStockLabel(productId) {
+            if (inventoryLoadState === 'loading') return 'Consultando inventario...';
+            if (inventoryLoadState === 'error') return 'Stock no disponible';
+            const stock = productInventory.get(productId) || 0;
+            return stock > 0 ? `${stock} disponibles` : 'Agotado';
+        }
+
+        function productCanBeOrdered(productId) {
+            return inventoryLoadState === 'ready' && (productInventory.get(productId) || 0) > 0;
+        }
+
+        async function loadProductInventory() {
+            if (!window.supabaseClient) {
+                inventoryLoadState = 'error';
+                filterCatalog();
+                return false;
+            }
+
+            inventoryLoadState = 'loading';
+            try {
+                const { data, error } = await window.supabaseClient
+                    .from('product_inventory')
+                    .select('product_id, stock');
+                if (error) throw error;
+
+                productInventory.clear();
+                (data || []).forEach(item => productInventory.set(item.product_id, Number(item.stock)));
+                inventoryLoadState = 'ready';
+            } catch (error) {
+                inventoryLoadState = 'error';
+                console.error('No se pudo cargar el inventario:', error);
+                filterCatalog();
+                return false;
+            }
+
+            let adjustedCart = false;
+            cart = cart.filter(item => {
+                const stock = productInventory.get(item.id) || 0;
+                if (stock <= 0) {
+                    adjustedCart = true;
+                    return false;
+                }
+                if (item.qty > stock) {
+                    item.qty = stock;
+                    adjustedCart = true;
+                }
+                return true;
+            });
+            filterCatalog();
+            updateCartUI();
+            if (adjustedCart) showToast('El carrito se ajustó a las existencias disponibles.');
+            return true;
+        }
+
         function renderCatalog(products) {
             const grid = document.getElementById('product-grid');
             grid.innerHTML = '';
 
             products.forEach(p => {
+                const canOrder = productCanBeOrdered(p.id);
+                const stockStyle = canOrder
+                    ? 'text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                    : 'text-red-700 dark:text-red-300 border-red-500/30';
                 const card = document.createElement('div');
                 card.className = 'catalog-card bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-5 flex flex-col justify-between hover:border-indigo-500 transition duration-300 group shadow-sm dark:shadow-none';
                 card.innerHTML = `
@@ -1557,7 +1617,7 @@
                         <button type="button" class="catalog-image-preview group/image h-44 w-full rounded-2xl bg-slate-100 dark:bg-slate-950 overflow-hidden relative mb-4 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#E3CC9A] focus-visible:outline-offset-2" data-image="${escapeHtml(p.img)}" data-image-name="${escapeHtml(p.name)}" aria-label="Ver imagen completa de ${escapeHtml(p.name)}">
                             <img src="${p.img}" alt="${p.name}" loading="lazy" decoding="async" fetchpriority="low" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
                             <span class="catalog-image-overlay absolute inset-0 flex items-center justify-center bg-slate-950/55 px-3 text-center text-xs font-black uppercase tracking-wide text-white">Ver imagen completa</span>
-                            <span class="absolute top-3 right-3 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md text-xs font-extrabold px-2.5 py-1 rounded-lg text-indigo-600 dark:text-indigo-400 border border-slate-200 dark:border-slate-800">${p.stock}</span>
+                            <span class="absolute top-3 right-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md text-[10px] font-extrabold px-2.5 py-1 rounded-lg border ${stockStyle}">${productStockLabel(p.id)}</span>
                         </button>
                         <div class="text-[10px] font-bold uppercase tracking-widest text-violet-600 dark:text-violet-400 mb-1">${catLabel[p.category]}</div>
                         <h4 class="font-bold text-slate-900 dark:text-white text-sm line-clamp-1 mb-2">${p.name}</h4>
@@ -1569,8 +1629,8 @@
                             <span class="text-xl font-black text-slate-900 dark:text-white">$${p.price.toFixed(2)}</span>
                             <button onclick="openQuickView('${p.id}')" class="catalog-quick-view text-xs text-indigo-600 dark:text-indigo-400 font-bold">Vista Rápida</button>
                         </div>
-                        <button onclick="addToCart('${p.id}', event)" class="catalog-product-action w-full bg-slate-100 dark:bg-slate-800 hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 text-slate-800 dark:text-white font-bold py-3 rounded-2xl transition border border-slate-200 dark:border-slate-700 flex items-center justify-center gap-2 text-xs">
-                            <i class="fa-solid fa-cart-plus"></i> Añadir al Carrito
+                        <button onclick="addToCart('${p.id}', event)" ${canOrder ? '' : 'disabled'} class="catalog-product-action w-full bg-slate-100 dark:bg-slate-800 hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 text-slate-800 dark:text-white font-bold py-3 rounded-2xl transition border border-slate-200 dark:border-slate-700 flex items-center justify-center gap-2 text-xs disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-slate-100 disabled:hover:text-slate-800 dark:disabled:hover:bg-slate-800 dark:disabled:hover:text-white">
+                            <i class="fa-solid ${canOrder ? 'fa-cart-plus' : 'fa-ban'}"></i> ${canOrder ? 'Añadir al Carrito' : productStockLabel(p.id)}
                         </button>
                     </div>
                 `;
@@ -1610,10 +1670,18 @@
         // --- Cart Management Logic ---
         function addToCart(productId, evt) {
             const item = productsDB.find(p => p.id === productId);
-            if (!item) return;
+            if (!item) return false;
+            if (!productCanBeOrdered(productId)) {
+                showToast(inventoryLoadState === 'ready' ? 'Este producto está agotado.' : 'No se pudo confirmar el inventario. Intenta nuevamente.');
+                return false;
+            }
 
             const existing = cart.find(i => i.id === productId);
             if (existing) {
+                if (existing.qty >= productInventory.get(productId)) {
+                    showToast('No hay más unidades disponibles de este producto.');
+                    return false;
+                }
                 existing.qty++;
             } else {
                 cart.push({ ...item, qty: 1 });
@@ -1622,6 +1690,7 @@
             updateCartUI();
             showToast(`${item.name} añadido al carrito.`);
             if (evt) flyToCart(evt);
+            return true;
         }
 
         function flyToCart(evt) {
@@ -1681,7 +1750,7 @@
                     <div class="flex items-center gap-2">
                         <button onclick="changeQty(${index}, -1)" class="w-7 h-7 bg-slate-200 dark:bg-slate-900 text-slate-800 dark:text-slate-300 rounded-lg text-xs font-bold">-</button>
                         <span class="text-xs font-bold text-slate-800 dark:text-white">${item.qty}</span>
-                        <button onclick="changeQty(${index}, 1)" class="w-7 h-7 bg-slate-200 dark:bg-slate-900 text-slate-800 dark:text-slate-300 rounded-lg text-xs font-bold">+</button>
+                        <button onclick="changeQty(${index}, 1)" ${item.qty >= (productInventory.get(item.id) || 0) ? 'disabled' : ''} class="w-7 h-7 bg-slate-200 dark:bg-slate-900 text-slate-800 dark:text-slate-300 rounded-lg text-xs font-bold disabled:cursor-not-allowed disabled:opacity-40">+</button>
                     </div>
                 `;
                 container.appendChild(div);
@@ -1703,8 +1772,14 @@
         }
 
         function changeQty(index, delta) {
-            cart[index].qty += delta;
-            if (cart[index].qty <= 0) cart.splice(index, 1);
+            const item = cart[index];
+            if (!item) return;
+            if (delta > 0 && item.qty >= (productInventory.get(item.id) || 0)) {
+                showToast('No hay más unidades disponibles de este producto.');
+                return;
+            }
+            item.qty += delta;
+            if (item.qty <= 0) cart.splice(index, 1);
             updateCartUI();
         }
 
@@ -1721,9 +1796,22 @@
             }
         }
 
-        function checkoutWhatsApp() {
+        async function checkoutWhatsApp() {
             if (cart.length === 0) {
                 showToast('Añade productos antes de finalizar la compra.');
+                return;
+            }
+            if (!await loadProductInventory()) {
+                showToast('No se pudo confirmar el inventario. Intenta nuevamente.');
+                return;
+            }
+            if (cart.length === 0) {
+                showToast('Los productos del carrito ya no tienen existencias disponibles.');
+                return;
+            }
+            const unavailable = cart.find(item => item.qty > (productInventory.get(item.id) || 0));
+            if (unavailable) {
+                showToast(`${unavailable.name} ya no tiene suficientes unidades disponibles.`);
                 return;
             }
 
@@ -1746,15 +1834,24 @@
             window.open(`https://wa.me/584264057916?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
         }
 
-        function orderProductWhatsApp(productId) {
+        async function orderProductWhatsApp(productId) {
             const product = productsDB.find(item => item.id === productId);
             if (!product) return;
+            if (!await loadProductInventory()) {
+                showToast('No se pudo confirmar el inventario. Intenta nuevamente.');
+                return;
+            }
+            if (!productCanBeOrdered(productId)) {
+                showToast('Este producto está agotado.');
+                return;
+            }
 
             const message = [
                 'Hola, quiero consultar/pedir este producto de INV. Armijhon:',
                 '',
                 `• ${product.name}`,
                 '• Cantidad: 1',
+                `• Existencias consultadas: ${productInventory.get(productId)}`,
                 `• Precio referencial: $${product.price.toFixed(2)}`,
                 '',
                 '¿Me confirman disponibilidad y precio final?'
@@ -1856,7 +1953,14 @@
                         receipt: { name: file.name, type: file.type, base64: await readReceipt(file) }
                     }
                 });
-                if (error) throw error;
+                if (error) {
+                    let detail = error.message || 'No se pudo enviar el pedido.';
+                    if (error.context instanceof Response) {
+                        const responseBody = await error.context.clone().json();
+                        if (typeof responseBody?.error === 'string') detail = responseBody.error;
+                    }
+                    throw new Error(detail);
+                }
                 status.textContent = `Pedido ${data.orderId.slice(0, 8)} recibido. Quedará pendiente de verificación.`;
                 status.className = 'text-xs text-emerald-600 dark:text-emerald-400';
                 cart = [];
@@ -1868,7 +1972,9 @@
                 launchReceiptCelebration();
             } catch (error) {
                 console.error(error);
-                status.textContent = 'No pudimos enviar el pedido. Intenta nuevamente o usa WhatsApp.';
+                status.textContent = error instanceof Error && error.message
+                    ? error.message
+                    : 'No pudimos enviar el pedido. Intenta nuevamente o usa WhatsApp.';
                 status.className = 'text-xs text-red-600 dark:text-red-400';
                 submit.disabled = false;
                 submit.textContent = 'Enviar comprobante para verificar';
@@ -1923,9 +2029,10 @@
                 </div>
                 <h3 class="text-lg font-black text-slate-900 dark:text-white">${p.name}</h3>
                 <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed my-2">${p.desc}</p>
+                <p class="text-xs font-bold ${productCanBeOrdered(p.id) ? 'text-emerald-600 dark:text-emerald-300' : 'text-red-600 dark:text-red-300'}">${productStockLabel(p.id)}</p>
                 <div class="text-2xl font-black text-indigo-500 my-4">$${p.price.toFixed(2)}</div>
-                <button onclick="addToCart('${p.id}', event); closeQuickView();" class="catalog-product-action w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 rounded-2xl transition text-xs">
-                    <i class="fa-solid fa-cart-plus mr-2"></i> Añadir a mi Carrito
+                <button onclick="if (addToCart('${p.id}', event)) closeQuickView();" ${productCanBeOrdered(p.id) ? '' : 'disabled'} class="catalog-product-action w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 rounded-2xl transition text-xs disabled:cursor-not-allowed disabled:opacity-50">
+                    <i class="fa-solid ${productCanBeOrdered(p.id) ? 'fa-cart-plus' : 'fa-ban'} mr-2"></i> ${productCanBeOrdered(p.id) ? 'Añadir a mi Carrito' : productStockLabel(p.id)}
                 </button>
                 <button onclick="orderProductWhatsApp('${p.id}')" class="mt-2 w-full rounded-2xl border border-emerald-500/40 bg-emerald-500/10 py-3.5 text-xs font-bold text-emerald-700 transition hover:bg-emerald-500 hover:text-white dark:text-emerald-400">
                     <i class="fa-brands fa-whatsapp mr-2"></i> Pedir por WhatsApp
@@ -2448,6 +2555,10 @@
             initTheme();
             filterCatalog();
             updateCartUI();
+            loadProductInventory();
+            window.setInterval(() => {
+                if (document.visibilityState === 'visible') loadProductInventory();
+            }, 60000);
             refreshExchangeRates();
             setInterval(refreshExchangeRates, window.PAYMENT_CONFIG.ratesRefreshMs);
             initFooter();

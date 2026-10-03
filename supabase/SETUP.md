@@ -46,6 +46,9 @@ Si no hay internet, usa la tasa de respaldo definida en `assets/js/payment-confi
 y muestra el estado al cliente. Esta fuente automatica no garantiza que el valor sea
 la tasa oficial publicada por el BCV; verifica la tasa y el monto real antes de cobrar.
 
+Esta fuente no requiere clave ni pago, pero no debe considerarse una cotizacion
+bancaria instantanea. Antes de confirmar un pago, verifica la tasa y el monto real.
+
 ## 4. Flujo previsto
 
 1. El cliente crea el pedido.
@@ -123,7 +126,38 @@ añadirse al sitio ni compartirse.
 No habilitar acceso anónimo directo a las tablas del chat ni copiar la clave `service_role`
 en archivos JavaScript, HTML o configuración pública.
 
-## 7. Activar notificaciones push para clientes y administradores
+## 7. Controlar el inventario
+
+1. Ejecutar `supabase/inventory-migration.sql` en SQL Editor despues de `schema.sql` y
+   `chat-migration.sql`. El script registra los 37 productos actuales con existencia
+   inicial de cero. Es seguro volver a ejecutarlo y conserva las cantidades que ya se
+   hayan configurado.
+2. Confirmar que el usuario que administra la tienda está agregado a `public.chat_admins`
+   (ver el paso anterior). Solo esos usuarios pueden cambiar existencias o aprobar pedidos.
+3. Publicar los archivos actualizados `index.html`, `admin.html` y `assets/js/admin.js`.
+   En el panel, abrir **Inventario de productos**, registrar las cantidades reales y
+   guardar cada producto. El catálogo mostrará las unidades o **Agotado**; con cero
+   unidades no permitirá añadirlo al carrito ni iniciar un pedido por WhatsApp.
+4. Volver a desplegar la función para que también compruebe las existencias en el servidor:
+
+   ```bash
+   supabase functions deploy create-order
+   ```
+
+   Los pedidos recibidos no reservan ni descuentan unidades. Al aprobar un pedido desde
+   el panel, el descuento y el cambio de estado se ejecutan juntos: si falta stock, no se
+   aprueba el pedido ni se descuenta parcialmente. En aprobaciones múltiples, cada pedido
+   se procesa por separado y el panel informa cuáles no pudieron aprobarse.
+5. Los pedidos enviados directamente por WhatsApp no se registran en `orders` y no
+   descuentan el inventario automáticamente; verifica y actualiza esas ventas desde el
+   panel. Eliminar un pedido aprobado tampoco repone unidades automáticamente; si cancelas
+   una venta, corrige la existencia desde el panel.
+
+Publica primero la migración SQL y después los archivos y la función actualizados. Antes
+de habilitar el catálogo, registra las existencias reales: todos los productos aparecerán
+agotados hasta que tengan unidades cargadas.
+
+## 8. Activar notificaciones push para clientes y administradores
 
 Las notificaciones son opcionales: cada cliente y cada navegador administrador debe
 habilitarlas explícitamente desde su botón. Los avisos no contienen el texto del chat.

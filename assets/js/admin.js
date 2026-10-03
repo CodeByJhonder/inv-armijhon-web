@@ -10,6 +10,8 @@ const loginView = document.getElementById('login-view');
 const ordersView = document.getElementById('orders-view');
 const ordersList = document.getElementById('orders-list');
 const ordersStatus = document.getElementById('orders-status');
+const inventoryList = document.getElementById('inventory-list');
+const inventoryStatus = document.getElementById('inventory-status');
 const ordersSummary = document.getElementById('orders-summary');
 const logoutButton = document.getElementById('logout-button');
 const themeToggle = document.getElementById('theme-toggle');
@@ -24,6 +26,7 @@ const paymentMethodFilter = document.getElementById('payment-method-filter');
 const receiptFilter = document.getElementById('receipt-filter');
 const sortFilter = document.getElementById('sort-filter');
 let orders = [];
+let inventoryProducts = [];
 let selectedOrderIds = new Set();
 let ordersChannel;
 let chatChannel;
@@ -101,6 +104,7 @@ function showOrders() {
     ordersView.classList.remove('hidden');
     logoutButton.classList.remove('hidden');
     loadOrders();
+    loadAdminInventory();
     subscribeToOrders();
     loadAdminChats();
     subscribeToAdminChats();
@@ -452,25 +456,123 @@ function renderOrder(order) {
     </article>`;
 }
 
+function renderAdminInventory() {
+    inventoryList.innerHTML = inventoryProducts.length ? inventoryProducts.map(product => `
+        <form class="inventory-product flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900 p-4" data-product-id="${escapeHtml(product.product_id)}">
+            <div class="min-w-0 flex-1">
+                <h3 class="truncate text-sm font-bold text-slate-100">${escapeHtml(product.product_name)}</h3>
+                <p class="mt-1 text-[11px] text-slate-400">Código ${escapeHtml(product.product_id)} · <span class="${product.stock > 0 ? 'text-emerald-300' : 'text-red-300'}">${product.stock > 0 ? `${product.stock} disponibles` : 'Agotado'}</span></p>
+            </div>
+            <label class="sr-only" for="stock-${escapeHtml(product.product_id)}">Unidades disponibles de ${escapeHtml(product.product_name)}</label>
+            <input id="stock-${escapeHtml(product.product_id)}" class="inventory-quantity w-20 rounded-lg border border-slate-700 bg-slate-950 px-2 py-2 text-center text-sm text-white outline-none focus:border-emerald-400" type="number" min="0" max="99999" step="1" value="${product.stock}" required>
+            <button class="inventory-save rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-500 disabled:cursor-wait disabled:opacity-50" type="submit">Guardar</button>
+        </form>
+    `).join('') : '<div class="rounded-2xl border border-slate-800 p-6 text-center text-sm text-slate-400 sm:col-span-2 xl:col-span-3">No hay productos registrados en el inventario.</div>';
+}
+
+async function loadAdminInventory() {
+    inventoryStatus.textContent = 'Cargando inventario...';
+    try {
+        const { data, error } = await supabaseClient
+            .from('product_inventory')
+            .select('product_id, product_name, stock')
+            .order('product_name');
+        if (error) throw error;
+
+        inventoryProducts = (data || []).map(product => ({
+            ...product,
+            stock: Number(product.stock)
+        }));
+        renderAdminInventory();
+        inventoryStatus.textContent = `${inventoryProducts.length} productos · los cambios se guardan individualmente.`;
+    } catch (error) {
+        inventoryStatus.textContent = 'No se pudo cargar el inventario. Verifica que ejecutaste la migración SQL.';
+        console.error('Error cargando el inventario:', error);
+        return;
+    }
+}
+
+async function saveProductStock(form) {
+    const productId = form.dataset.productId;
+    const input = form.querySelector('.inventory-quantity');
+    const saveButton = form.querySelector('.inventory-save');
+    const stock = Number(input.value);
+
+    if (!productId || !Number.isInteger(stock) || stock < 0 || stock > 99999) {
+        inventoryStatus.textContent = 'Ingresa una cantidad entera entre 0 y 99999.';
+        input.focus();
+        return;
+    }
+
+    saveButton.disabled = true;
+    inventoryStatus.textContent = 'Guardando existencia...';
+    try {
+        const { data, error } = await supabaseClient.rpc('admin_set_product_stock', {
+            p_product_id: productId,
+            p_stock: stock
+        });
+        if (error) throw error;
+
+        const product = inventoryProducts.find(item => item.product_id === productId);
+        if (product) product.stock = Number(data);
+        renderAdminInventory();
+        inventoryStatus.textContent = `Inventario actualizado: ${product?.product_name || productId} · ${Number(data)} unidades.`;
+    } catch (error) {
+        console.error('Error guardando la existencia:', error);
+        inventoryStatus.textContent = error.message || 'No se pudo guardar la existencia.';
+    } finally {
+        saveButton.disabled = false;
+    }
+}
+
 async function updateOrderStatus(ids, status) {
     if (!ids.length) {
         alert('Selecciona al menos un pedido.');
         return;
     }
-    ordersStatus.textContent = 'Actualizando pedidos...';
-    const { data: sessionData } = await supabaseClient.auth.getSession();
-    const { error } = await supabaseClient.from('orders').update({
-        status,
-        reviewed_at: new Date().toISOString(),
-        reviewed_by: sessionData.session?.user?.id || null
-    }).in('id', ids);
-    if (error) {
-        ordersStatus.textContent = 'No se pudieron actualizar los pedidos.';
-        console.error(error);
+    if (!['approved', 'rejected', 'completed'].includes(status)) {
+        ordersStatus.textContent = 'Estado de pedido no permitido.';
         return;
     }
+
+    const expectedStatus = status === 'completed' ? 'approved' : 'pending';
+    const eligibleIds = ids.filter(id => orders.some(order => order.id === id && order.status === expectedStatus));
+    const skipped = ids.length - eligibleIds.length;
+    const failures = [];
+    let updated = 0;
+    ordersStatus.textContent = status === 'approved' ? 'Aprobando pedidos y comprobando existencias...' : 'Actualizando pedidos...';
+
+    for (const id of eligibleIds) {
+        try {
+            const { error } = status === 'approved'
+                ? await supabaseClient.rpc('admin_approve_order_with_inventory', { p_order_id: id })
+                : await supabaseClient.rpc('admin_set_order_status', { p_order_id: id, p_status: status });
+            if (error) throw error;
+            updated++;
+        } catch (error) {
+            const message = typeof error === 'object' && error !== null
+                && 'message' in error && typeof error.message === 'string'
+                ? error.message
+                : `Pedido ${id}`;
+            failures.push(message);
+            console.error(`No se pudo actualizar el pedido ${id}:`, error);
+        }
+    }
+
     selectedOrderIds.clear();
-    await loadOrders();
+    await Promise.all([
+        loadOrders(),
+        status === 'approved' ? loadAdminInventory() : Promise.resolve()
+    ]);
+    const resultParts = [];
+    const statusLabel = { approved: 'aprobado', rejected: 'rechazado', completed: 'completado' }[status];
+    if (updated) {
+        const inventoryNote = status === 'approved' ? ' y stock descontado' : '';
+        resultParts.push(`${updated} pedido${updated === 1 ? '' : 's'} ${statusLabel}${updated === 1 ? '' : 's'}${inventoryNote}.`);
+    }
+    if (failures.length) resultParts.push(`${failures.length} ${failures.length === 1 ? 'no se pudo' : 'no se pudieron'} actualizar: ${failures.join(' · ')}`);
+    if (skipped) resultParts.push(`${skipped} pedido${skipped === 1 ? '' : 's'} omitido${skipped === 1 ? '' : 's'} por tener un estado distinto.`);
+    ordersStatus.textContent = resultParts.join(' ') || 'No hay pedidos seleccionados para ese cambio de estado.';
 }
 
 async function deleteOrders(ids) {
@@ -584,6 +686,13 @@ logoutButton.addEventListener('click', async () => {
 });
 
 document.getElementById('refresh-orders').addEventListener('click', loadOrders);
+document.getElementById('refresh-inventory').addEventListener('click', loadAdminInventory);
+inventoryList.addEventListener('submit', event => {
+    const form = event.target.closest('.inventory-product');
+    if (!form) return;
+    event.preventDefault();
+    saveProductStock(form);
+});
 document.getElementById('refresh-chats').addEventListener('click', async () => {
     await loadAdminChats();
 });

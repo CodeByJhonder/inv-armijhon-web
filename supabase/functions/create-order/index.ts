@@ -86,6 +86,24 @@ Deno.serve(async request => {
         if (!Array.isArray(items) || items.length === 0 || items.length > 50) {
             return json({ error: 'El pedido no contiene productos válidos.' }, 400);
         }
+        const normalizedItems = items.map((value: unknown) => {
+            if (!value || typeof value !== 'object') return null;
+            const item = value as Record<string, unknown>;
+            const id = typeof item.id === 'string' ? item.id.trim() : '';
+            const quantity = Number(item.quantity);
+            if (!/^p\d+$/.test(id) || !Number.isSafeInteger(quantity) || quantity < 1 || quantity > 99999) return null;
+            return {
+                id,
+                name: typeof item.name === 'string' ? item.name.slice(0, 160) : '',
+                quantity,
+                unitPriceUsd: Number(item.unitPriceUsd),
+                lineTotalUsd: Number(item.lineTotalUsd)
+            };
+        });
+        if (normalizedItems.some(item => item === null)) {
+            return json({ error: 'El pedido contiene productos o cantidades inválidas.' }, 400);
+        }
+        const validItems = normalizedItems.filter((item): item is NonNullable<typeof item> => item !== null);
         if (!receipt?.base64 || !receipt?.name || !receipt?.type || receipt.base64.length > 7_000_000) {
             return json({ error: 'El comprobante es obligatorio y no debe superar 5 MB.' }, 400);
         }
@@ -97,6 +115,28 @@ Deno.serve(async request => {
             Deno.env.get('SUPABASE_URL') ?? '',
             Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
         );
+        const requestedQuantities = new Map<string, number>();
+        validItems.forEach(item => {
+            requestedQuantities.set(item.id, (requestedQuantities.get(item.id) || 0) + item.quantity);
+        });
+        const { data: inventory, error: inventoryError } = await supabase
+            .from('product_inventory')
+            .select('product_id, product_name, stock')
+            .in('product_id', [...requestedQuantities.keys()]);
+        if (inventoryError) return json({ error: 'No se pudo verificar la disponibilidad del inventario.' }, 500);
+        const availableByProduct = new Map((inventory || []).map(item => [item.product_id, {
+            name: item.product_name,
+            stock: Number(item.stock)
+        }]));
+        for (const [productId, requested] of requestedQuantities) {
+            const product = availableByProduct.get(productId);
+            if (!product || requested > product.stock) {
+                return json({
+                    error: `Existencias insuficientes para ${product?.name || productId}. Disponibles: ${product?.stock ?? 0}.`
+                }, 409);
+            }
+        }
+
         const orderId = crypto.randomUUID();
         const extension = receipt.name.split('.').pop()?.toLowerCase() || 'bin';
         const storagePath = `${orderId}/comprobante.${extension}`;
@@ -119,13 +159,13 @@ Deno.serve(async request => {
         });
         if (orderError) return json({ error: 'No se pudo crear el pedido.' }, 500);
 
-        const itemRows = items.map((item: any) => ({
+        const itemRows = validItems.map(item => ({
             order_id: orderId,
-            product_id: String(item.id).slice(0, 80),
-            product_name: String(item.name).slice(0, 160),
-            quantity: Math.max(1, Number(item.quantity)),
-            unit_price_usd: Number(item.unitPriceUsd),
-            line_total_usd: Number(item.lineTotalUsd)
+            product_id: item.id,
+            product_name: item.name,
+            quantity: item.quantity,
+            unit_price_usd: item.unitPriceUsd,
+            line_total_usd: item.lineTotalUsd
         }));
         const { error: itemsError } = await supabase.from('order_items').insert(itemRows);
         if (itemsError) return json({ error: 'No se pudieron guardar los productos.' }, 500);

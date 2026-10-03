@@ -126,6 +126,18 @@
             </div>
             <div id="orders-list" class="grid gap-4"></div>
 
+            <section class="mt-10 border-t border-slate-800 pt-8" aria-labelledby="inventory-heading">
+                <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
+                    <div>
+                        <h2 id="inventory-heading" class="text-xl font-black"><i class="fa-solid fa-boxes-stacked mr-2 text-emerald-300"></i>Inventario de productos</h2>
+                        <p class="mt-1 text-xs text-slate-400">Actualiza las unidades disponibles. El stock se descuenta al aprobar un pedido; si cancelas una venta aprobada, repón las unidades aquí.</p>
+                    </div>
+                    <button id="refresh-inventory" type="button" class="rounded-xl border border-slate-700 px-4 py-2 text-xs font-bold hover:bg-slate-800"><i class="fa-solid fa-rotate mr-2"></i>Actualizar inventario</button>
+                </div>
+                <p id="inventory-status" class="mb-3 min-h-4 text-xs text-slate-400" role="status" aria-live="polite"></p>
+                <div id="inventory-list" class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3"></div>
+            </section>
+
             <section class="mt-10 border-t border-slate-800 pt-8">
                 <div class="mb-5 flex flex-wrap items-end justify-between gap-3">
                     <div>
