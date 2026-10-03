@@ -39,12 +39,12 @@ Antes de activar el checkout se deben definir:
 
 ## 3.1 Tasas de cambio automaticas
 
-La pagina consulta gratuitamente `open.er-api.com` para obtener USD/VES.
-Se actualiza al abrir la pagina y cada 5 minutos. Si no hay internet, usa las tasas
-de respaldo definidas en `assets/js/payment-config.js` y muestra el estado al cliente.
-
-Esta fuente no requiere clave ni pago, pero no debe considerarse una cotizacion
-bancaria instantanea. Antes de confirmar un pago, verifica la tasa y el monto real.
+La pagina consulta gratuitamente `open.er-api.com` para obtener una tasa referencial
+USD/VES. A la tasa consultada se le suman Bs. 30 por USD para calcular los importes
+referenciales en bolivares. La tasa se actualiza al abrir la pagina y cada 5 minutos.
+Si no hay internet, usa la tasa de respaldo definida en `assets/js/payment-config.js`
+y muestra el estado al cliente. Esta fuente automatica no garantiza que el valor sea
+la tasa oficial publicada por el BCV; verifica la tasa y el monto real antes de cobrar.
 
 ## 4. Flujo previsto
 

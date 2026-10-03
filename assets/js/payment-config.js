@@ -1,6 +1,7 @@
 window.PAYMENT_CONFIG = {
     currency: 'VES',
     exchangeRate: 849.564,
+    vesRateAdjustment: 30,
     exchangeRates: {
         VES: 849.564
     },
