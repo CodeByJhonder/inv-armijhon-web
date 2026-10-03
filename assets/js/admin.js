@@ -12,6 +12,7 @@ const ordersList = document.getElementById('orders-list');
 const ordersStatus = document.getElementById('orders-status');
 const inventoryList = document.getElementById('inventory-list');
 const inventoryStatus = document.getElementById('inventory-status');
+const inventorySearch = document.getElementById('inventory-search');
 const ordersSummary = document.getElementById('orders-summary');
 const logoutButton = document.getElementById('logout-button');
 const themeToggle = document.getElementById('theme-toggle');
@@ -457,7 +458,16 @@ function renderOrder(order) {
 }
 
 function renderAdminInventory() {
-    inventoryList.innerHTML = inventoryProducts.length ? inventoryProducts.map(product => `
+    const query = inventorySearch.value.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es');
+    const filteredProducts = inventoryProducts.filter(product => {
+        const searchableText = `${product.product_name} ${product.product_id}`
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLocaleLowerCase('es');
+        return searchableText.includes(query);
+    });
+
+    inventoryList.innerHTML = filteredProducts.length ? filteredProducts.map(product => `
         <form class="inventory-product flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900 p-4" data-product-id="${escapeHtml(product.product_id)}">
             <div class="min-w-0 flex-1">
                 <h3 class="truncate text-sm font-bold text-slate-100">${escapeHtml(product.product_name)}</h3>
@@ -467,7 +477,11 @@ function renderAdminInventory() {
             <input id="stock-${escapeHtml(product.product_id)}" class="inventory-quantity w-20 rounded-lg border border-slate-700 bg-slate-950 px-2 py-2 text-center text-sm text-white outline-none focus:border-emerald-400" type="number" min="0" max="99999" step="1" value="${product.stock}" required>
             <button class="inventory-save rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-500 disabled:cursor-wait disabled:opacity-50" type="submit">Guardar</button>
         </form>
-    `).join('') : '<div class="rounded-2xl border border-slate-800 p-6 text-center text-sm text-slate-400 sm:col-span-2 xl:col-span-3">No hay productos registrados en el inventario.</div>';
+    `).join('') : `<div class="rounded-2xl border border-slate-800 p-6 text-center text-sm text-slate-400 sm:col-span-2 xl:col-span-3">${inventoryProducts.length ? 'No se encontraron productos con esa búsqueda.' : 'No hay productos registrados en el inventario.'}</div>`;
+
+    inventoryStatus.textContent = query
+        ? `${filteredProducts.length} resultado${filteredProducts.length === 1 ? '' : 's'} de ${inventoryProducts.length} productos.`
+        : `${inventoryProducts.length} productos · los cambios se guardan individualmente.`;
 }
 
 async function loadAdminInventory() {
@@ -687,6 +701,7 @@ logoutButton.addEventListener('click', async () => {
 
 document.getElementById('refresh-orders').addEventListener('click', loadOrders);
 document.getElementById('refresh-inventory').addEventListener('click', loadAdminInventory);
+inventorySearch.addEventListener('input', renderAdminInventory);
 inventoryList.addEventListener('submit', event => {
     const form = event.target.closest('.inventory-product');
     if (!form) return;
