@@ -2,7 +2,6 @@ window.PAYMENT_CONFIG = {
     currency: 'VES',
     exchangeRate: 849.564,
     exchangeRates: {
-        COP: 4000,
         VES: 849.564
     },
     ratesApiUrl: 'https://open.er-api.com/v6/latest/USD',

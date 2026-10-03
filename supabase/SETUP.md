@@ -39,7 +39,7 @@ Antes de activar el checkout se deben definir:
 
 ## 3.1 Tasas de cambio automaticas
 
-La pagina consulta gratuitamente `open.er-api.com` para obtener USD/COP y USD/VES.
+La pagina consulta gratuitamente `open.er-api.com` para obtener USD/VES.
 Se actualiza al abrir la pagina y cada 5 minutos. Si no hay internet, usa las tasas
 de respaldo definidas en `assets/js/payment-config.js` y muestra el estado al cliente.
 
