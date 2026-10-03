@@ -489,16 +489,18 @@ function renderAdminInventory() {
     });
 
     inventoryList.innerHTML = filteredProducts.length ? filteredProducts.map(product => `
-        <form class="inventory-product flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900 p-4" data-product-id="${escapeHtml(product.product_id)}">
-            <div class="min-w-0 flex-1">
-                <h3 class="truncate text-sm font-bold text-slate-100">${escapeHtml(product.product_name)}</h3>
-                <p class="mt-1 text-[11px] text-slate-400">Código ${escapeHtml(product.product_id)} · <span class="${product.stock > 0 ? 'text-emerald-300' : 'text-red-300'}">${product.stock > 0 ? `${product.stock} disponibles` : 'Agotado'}</span></p>
+        <form class="inventory-product grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 rounded-2xl border border-slate-800 bg-slate-900 p-4" data-product-id="${escapeHtml(product.product_id)}">
+            <div class="min-w-0">
+                <h3 class="break-words text-sm font-bold leading-snug text-slate-100">${escapeHtml(product.product_name)}</h3>
+                <p class="mt-1 text-[11px] leading-snug text-slate-400">Código ${escapeHtml(product.product_id)} · <span class="${product.stock > 0 ? 'text-emerald-300' : 'text-red-300'}">${product.stock > 0 ? `${product.stock} disponibles` : 'Agotado'}</span></p>
             </div>
             <label class="sr-only" for="stock-${escapeHtml(product.product_id)}">Unidades disponibles de ${escapeHtml(product.product_name)}</label>
-            <input id="stock-${escapeHtml(product.product_id)}" class="inventory-quantity w-20 rounded-lg border border-slate-700 bg-slate-950 px-2 py-2 text-center text-sm text-white outline-none focus:border-emerald-400" type="number" min="0" max="99999" step="1" value="${product.stock}" required>
-            <button class="inventory-save rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-500 disabled:cursor-wait disabled:opacity-50" type="submit">Guardar</button>
+            <div class="flex shrink-0 items-center gap-2">
+                <input id="stock-${escapeHtml(product.product_id)}" class="inventory-quantity w-[4.5rem] shrink-0 rounded-lg border border-slate-700 bg-slate-950 px-2 py-2 text-center text-sm text-white outline-none focus:border-emerald-400" type="number" min="0" max="99999" step="1" value="${product.stock}" required>
+                <button class="inventory-save whitespace-nowrap rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-500 disabled:cursor-wait disabled:opacity-50" type="submit">Guardar</button>
+            </div>
         </form>
-    `).join('') : `<div class="rounded-2xl border border-slate-800 p-6 text-center text-sm text-slate-400 sm:col-span-2 xl:col-span-3">${inventoryProducts.length ? 'No se encontraron productos con esa búsqueda.' : 'No hay productos registrados en el inventario.'}</div>`;
+    `).join('') : `<div class="rounded-2xl border border-slate-800 p-6 text-center text-sm text-slate-400 md:col-span-2 2xl:col-span-3">${inventoryProducts.length ? 'No se encontraron productos con esa búsqueda.' : 'No hay productos registrados en el inventario.'}</div>`;
 
     inventoryStatus.textContent = query
         ? `${filteredProducts.length} resultado${filteredProducts.length === 1 ? '' : 's'} de ${inventoryProducts.length} productos.`
