@@ -98,7 +98,7 @@ function validateAttachmentDescriptors(value: unknown, conversationId: string): 
   return attachments;
 }
 
-async function authorizeAttachmentAudience(request: Request, payload: Record<string, unknown>) {
+async function authorizeAttachmentAudience(request: Request, payload: Record<string, unknown>, allowClosed = false) {
   if (payload.audience === "admin") {
     const adminUserId = await requireAdmin(request);
     if (!adminUserId) return { error: "Se requiere una sesión administrativa autorizada.", conversationId: null, adminUserId: null };
@@ -109,7 +109,7 @@ async function authorizeAttachmentAudience(request: Request, payload: Record<str
       .eq("id", payload.conversationId)
       .maybeSingle();
     if (error) throw error;
-    if (!conversation || conversation.status !== "open") {
+    if (!conversation || (!allowClosed && conversation.status !== "open")) {
       return { error: "Esta conversación no está disponible.", conversationId: null, adminUserId };
     }
     return { error: null, conversationId: conversation.id, adminUserId };
@@ -120,7 +120,7 @@ async function authorizeAttachmentAudience(request: Request, payload: Record<str
     if (session.error || !session.conversation) {
       return { error: session.error, conversationId: null, adminUserId: null };
     }
-    if (session.conversation.status !== "open") {
+    if (!allowClosed && session.conversation.status !== "open") {
       return { error: "Esta conversación fue cerrada.", conversationId: null, adminUserId: null };
     }
     return { error: null, conversationId: session.conversation.id, adminUserId: null };
@@ -310,7 +310,7 @@ async function requireConversation(id: unknown, token: unknown) {
   const tokenHash = await hashToken(token);
   const { data, error } = await adminClient
     .from("chat_conversations")
-    .select("id, status, customer_unread")
+    .select("id, status, customer_unread, customer_name, customer_phone")
     .eq("id", id)
     .eq("session_token_hash", tokenHash)
     .maybeSingle();
@@ -329,7 +329,7 @@ Deno.serve(async (request) => {
     const action = payload?.action;
 
     if (action === "attachment_upload_url" || action === "attachment_cleanup") {
-      const access = await authorizeAttachmentAudience(request, payload);
+      const access = await authorizeAttachmentAudience(request, payload, action === "attachment_cleanup");
       if (access.error || !access.conversationId) {
         return jsonResponse({ error: access.error ?? "No se pudo autorizar esta conversación." }, 403);
       }
@@ -449,7 +449,7 @@ Deno.serve(async (request) => {
       return jsonResponse({ conversation: data });
     }
 
-    if (action === "admin_list" || action === "admin_messages" || action === "admin_reply") {
+    if (action === "admin_list" || action === "admin_messages" || action === "admin_reply" || action === "admin_close") {
       const adminUserId = await requireAdmin(request);
       if (!adminUserId) return jsonResponse({ error: "Se requiere una sesión administrativa autorizada." }, 401);
       if (action === "admin_list") {
@@ -465,6 +465,34 @@ Deno.serve(async (request) => {
       const conversationId = payload.conversationId;
       if (!validConversationId(conversationId)) {
         return jsonResponse({ error: "La conversación no es válida." }, 400);
+      }
+
+      if (action === "admin_close") {
+        const { data: closedConversation, error: closeError } = await adminClient
+          .from("chat_conversations")
+          .update({ status: "closed" })
+          .eq("id", conversationId)
+          .eq("status", "open")
+          .select("id, status")
+          .maybeSingle();
+        if (closeError) throw closeError;
+        if (!closedConversation) {
+          const { data: existing, error: lookupError } = await adminClient
+            .from("chat_conversations")
+            .select("id, status")
+            .eq("id", conversationId)
+            .maybeSingle();
+          if (lookupError) throw lookupError;
+          if (!existing) return jsonResponse({ error: "No se encontró esta conversación." }, 404);
+          return jsonResponse({ error: "Esta conversación ya estaba cerrada." }, 409);
+        }
+        const { error: subscriptionError } = await adminClient
+          .from("chat_push_subscriptions")
+          .delete()
+          .eq("audience", "customer")
+          .eq("conversation_id", conversationId);
+        if (subscriptionError) throw subscriptionError;
+        return jsonResponse({ conversation: closedConversation });
       }
 
       if (action === "admin_messages") {
@@ -512,6 +540,7 @@ Deno.serve(async (request) => {
         .insert({ conversation_id: conversationId, sender: "admin", body, attachments })
         .select("id, conversation_id, sender, body, attachments, created_at")
         .single();
+      if (error?.code === "23514") return jsonResponse({ error: "Esta conversación fue cerrada." }, 409);
       if (error) throw error;
       scheduleChatPush("admin", conversationId);
       return jsonResponse({ message: data });
@@ -520,7 +549,6 @@ Deno.serve(async (request) => {
     if (action === "client_list" || action === "client_send") {
       const { conversation, error: sessionError } = await requireConversation(payload.conversationId, payload.sessionToken);
       if (sessionError || !conversation) return jsonResponse({ error: sessionError }, 403);
-      if (conversation.status !== "open") return jsonResponse({ error: "Esta conversación fue cerrada." }, 409);
 
       if (action === "client_list") {
         const { data, error } = await adminClient
@@ -537,9 +565,17 @@ Deno.serve(async (request) => {
             .eq("id", conversation.id);
           if (readError) throw readError;
         }
-        return jsonResponse({ messages: await messagesWithSignedAttachments((data ?? []).reverse()) });
+        return jsonResponse({
+          messages: await messagesWithSignedAttachments((data ?? []).reverse()),
+          conversation: {
+            status: conversation.status,
+            customer_name: conversation.customer_name,
+            customer_phone: conversation.customer_phone
+          }
+        });
       }
 
+      if (conversation.status !== "open") return jsonResponse({ error: "Esta conversación fue cerrada." }, 409);
       const body = typeof payload.body === "string" ? payload.body.trim() : "";
       const attachments = validateAttachmentDescriptors(payload.attachments ?? [], conversation.id);
       if (!attachments) return jsonResponse({ error: "Los archivos adjuntos no son válidos." }, 400);
@@ -564,6 +600,7 @@ Deno.serve(async (request) => {
         .insert({ conversation_id: conversation.id, sender: "customer", body, attachments })
         .select("id, conversation_id, sender, body, attachments, created_at")
         .single();
+      if (error?.code === "23514") return jsonResponse({ error: "Esta conversación fue cerrada." }, 409);
       if (error) throw error;
       scheduleChatPush("customer", conversation.id);
       return jsonResponse({ message: data });

@@ -1167,6 +1167,11 @@
             </div>
             <p id="support-chat-push-status" class="hidden px-4 pt-2 text-[10px] text-slate-400" role="status"></p>
             <p id="support-chat-thread-status" class="hidden px-4 pt-2 text-xs text-red-300" role="alert"></p>
+            <div id="support-chat-closed-notice" class="hidden border-b border-amber-500/20 bg-amber-500/10 px-4 py-3" role="status">
+                <p class="text-xs font-bold text-amber-200">Esta conversación fue finalizada.</p>
+                <p class="mt-1 text-[10px] leading-relaxed text-slate-300">El historial se conserva. Si necesitas ayuda con otro tema, puedes iniciar un nuevo chat.</p>
+                <button id="support-chat-new-conversation" type="button" class="mt-3 rounded-lg bg-indigo-600 px-3 py-2 text-[10px] font-black text-white transition hover:bg-indigo-500">Iniciar nuevo chat</button>
+            </div>
             <div id="support-chat-messages" class="flex-1 space-y-3 overflow-y-auto bg-slate-950/60 p-4" aria-live="polite"></div>
             <div id="support-chat-selected-files" class="hidden flex flex-wrap gap-2 border-t border-slate-800 px-3 pt-3"></div>
             <p id="support-chat-upload-status" class="hidden px-3 pt-2 text-[10px] text-slate-400" role="status"></p>
@@ -2220,12 +2225,14 @@
         const supportChatMessages = document.getElementById('support-chat-messages');
         const supportChatStartError = document.getElementById('support-chat-start-error');
         const supportChatThreadStatus = document.getElementById('support-chat-thread-status');
+        const supportChatClosedNotice = document.getElementById('support-chat-closed-notice');
         const supportChatPushButton = document.getElementById('support-chat-push-toggle');
         const supportChatPushStatus = document.getElementById('support-chat-push-status');
         let supportChatSession = null;
         let supportChatPoll = null;
         let supportChatRequestPending = false;
         let supportChatSelectedFiles = [];
+        let supportChatConversationClosed = false;
 
         function readSupportChatSession() {
             try {
@@ -2263,7 +2270,9 @@
             if (!messages.length) {
                 const empty = document.createElement('p');
                 empty.className = 'm-auto max-w-xs text-center text-xs leading-relaxed text-slate-500';
-                empty.textContent = '¡Hola! Escribe tu consulta y te responderemos por aquí.';
+                empty.textContent = supportChatConversationClosed
+                    ? 'Esta conversación no tiene mensajes.'
+                    : '¡Hola! Escribe tu consulta y te responderemos por aquí.';
                 supportChatMessages.append(empty);
                 return;
             }
@@ -2296,6 +2305,23 @@
             try {
                 const data = await callCustomerChat('client_list');
                 supportChatThreadStatus.classList.add('hidden');
+                if (data.conversation) {
+                    supportChatSession.name = data.conversation.customer_name;
+                    supportChatSession.phone = data.conversation.customer_phone;
+                    localStorage.setItem(chatStorageKey, JSON.stringify(supportChatSession));
+                    supportChatConversationClosed = data.conversation.status === 'closed';
+                    document.getElementById('support-chat-session-label').textContent = `Conversación de ${supportChatSession.name}`;
+                    supportChatClosedNotice.classList.toggle('hidden', !supportChatConversationClosed);
+                    document.getElementById('support-chat-message-form').classList.toggle('hidden', supportChatConversationClosed);
+                    document.getElementById('support-chat-selected-files').classList.toggle('hidden', supportChatConversationClosed || !supportChatSelectedFiles.length);
+                    document.getElementById('support-chat-upload-status').classList.toggle('hidden', supportChatConversationClosed);
+                    supportChatPushButton.disabled = supportChatConversationClosed;
+                    if (supportChatConversationClosed) {
+                        supportChatPushButton.innerHTML = '<i class="fa-solid fa-lock mr-1"></i>Chat finalizado';
+                        supportChatPushStatus.textContent = 'Las notificaciones están desactivadas para esta conversación finalizada.';
+                        supportChatPushStatus.classList.remove('hidden');
+                    }
+                }
                 renderSupportChatMessages(data.messages || []);
             } catch (error) {
                 supportChatThreadStatus.textContent = error.message || 'No se pudo actualizar el chat. Intenta de nuevo.';
@@ -2313,6 +2339,10 @@
 
         async function refreshSupportChatPushControl() {
             if (!supportChatSession) return;
+            if (supportChatConversationClosed) {
+                supportChatPushButton.disabled = true;
+                return;
+            }
             const compatibility = window.ChatPush.getCompatibility();
             if (!compatibility.supported) {
                 supportChatPushButton.disabled = true;
@@ -2340,7 +2370,7 @@
             }
         }
 
-        function openSupportChat() {
+        async function openSupportChat() {
             supportChatPanel.classList.remove('hidden');
             supportChatPanel.classList.add('flex');
             supportChatLauncher.setAttribute('aria-expanded', 'true');
@@ -2349,8 +2379,8 @@
                 supportChatThread.classList.remove('hidden');
                 supportChatThread.classList.add('flex');
                 document.getElementById('support-chat-session-label').textContent = `Conversación de ${supportChatSession.name}`;
-                refreshSupportChat();
-                refreshSupportChatPushControl();
+                await refreshSupportChat();
+                if (!supportChatConversationClosed) await refreshSupportChatPushControl();
                 if (!supportChatPoll) supportChatPoll = window.setInterval(refreshSupportChat, 3500);
             } else {
                 supportChatStartForm.classList.remove('hidden');
@@ -2443,7 +2473,8 @@
                 const name = document.getElementById('support-chat-name').value.trim();
                 const phone = document.getElementById('support-chat-phone').value.trim();
                 const data = await callCustomerChat('start', { name, phone, sessionToken: token });
-                supportChatSession = { conversationId: data.conversation.id, sessionToken: token, name: data.conversation.customer_name };
+                supportChatSession = { conversationId: data.conversation.id, sessionToken: token, name: data.conversation.customer_name, phone: data.conversation.customer_phone };
+                supportChatConversationClosed = false;
                 localStorage.setItem(chatStorageKey, JSON.stringify(supportChatSession));
                 openSupportChat();
             } catch (error) {
@@ -2453,6 +2484,21 @@
                 submitButton.disabled = false;
                 submitButton.innerHTML = '<i class="fa-solid fa-comment-dots mr-2"></i>Iniciar chat';
             }
+        });
+        document.getElementById('support-chat-new-conversation').addEventListener('click', () => {
+            if (!supportChatSession || !supportChatConversationClosed) return;
+            const previousSession = supportChatSession;
+            supportChatSession = null;
+            supportChatConversationClosed = false;
+            supportChatSelectedFiles.length = 0;
+            localStorage.removeItem(chatStorageKey);
+            document.getElementById('support-chat-name').value = previousSession.name || '';
+            document.getElementById('support-chat-phone').value = previousSession.phone || '';
+            supportChatClosedNotice.classList.add('hidden');
+            supportChatThread.classList.add('hidden');
+            supportChatThread.classList.remove('flex');
+            supportChatStartForm.classList.remove('hidden');
+            document.getElementById('support-chat-start-button').focus();
         });
         document.getElementById('support-chat-message-form').addEventListener('submit', async event => {
             event.preventDefault();
@@ -2494,8 +2540,11 @@
                         console.error('No se pudieron limpiar los adjuntos no enviados:', cleanupError);
                     }
                 }
-                supportChatThreadStatus.textContent = error.message || 'No se pudo enviar el mensaje. Intenta de nuevo.';
-                supportChatThreadStatus.classList.remove('hidden');
+                await refreshSupportChat();
+                if (!supportChatConversationClosed) {
+                    supportChatThreadStatus.textContent = error.message || 'No se pudo enviar el mensaje. Intenta de nuevo.';
+                    supportChatThreadStatus.classList.remove('hidden');
+                }
             } finally {
                 supportChatUploadStatus.classList.add('hidden');
                 sendButton.disabled = false;

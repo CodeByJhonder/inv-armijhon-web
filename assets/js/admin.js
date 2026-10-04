@@ -406,6 +406,9 @@ function updateAdminChatHeader(conversation) {
     document.getElementById('chat-thread-subtitle').textContent = `${conversation.customer_phone} · ${conversation.status === 'open' ? 'Chat activo' : 'Conversación cerrada'}`;
     adminChatReplyForm.classList.toggle('hidden', conversation.status !== 'open');
     adminChatReplyForm.classList.toggle('flex', conversation.status === 'open');
+    document.getElementById('admin-chat-close-conversation').classList.toggle('hidden', conversation.status !== 'open');
+    document.getElementById('admin-chat-closed-notice').classList.toggle('hidden', conversation.status !== 'closed');
+    document.getElementById('admin-chat-selected-files').classList.toggle('hidden', conversation.status !== 'open' || !adminChatSelectedFiles.length);
 }
 
 async function loadAdminChatMessages(conversationId) {
@@ -1215,6 +1218,27 @@ document.getElementById('refresh-chats').addEventListener('click', async () => {
     await loadAdminChats();
 });
 adminChatPushButton.addEventListener('click', toggleAdminChatPush);
+document.getElementById('admin-chat-close-conversation').addEventListener('click', async () => {
+    const conversation = adminChatConversations.find(item => item.id === selectedChatId);
+    if (!conversation || conversation.status !== 'open') return;
+    if (!window.confirm(`¿Finalizar la conversación con ${conversation.customer_name}? El historial se conservará, pero nadie podrá enviar más mensajes en este chat.`)) return;
+    const closeButton = document.getElementById('admin-chat-close-conversation');
+    closeButton.disabled = true;
+    chatsStatus.textContent = 'Finalizando conversación...';
+    try {
+        await invokeAdminChat('admin_close', { conversationId: conversation.id });
+        adminChatSelectedFiles.length = 0;
+        renderAdminChatSelectedFiles();
+        await loadAdminChats();
+        chatsStatus.textContent = 'Conversación finalizada. El historial se conservó.';
+    } catch (error) {
+        await loadAdminChats();
+        chatsStatus.textContent = error.message || 'No se pudo finalizar la conversación.';
+        console.error('Error finalizando la conversación:', error);
+    } finally {
+        closeButton.disabled = false;
+    }
+});
 document.getElementById('export-receipts').addEventListener('click', () => exportReceipts(false));
 document.getElementById('export-filtered-receipts').addEventListener('click', () => exportReceipts(true));
 document.getElementById('bulk-approve').addEventListener('click', () => openBulkActionConfirmation('approved', [...selectedOrderIds]));
