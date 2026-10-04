@@ -31,6 +31,10 @@ const receiptFilter = document.getElementById('receipt-filter');
 const sortFilter = document.getElementById('sort-filter');
 let orders = [];
 let inventoryProducts = [];
+let ordersLoaded = false;
+let inventoryLoaded = false;
+let dashboardOrdersMessage = 'Cargando pedidos…';
+let dashboardInventoryMessage = 'Cargando inventario…';
 let selectedOrderIds = new Set();
 let ordersChannel;
 let chatChannel;
@@ -106,7 +110,7 @@ function showLogin() {
 function showOrders() {
     loginView.classList.add('hidden');
     ordersView.classList.remove('hidden');
-    showAdminPage('orders');
+    showAdminPage('dashboard');
     logoutButton.classList.remove('hidden');
     loadOrders();
     loadAdminInventory();
@@ -381,6 +385,8 @@ async function loadAdminChatMessages(conversationId) {
 
 async function loadOrders() {
     ordersStatus.textContent = 'Cargando pedidos...';
+    dashboardOrdersMessage = 'Actualizando pedidos…';
+    renderAdminDashboard();
     const { data, error } = await supabaseClient
         .from('orders')
         .select('*, order_items(*), payment_receipts(*)')
@@ -388,6 +394,8 @@ async function loadOrders() {
 
     if (error) {
         ordersStatus.textContent = 'No se pudieron cargar los pedidos.';
+        dashboardOrdersMessage = 'No se pudieron cargar los pedidos.';
+        renderAdminDashboard();
         console.error(error);
         return;
     }
@@ -411,10 +419,13 @@ async function loadOrders() {
             }));
         }
     }
+    ordersLoaded = true;
+    dashboardOrdersMessage = `${orders.length} pedido${orders.length === 1 ? '' : 's'} en total`;
     const currentIds = new Set(orders.map(order => order.id));
     selectedOrderIds = new Set([...selectedOrderIds].filter(id => currentIds.has(id)));
     ordersSummary.textContent = `${orders.length} pedido${orders.length === 1 ? '' : 's'} · ${visibleOrders().length} visible${visibleOrders().length === 1 ? '' : 's'}`;
     renderCounters();
+    renderAdminDashboard();
     renderOrders();
     ordersStatus.textContent = '';
 }
@@ -436,6 +447,27 @@ function renderCounters() {
     document.getElementById('approved-count').textContent = orders.filter(order => order.status === 'approved').length;
     document.getElementById('rejected-count').textContent = orders.filter(order => order.status === 'rejected').length;
     selectedCount.textContent = `${selectedOrderIds.size} seleccionado${selectedOrderIds.size === 1 ? '' : 's'}`;
+}
+
+function renderAdminDashboard() {
+    document.getElementById('dashboard-orders-note').textContent = dashboardOrdersMessage;
+    document.getElementById('dashboard-inventory-note').textContent = dashboardInventoryMessage;
+
+    if (ordersLoaded) {
+        const approvedOrders = orders.filter(order => order.status === 'approved');
+        document.getElementById('dashboard-pending-count').textContent =
+            orders.filter(order => order.status === 'pending').length;
+        document.getElementById('dashboard-approved-count').textContent = approvedOrders.length;
+        document.getElementById('dashboard-approved-total').textContent =
+            `Total aprobado: ${formatVes(approvedOrders.reduce((total, order) => total + Number(order.total_ves || 0), 0))} VES`;
+    }
+
+    if (inventoryLoaded) {
+        const outOfStockProducts = inventoryProducts.filter(product => product.stock <= 0).length;
+        document.getElementById('dashboard-out-of-stock-count').textContent = outOfStockProducts;
+        dashboardInventoryMessage = `${inventoryProducts.length} productos registrados`;
+        document.getElementById('dashboard-inventory-note').textContent = dashboardInventoryMessage;
+    }
 }
 
 function renderOrders() {
@@ -509,6 +541,8 @@ function renderAdminInventory() {
 
 async function loadAdminInventory() {
     inventoryStatus.textContent = 'Cargando inventario...';
+    dashboardInventoryMessage = 'Actualizando inventario…';
+    renderAdminDashboard();
     try {
         const { data, error } = await supabaseClient
             .from('product_inventory')
@@ -520,10 +554,14 @@ async function loadAdminInventory() {
             ...product,
             stock: Number(product.stock)
         }));
+        inventoryLoaded = true;
         renderAdminInventory();
+        renderAdminDashboard();
         inventoryStatus.textContent = `${inventoryProducts.length} productos · los cambios se guardan individualmente.`;
     } catch (error) {
         inventoryStatus.textContent = 'No se pudo cargar el inventario. Verifica que ejecutaste la migración SQL.';
+        dashboardInventoryMessage = 'No se pudo cargar el inventario.';
+        renderAdminDashboard();
         console.error('Error cargando el inventario:', error);
         return;
     }
@@ -553,6 +591,7 @@ async function saveProductStock(form) {
         const product = inventoryProducts.find(item => item.product_id === productId);
         if (product) product.stock = Number(data);
         renderAdminInventory();
+        renderAdminDashboard();
         inventoryStatus.textContent = `Inventario actualizado: ${product?.product_name || productId} · ${Number(data)} unidades.`;
     } catch (error) {
         console.error('Error guardando la existencia:', error);
@@ -724,10 +763,23 @@ logoutButton.addEventListener('click', async () => {
 
 document.getElementById('refresh-orders').addEventListener('click', loadOrders);
 document.getElementById('refresh-inventory').addEventListener('click', loadAdminInventory);
+document.getElementById('refresh-dashboard').addEventListener('click', () => {
+    Promise.all([loadOrders(), loadAdminInventory()]);
+});
 adminNavigation.addEventListener('click', event => {
     const button = event.target.closest('[data-admin-page]');
     if (!button) return;
     showAdminPage(button.dataset.adminPage);
+});
+ordersView.addEventListener('click', event => {
+    const button = event.target.closest('[data-dashboard-page]');
+    if (!button) return;
+
+    if (button.dataset.dashboardFilter) {
+        statusFilter.value = button.dataset.dashboardFilter;
+        renderOrders();
+    }
+    showAdminPage(button.dataset.dashboardPage);
 });
 inventorySearch.addEventListener('input', renderAdminInventory);
 inventoryList.addEventListener('submit', event => {
