@@ -122,6 +122,14 @@ añadirse al sitio ni compartirse.
 6. Probar el flujo desde una ventana/navegador de cliente y confirmar que el mensaje
    aparece en la sección **Atención por chat** del panel. Mantener la página del panel
    abierta para recibir los eventos Realtime.
+7. Para separar las conversaciones por responder de las atendidas, ejecutar
+   `supabase/chat-last-sender-migration.sql` en SQL Editor despues de
+   `chat-migration.sql` y `chat-attachments-migration.sql`, volver a desplegar
+   `customer-chat` y publicar los archivos actualizados del panel. La migracion también
+   clasifica las conversaciones existentes usando el remitente de su último mensaje.
+   En el panel, **Por responder** muestra conversaciones abiertas cuyo último mensaje
+   envió el cliente; **Atendidas** muestra las que ya tienen una respuesta de la tienda;
+   **Cerradas** conserva las conversaciones finalizadas.
 
 No habilitar acceso anónimo directo a las tablas del chat ni copiar la clave `service_role`
 en archivos JavaScript, HTML o configuración pública.

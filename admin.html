@@ -276,6 +276,13 @@
                             <h3 class="text-sm font-black">Conversaciones</h3>
                             <span id="chat-count" class="rounded-full bg-violet-500/15 px-2 py-1 text-[10px] font-black text-violet-200">0</span>
                         </div>
+                        <div id="chat-conversation-filters" class="flex flex-wrap gap-2 border-b border-slate-800 p-3" role="group" aria-label="Filtrar conversaciones">
+                            <button type="button" data-chat-filter="all" aria-pressed="true" class="chat-filter-button rounded-full border border-violet-400/40 bg-violet-500/15 px-3 py-1.5 text-[10px] font-bold text-violet-200">Todas <span id="chat-filter-count-all" class="ml-1">0</span></button>
+                            <button type="button" data-chat-filter="needs-reply" aria-pressed="false" class="chat-filter-button rounded-full border border-slate-700 px-3 py-1.5 text-[10px] font-bold text-slate-400 hover:bg-slate-800">Por responder <span id="chat-filter-count-needs-reply" class="ml-1">0</span></button>
+                            <button type="button" data-chat-filter="attended" aria-pressed="false" class="chat-filter-button rounded-full border border-slate-700 px-3 py-1.5 text-[10px] font-bold text-slate-400 hover:bg-slate-800">Atendidas <span id="chat-filter-count-attended" class="ml-1">0</span></button>
+                            <button type="button" data-chat-filter="closed" aria-pressed="false" class="chat-filter-button rounded-full border border-slate-700 px-3 py-1.5 text-[10px] font-bold text-slate-400 hover:bg-slate-800">Cerradas <span id="chat-filter-count-closed" class="ml-1">0</span></button>
+                        </div>
+                        <p id="chat-filter-description" class="border-b border-slate-800 px-4 py-2 text-[10px] leading-relaxed text-slate-500">“Por responder” son chats cuyo último mensaje lo envió el cliente; “Atendidas” son chats con una última respuesta de la tienda.</p>
                         <div id="chat-conversation-list" class="max-h-72 flex-1 divide-y divide-slate-800 overflow-y-auto lg:max-h-[36rem]">
                             <p class="p-5 text-xs text-slate-500">Cargando conversaciones...</p>
                         </div>

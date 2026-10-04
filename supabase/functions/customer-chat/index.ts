@@ -455,7 +455,7 @@ Deno.serve(async (request) => {
       if (action === "admin_list") {
         const { data, error } = await adminClient
           .from("chat_conversations")
-          .select("id, customer_name, customer_phone, status, created_at, last_message_at, last_message_preview, admin_unread, customer_unread")
+          .select("id, customer_name, customer_phone, status, created_at, last_message_at, last_message_preview, last_message_sender, admin_unread, customer_unread")
           .order("last_message_at", { ascending: false })
           .limit(200);
         if (error) throw error;

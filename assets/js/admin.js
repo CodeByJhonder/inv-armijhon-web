@@ -55,6 +55,7 @@ let chatChannel;
 let chatRefreshTimer;
 let adminChatConversations = [];
 let selectedChatId = null;
+let adminChatFilter = 'all';
 let chatMessagesRequest = 0;
 let adminChatSelectedFiles = [];
 const chatConversationList = document.getElementById('chat-conversation-list');
@@ -211,21 +212,68 @@ function subscribeToAdminChats() {
 }
 
 function renderAdminChatConversations() {
-    document.getElementById('chat-count').textContent = adminChatConversations.length;
+    const counts = {
+        all: adminChatConversations.length,
+        'needs-reply': adminChatConversations.filter(conversation =>
+            conversation.status === 'open' && conversation.last_message_sender === 'customer').length,
+        attended: adminChatConversations.filter(conversation =>
+            conversation.status === 'open' && conversation.last_message_sender === 'admin').length,
+        closed: adminChatConversations.filter(conversation => conversation.status === 'closed').length
+    };
+    document.getElementById('chat-count').textContent = counts[adminChatFilter];
+    document.getElementById('chat-filter-count-all').textContent = counts.all;
+    document.getElementById('chat-filter-count-needs-reply').textContent = counts['needs-reply'];
+    document.getElementById('chat-filter-count-attended').textContent = counts.attended;
+    document.getElementById('chat-filter-count-closed').textContent = counts.closed;
+    document.querySelectorAll('[data-chat-filter]').forEach(button => {
+        const active = button.dataset.chatFilter === adminChatFilter;
+        button.setAttribute('aria-pressed', String(active));
+        button.classList.toggle('border-violet-400/40', active);
+        button.classList.toggle('bg-violet-500/15', active);
+        button.classList.toggle('text-violet-200', active);
+        button.classList.toggle('border-slate-700', !active);
+        button.classList.toggle('text-slate-400', !active);
+    });
+
     chatConversationList.replaceChildren();
-    if (!adminChatConversations.length) {
+    const filteredConversations = adminChatConversations
+        .filter(conversation => {
+            if (adminChatFilter === 'needs-reply') {
+                return conversation.status === 'open' && conversation.last_message_sender === 'customer';
+            }
+            if (adminChatFilter === 'attended') {
+                return conversation.status === 'open' && conversation.last_message_sender === 'admin';
+            }
+            if (adminChatFilter === 'closed') return conversation.status === 'closed';
+            return true;
+        })
+        .sort((a, b) => {
+            const aNeedsReply = a.status === 'open' && a.last_message_sender === 'customer';
+            const bNeedsReply = b.status === 'open' && b.last_message_sender === 'customer';
+            if (aNeedsReply !== bNeedsReply) return aNeedsReply ? -1 : 1;
+            return new Date(b.last_message_at) - new Date(a.last_message_at);
+        });
+
+    if (!filteredConversations.length) {
         const empty = document.createElement('p');
         empty.className = 'p-5 text-xs text-slate-500';
-        empty.textContent = 'Aún no hay conversaciones.';
+        empty.textContent = adminChatConversations.length
+            ? {
+                'needs-reply': 'No hay conversaciones esperando respuesta.',
+                attended: 'No hay conversaciones abiertas con respuesta de la tienda.',
+                closed: 'No hay conversaciones cerradas.'
+            }[adminChatFilter]
+            : 'Aún no hay conversaciones.';
         chatConversationList.append(empty);
         return;
     }
 
-    adminChatConversations.forEach(conversation => {
+    filteredConversations.forEach(conversation => {
         const button = document.createElement('button');
         button.type = 'button';
         button.dataset.chatId = conversation.id;
-        button.className = `block w-full px-4 py-4 text-left transition hover:bg-slate-800 ${selectedChatId === conversation.id ? 'bg-violet-500/10' : ''}`;
+        const needsReply = conversation.status === 'open' && conversation.last_message_sender === 'customer';
+        button.className = `block w-full border-l-2 px-4 py-4 text-left transition hover:bg-slate-800 ${needsReply ? 'border-amber-400 bg-amber-500/5' : 'border-transparent'} ${selectedChatId === conversation.id ? 'bg-violet-500/10' : ''}`;
         const top = document.createElement('div');
         top.className = 'flex items-start justify-between gap-3';
         const name = document.createElement('span');
@@ -238,10 +286,10 @@ function renderAdminChatConversations() {
         date.dateTime = conversation.last_message_at;
         date.textContent = new Date(conversation.last_message_at).toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit' });
         right.append(date);
-        if (conversation.admin_unread > 0) {
+        if (Number(conversation.admin_unread) > 0) {
             const unread = document.createElement('span');
             unread.className = 'grid h-5 min-w-5 place-items-center rounded-full bg-violet-500 px-1 text-[9px] font-black text-white';
-            unread.textContent = conversation.admin_unread > 99 ? '99+' : conversation.admin_unread;
+            unread.textContent = Number(conversation.admin_unread) > 99 ? '99+' : Number(conversation.admin_unread);
             right.append(unread);
         }
         top.append(name, right);
@@ -251,7 +299,12 @@ function renderAdminChatConversations() {
         const preview = document.createElement('p');
         preview.className = 'mt-2 truncate text-xs text-slate-400';
         preview.textContent = conversation.last_message_preview || 'Conversación iniciada';
-        button.append(top, phone, preview);
+        const state = document.createElement('span');
+        state.className = `mt-2 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[9px] font-black uppercase ${needsReply ? 'bg-amber-400/15 text-amber-200' : conversation.status === 'closed' ? 'bg-slate-700/70 text-slate-300' : 'bg-emerald-500/10 text-emerald-300'}`;
+        state.textContent = needsReply
+            ? 'Espera respuesta'
+            : conversation.status === 'closed' ? 'Cerrada' : conversation.last_message_sender === 'admin' ? 'Atendida' : 'Sin mensajes';
+        button.append(top, phone, preview, state);
         chatConversationList.append(button);
     });
 }
@@ -1201,6 +1254,13 @@ selectAll.addEventListener('change', () => {
     renderOrders();
 });
 themeToggle.addEventListener('click', toggleAdminTheme);
+
+document.getElementById('chat-conversation-filters').addEventListener('click', event => {
+    const button = event.target.closest('[data-chat-filter]');
+    if (!button) return;
+    adminChatFilter = button.dataset.chatFilter;
+    renderAdminChatConversations();
+});
 
 chatConversationList.addEventListener('click', async event => {
     const button = event.target.closest('[data-chat-id]');
