@@ -189,6 +189,22 @@
                 </div>
             </div>
             <div id="orders-list" class="grid gap-4"></div>
+            <div id="order-details-dialog" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-labelledby="order-details-title">
+                <section class="max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl">
+                    <header class="flex items-start justify-between gap-4 border-b border-slate-800 p-5">
+                        <div class="min-w-0">
+                            <h3 id="order-details-title" class="text-lg font-black">Detalle del pedido</h3>
+                            <p id="order-details-subtitle" class="mt-1 break-all text-[11px] text-slate-500"></p>
+                        </div>
+                        <button id="close-order-details" type="button" class="shrink-0 rounded-lg border border-slate-700 px-3 py-2 text-xs font-bold hover:bg-slate-800" aria-label="Cerrar detalle">Cerrar</button>
+                    </header>
+                    <div class="max-h-[75vh] overflow-y-auto p-5">
+                        <div id="order-details-customer" class="grid gap-3 sm:grid-cols-2"></div>
+                        <div id="order-details-items" class="mt-5 border-t border-slate-800 pt-4"></div>
+                        <div id="order-details-receipt" class="mt-5 border-t border-slate-800 pt-4"></div>
+                    </div>
+                </section>
+            </div>
                     </section>
 
             <section id="admin-page-inventory" data-admin-page-view class="hidden" aria-labelledby="inventory-heading">

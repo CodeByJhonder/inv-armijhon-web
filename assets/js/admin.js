@@ -13,6 +13,12 @@ const adminPageButtons = [...adminNavigation.querySelectorAll('[data-admin-page]
 const adminPageViews = [...ordersView.querySelectorAll('[data-admin-page-view]')];
 const ordersList = document.getElementById('orders-list');
 const ordersStatus = document.getElementById('orders-status');
+const orderDetailsDialog = document.getElementById('order-details-dialog');
+const orderDetailsSubtitle = document.getElementById('order-details-subtitle');
+const orderDetailsCustomer = document.getElementById('order-details-customer');
+const orderDetailsItems = document.getElementById('order-details-items');
+const orderDetailsReceipt = document.getElementById('order-details-receipt');
+let orderDetailsRequest = 0;
 const inventoryList = document.getElementById('inventory-list');
 const inventoryStatus = document.getElementById('inventory-status');
 const inventorySearch = document.getElementById('inventory-search');
@@ -501,20 +507,147 @@ function renderOrder(order) {
         <button data-id="${order.id}" data-status="approved" class="status-action rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold hover:bg-emerald-500">Aprobar</button>
         <button data-id="${order.id}" data-status="rejected" class="status-action rounded-xl border border-red-500/40 px-3 py-2 text-xs font-bold text-red-300 hover:bg-red-500/10">Rechazar</button>` :
         order.status === 'approved' ? `<button data-id="${order.id}" data-status="completed" class="status-action rounded-xl bg-sky-600 px-3 py-2 text-xs font-bold hover:bg-sky-500">Marcar completado</button>` : '';
+    const pending = order.status === 'pending';
 
-    return `<article class="rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-xl">
+    return `<article class="rounded-2xl border ${pending ? 'border-amber-400/60 bg-amber-950/20 shadow-lg shadow-amber-950/20' : 'border-slate-800 bg-slate-900 shadow-xl'} p-5">
         <div class="flex flex-wrap items-start gap-3">
             <label class="pt-1"><input type="checkbox" class="order-check h-5 w-5" data-id="${order.id}" ${selectedOrderIds.has(order.id) ? 'checked' : ''}></label>
             <div class="min-w-0 flex-1">
                 <div class="flex flex-wrap items-start justify-between gap-3">
-                    <div><div class="text-xs text-slate-500">${new Date(order.created_at).toLocaleString('es-VE')}</div><h3 class="font-black mt-1">${escapeHtml(order.customer_name)}</h3><div class="text-xs text-slate-400 mt-1">${escapeHtml(order.customer_phone)} · ${order.payment_method === 'pago_movil' ? 'Pago Móvil' : 'Transferencia'}</div></div>
+                    <div>
+                        ${pending ? '<span class="mb-1 inline-flex items-center gap-1 rounded-full bg-amber-400/15 px-2 py-1 text-[9px] font-black uppercase tracking-wide text-amber-200"><i class="fa-solid fa-bell" aria-hidden="true"></i> Requiere revisión</span>' : ''}
+                        <div class="text-xs text-slate-500">${new Date(order.created_at).toLocaleString('es-VE')}</div>
+                        <h3 class="mt-1 font-black">${escapeHtml(order.customer_name)}</h3>
+                        <div class="mt-1 text-xs text-slate-400">${escapeHtml(order.customer_phone)} · ${order.payment_method === 'pago_movil' ? 'Pago Móvil' : 'Transferencia'}</div>
+                    </div>
                     <div class="text-right">${statusBadge(order.status)}<div class="text-xl font-black text-violet-300 mt-2">Bs. ${formatVes(order.total_ves)}</div><div class="text-[10px] text-slate-500">$${Number(order.total_usd).toFixed(2)} · tasa ${formatVes(order.exchange_rate)}</div></div>
                 </div>
                 <ul class="border-t border-slate-800 mt-4 pt-4 space-y-1 text-xs text-slate-300">${items}</ul>
-                <div class="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 mt-4 pt-4">${receiptButton}<div class="flex flex-wrap gap-2">${actions}<button data-delete-id="${order.id}" class="delete-order rounded-xl border border-red-500/40 px-3 py-2 text-xs font-bold text-red-300 hover:bg-red-500/10">Eliminar</button></div></div>
+                <div class="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 mt-4 pt-4">
+                    <button type="button" data-order-details-id="${escapeHtml(order.id)}" class="order-details-button rounded-xl border border-violet-400/40 px-3 py-2 text-xs font-bold text-violet-200 hover:bg-violet-500/10"><i class="fa-solid fa-eye mr-2" aria-hidden="true"></i>Ver detalles</button>
+                    ${receiptButton}
+                    <div class="ml-auto flex flex-wrap gap-2">${actions}<button data-delete-id="${escapeHtml(order.id)}" class="delete-order rounded-xl border border-red-500/40 px-3 py-2 text-xs font-bold text-red-300 hover:bg-red-500/10">Eliminar</button></div>
+                </div>
             </div>
         </div>
     </article>`;
+}
+
+function appendOrderDetail(label, value) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'rounded-xl border border-slate-800 bg-slate-950/50 p-3';
+    const title = document.createElement('p');
+    title.className = 'text-[10px] font-bold uppercase tracking-wide text-slate-500';
+    title.textContent = label;
+    const content = document.createElement('p');
+    content.className = 'mt-1 break-words text-sm font-semibold text-slate-100';
+    content.textContent = value;
+    wrapper.append(title, content);
+    orderDetailsCustomer.append(wrapper);
+}
+
+async function openOrderDetails(orderId) {
+    const order = orders.find(item => item.id === orderId);
+    if (!order) {
+        ordersStatus.textContent = 'No se encontró el pedido para mostrar sus detalles.';
+        return;
+    }
+
+    const requestId = ++orderDetailsRequest;
+    const closeButton = document.getElementById('close-order-details');
+    orderDetailsSubtitle.textContent = `Pedido ${order.id}`;
+    orderDetailsCustomer.replaceChildren();
+    orderDetailsItems.replaceChildren();
+    orderDetailsReceipt.replaceChildren();
+
+    appendOrderDetail('Cliente', order.customer_name);
+    appendOrderDetail('Teléfono', order.customer_phone);
+    appendOrderDetail('Recibido', new Date(order.created_at).toLocaleString('es-VE'));
+    appendOrderDetail('Estado', { pending: 'Pendiente de revisión', approved: 'Aprobado', rejected: 'Rechazado', completed: 'Completado' }[order.status] || order.status);
+    appendOrderDetail('Método de pago', order.payment_method === 'pago_movil' ? 'Pago Móvil' : 'Transferencia');
+    const receipt = order.payment_receipts?.[0];
+    if (receipt?.reference_number) appendOrderDetail('Referencia de pago', receipt.reference_number);
+    if (order.notes) appendOrderDetail('Notas', order.notes);
+
+    const itemsHeading = document.createElement('h4');
+    itemsHeading.className = 'mb-3 text-sm font-black';
+    itemsHeading.textContent = 'Productos del pedido';
+    const itemsList = document.createElement('ul');
+    itemsList.className = 'space-y-2';
+    (order.order_items || []).forEach(item => {
+        const row = document.createElement('li');
+        row.className = 'flex flex-wrap justify-between gap-2 rounded-lg bg-slate-950/50 px-3 py-2 text-xs';
+        const description = document.createElement('span');
+        description.className = 'text-slate-200';
+        description.textContent = `${item.quantity} × ${item.product_name} · $${Number(item.unit_price_usd).toFixed(2)} c/u`;
+        const total = document.createElement('strong');
+        total.className = 'text-slate-300';
+        total.textContent = `$${Number(item.line_total_usd).toFixed(2)}`;
+        row.append(description, total);
+        itemsList.append(row);
+    });
+    const total = document.createElement('p');
+    total.className = 'mt-3 text-right text-sm font-black text-violet-200';
+    total.textContent = `Total: Bs. ${formatVes(order.total_ves)} · $${Number(order.total_usd).toFixed(2)}`;
+    orderDetailsItems.append(itemsHeading, itemsList, total);
+
+    const receiptHeading = document.createElement('h4');
+    receiptHeading.className = 'mb-3 text-sm font-black';
+    receiptHeading.textContent = 'Comprobante de pago';
+    orderDetailsReceipt.append(receiptHeading);
+    const loadingMessage = document.createElement('p');
+    loadingMessage.className = 'text-xs text-slate-400';
+    loadingMessage.textContent = receipt ? 'Cargando comprobante seguro…' : 'Este pedido no tiene comprobante adjunto.';
+    orderDetailsReceipt.append(loadingMessage);
+
+    orderDetailsDialog.classList.remove('hidden');
+    orderDetailsDialog.classList.add('flex');
+    closeButton.focus();
+    if (!receipt) return;
+
+    try {
+        const { data, error } = await supabaseClient.storage.from('payment-receipts')
+            .createSignedUrl(receipt.storage_path, 300);
+        if (error) throw error;
+        if (requestId !== orderDetailsRequest || orderDetailsDialog.classList.contains('hidden')) return;
+
+        const preview = receipt.mime_type?.startsWith('image/')
+            ? document.createElement('img')
+            : receipt.mime_type === 'application/pdf'
+                ? document.createElement('iframe')
+                : null;
+        if (preview) {
+            preview.className = 'max-h-[55vh] w-full rounded-xl border border-slate-800 bg-slate-950 object-contain';
+            if (preview instanceof HTMLImageElement) {
+                preview.alt = `Comprobante de pago de ${order.customer_name}`;
+                preview.src = data.signedUrl;
+            } else {
+                preview.title = `Comprobante de pago de ${order.customer_name}`;
+                preview.src = data.signedUrl;
+                preview.height = 480;
+            }
+            orderDetailsReceipt.replaceChildren(receiptHeading, preview);
+        }
+
+        const link = document.createElement('a');
+        link.className = 'mt-3 inline-flex rounded-lg border border-violet-400/40 px-3 py-2 text-xs font-bold text-violet-200 hover:bg-violet-500/10';
+        link.href = data.signedUrl;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.textContent = 'Abrir comprobante en otra pestaña';
+        orderDetailsReceipt.append(link);
+    } catch (error) {
+        if (requestId !== orderDetailsRequest) return;
+        console.error('Error abriendo el comprobante del pedido:', error);
+        loadingMessage.textContent = error.message || 'No se pudo cargar el comprobante.';
+        loadingMessage.className = 'text-xs text-red-300';
+    }
+}
+
+function closeOrderDetails() {
+    orderDetailsRequest++;
+    orderDetailsDialog.classList.add('hidden');
+    orderDetailsDialog.classList.remove('flex');
 }
 
 function renderAdminInventory() {
@@ -1093,7 +1226,12 @@ ordersList.addEventListener('change', event => {
 ordersList.addEventListener('click', async event => {
     const statusButton = event.target.closest('.status-action');
     const deleteButton = event.target.closest('.delete-order');
+    const detailsButton = event.target.closest('.order-details-button');
     const receiptButton = event.target.closest('.receipt-link');
+    if (detailsButton) {
+        await openOrderDetails(detailsButton.dataset.orderDetailsId);
+        return;
+    }
     if (statusButton) await updateOrderStatus([statusButton.dataset.id], statusButton.dataset.status);
     if (deleteButton) await deleteOrders([deleteButton.dataset.deleteId]);
     if (!receiptButton) return;
@@ -1105,6 +1243,16 @@ ordersList.addEventListener('click', async event => {
         return;
     }
     window.open(data.signedUrl, '_blank', 'noopener');
+});
+
+document.getElementById('close-order-details').addEventListener('click', closeOrderDetails);
+orderDetailsDialog.addEventListener('click', event => {
+    if (event.target === orderDetailsDialog) closeOrderDetails();
+});
+document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && !orderDetailsDialog.classList.contains('hidden')) {
+        closeOrderDetails();
+    }
 });
 
 supabaseClient.auth.getSession()
