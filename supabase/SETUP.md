@@ -169,7 +169,17 @@ agotados hasta que tengan unidades cargadas.
    se filtra el inventario para mostrar solo esos productos. Se puede cambiar o desactivar
    la alerta por producto usando un mínimo de cero.
 
-## 9. Activar notificaciones push para clientes y administradores
+## 9. Historial de movimientos del inventario
+
+1. Ejecutar `supabase/stock-history-migration.sql` en SQL Editor después de
+   `inventory-migration.sql` y `stock-alerts-migration.sql`.
+2. Publicar `admin.html` y `assets/js/admin.js` junto con el CSS compilado. En cada
+   producto, **Ver historial** muestra las existencias anteriores y nuevas, el cambio,
+   la fecha, el administrador y si fue un ajuste manual o la aprobación de un pedido.
+3. El historial se registra desde que se ejecuta esta migración; no es posible recuperar
+   cambios anteriores que no se hubieran guardado como movimientos.
+
+## 10. Activar notificaciones push para clientes y administradores
 
 Las notificaciones son opcionales: cada cliente y cada navegador administrador debe
 habilitarlas explícitamente desde su botón. Los avisos no contienen el texto del chat.
@@ -231,7 +241,7 @@ información sensible.
 - Si el permiso se bloquea, hay que cambiarlo desde los ajustes del sitio en el navegador
   o dispositivo. El sitio no volverá a mostrar el diálogo automáticamente.
 
-## 10. Activar archivos adjuntos en el chat
+## 11. Activar archivos adjuntos en el chat
 
 El chat admite hasta 5 archivos por mensaje. Cada archivo puede ser una imagen (`image/*`)
 o un PDF y debe pesar como máximo 10 MB. En dispositivos compatibles, el botón de cámara

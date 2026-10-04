@@ -17,6 +17,10 @@ const inventoryList = document.getElementById('inventory-list');
 const inventoryStatus = document.getElementById('inventory-status');
 const inventorySearch = document.getElementById('inventory-search');
 const filterLowStockButton = document.getElementById('filter-low-stock');
+const stockHistoryDialog = document.getElementById('stock-history-dialog');
+const stockHistoryProduct = document.getElementById('stock-history-product');
+const stockHistoryStatus = document.getElementById('stock-history-status');
+const stockHistoryList = document.getElementById('stock-history-list');
 const ordersSummary = document.getElementById('orders-summary');
 const logoutButton = document.getElementById('logout-button');
 const themeToggle = document.getElementById('theme-toggle');
@@ -554,6 +558,9 @@ function renderAdminInventory() {
                         <button class="inventory-min-save whitespace-nowrap rounded-lg border border-amber-500/40 px-3 py-2 text-xs font-bold text-amber-200 transition hover:bg-amber-500/10 disabled:cursor-wait disabled:opacity-50" type="submit">Guardar mínimo</button>
                     </div>
                 </form>
+                <button class="stock-history-button mt-3 w-full rounded-lg border border-slate-700 px-3 py-2 text-xs font-bold text-slate-300 transition hover:bg-slate-800" type="button" data-product-id="${escapeHtml(product.product_id)}">
+                    <i class="fa-solid fa-clock-rotate-left mr-2" aria-hidden="true"></i>Ver historial
+                </button>
             </article>`;
     }).join('') : `<div class="rounded-2xl border border-slate-800 p-6 text-center text-sm text-slate-400 md:col-span-2 2xl:col-span-3">${inventoryProducts.length ? 'No se encontraron productos con esos filtros.' : 'No hay productos registrados en el inventario.'}</div>`;
 
@@ -659,6 +666,73 @@ async function saveProductMinStock(form) {
     } finally {
         saveButton.disabled = false;
     }
+}
+
+async function openStockHistory(productId) {
+    const product = inventoryProducts.find(item => item.product_id === productId);
+    if (!product) {
+        inventoryStatus.textContent = 'No se encontró el producto para consultar su historial.';
+        return;
+    }
+
+    stockHistoryProduct.textContent = `${product.product_name} · Código ${product.product_id}`;
+    stockHistoryStatus.textContent = 'Cargando movimientos...';
+    stockHistoryList.replaceChildren();
+    stockHistoryDialog.classList.remove('hidden');
+    stockHistoryDialog.classList.add('flex');
+    document.getElementById('close-stock-history').focus();
+
+    try {
+        const { data, error } = await supabaseClient.rpc('admin_get_product_stock_history', {
+            p_product_id: productId,
+            p_limit: 100
+        });
+        if (error) throw error;
+
+        const entries = data || [];
+        if (!entries.length) {
+            stockHistoryStatus.textContent = 'Todavía no hay movimientos registrados para este producto. El historial empieza desde que se aplicó esta migración.';
+            return;
+        }
+
+        entries.forEach(entry => {
+            const item = document.createElement('li');
+            item.className = 'rounded-xl border border-slate-800 bg-slate-950/60 p-4';
+
+            const header = document.createElement('div');
+            header.className = 'flex flex-wrap items-center justify-between gap-2';
+            const change = document.createElement('strong');
+            const quantityChange = Number(entry.quantity_change);
+            change.className = `text-sm font-black ${quantityChange < 0 ? 'text-red-300' : 'text-emerald-300'}`;
+            change.textContent = `${quantityChange > 0 ? '+' : ''}${quantityChange} unidades`;
+            const timestamp = document.createElement('time');
+            timestamp.className = 'text-[11px] text-slate-400';
+            timestamp.dateTime = entry.changed_at;
+            timestamp.textContent = new Date(entry.changed_at).toLocaleString('es-VE', {
+                dateStyle: 'medium',
+                timeStyle: 'short'
+            });
+            header.append(change, timestamp);
+
+            const details = document.createElement('p');
+            details.className = 'mt-2 text-xs text-slate-300';
+            details.textContent = `Existencias: ${entry.previous_stock} → ${entry.new_stock}`;
+            const source = document.createElement('p');
+            source.className = 'mt-1 text-[11px] text-slate-500';
+            source.textContent = `${entry.change_source} · ${entry.actor_email || 'Administrador'}`;
+            item.append(header, details, source);
+            stockHistoryList.append(item);
+        });
+        stockHistoryStatus.textContent = `${entries.length} movimiento${entries.length === 1 ? '' : 's'} recientes (máximo 100).`;
+    } catch (error) {
+        console.error('Error cargando el historial de existencias:', error);
+        stockHistoryStatus.textContent = error.message || 'No se pudo cargar el historial de existencias.';
+    }
+}
+
+function closeStockHistory() {
+    stockHistoryDialog.classList.add('hidden');
+    stockHistoryDialog.classList.remove('flex');
 }
 
 async function updateOrderStatus(ids, status) {
@@ -846,6 +920,15 @@ ordersView.addEventListener('click', event => {
     showAdminPage(button.dataset.dashboardPage);
 });
 inventorySearch.addEventListener('input', renderAdminInventory);
+document.getElementById('close-stock-history').addEventListener('click', closeStockHistory);
+stockHistoryDialog.addEventListener('click', event => {
+    if (event.target === stockHistoryDialog) closeStockHistory();
+});
+document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && !stockHistoryDialog.classList.contains('hidden')) {
+        closeStockHistory();
+    }
+});
 filterLowStockButton.addEventListener('click', () => {
     showLowStockOnly = !showLowStockOnly;
     renderAdminInventory();
@@ -859,6 +942,10 @@ inventoryList.addEventListener('submit', event => {
     } else {
         saveProductStock(form);
     }
+});
+inventoryList.addEventListener('click', event => {
+    const button = event.target.closest('.stock-history-button');
+    if (button) openStockHistory(button.dataset.productId);
 });
 document.getElementById('refresh-chats').addEventListener('click', async () => {
     await loadAdminChats();
