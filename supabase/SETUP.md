@@ -157,7 +157,19 @@ Publica primero la migración SQL y después los archivos y la función actualiz
 de habilitar el catálogo, registra las existencias reales: todos los productos aparecerán
 agotados hasta que tengan unidades cargadas.
 
-## 8. Activar notificaciones push para clientes y administradores
+## 8. Alertas de inventario bajo
+
+1. Ejecutar `supabase/stock-alerts-migration.sql` en SQL Editor después de
+   `inventory-migration.sql`. Los productos existentes comienzan con un mínimo de
+   reposición de 5 unidades.
+2. Publicar `admin.html`, `assets/js/admin.js` y el CSS compilado. En **Inventario**,
+   cada producto permite guardar sus existencias y su mínimo de reposición por separado.
+   Se marca para reponer cuando las existencias son iguales o menores al mínimo.
+3. El **Resumen** muestra cuántos productos requieren reposición. Al abrir esa tarjeta
+   se filtra el inventario para mostrar solo esos productos. Se puede cambiar o desactivar
+   la alerta por producto usando un mínimo de cero.
+
+## 9. Activar notificaciones push para clientes y administradores
 
 Las notificaciones son opcionales: cada cliente y cada navegador administrador debe
 habilitarlas explícitamente desde su botón. Los avisos no contienen el texto del chat.
@@ -219,7 +231,7 @@ información sensible.
 - Si el permiso se bloquea, hay que cambiarlo desde los ajustes del sitio en el navegador
   o dispositivo. El sitio no volverá a mostrar el diálogo automáticamente.
 
-## 8. Activar archivos adjuntos en el chat
+## 10. Activar archivos adjuntos en el chat
 
 El chat admite hasta 5 archivos por mensaje. Cada archivo puede ser una imagen (`image/*`)
 o un PDF y debe pesar como máximo 10 MB. En dispositivos compatibles, el botón de cámara

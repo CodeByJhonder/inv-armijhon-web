@@ -105,10 +105,10 @@
                                 <strong id="dashboard-approved-count" class="mt-1 block text-3xl font-black">—</strong>
                                 <span id="dashboard-approved-total" class="mt-2 block text-[11px] text-slate-400">Cargando ventas…</span>
                             </button>
-                            <button type="button" data-dashboard-page="inventory" class="rounded-2xl border border-violet-500/20 bg-violet-500/10 p-5 text-left transition hover:border-violet-400/50 hover:bg-violet-500/15 sm:col-span-2 xl:col-span-1">
-                                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-400/15 text-violet-300"><i class="fa-solid fa-box-open" aria-hidden="true"></i></span>
-                                <span class="mt-4 block text-xs font-bold text-violet-200">Productos agotados</span>
-                                <strong id="dashboard-out-of-stock-count" class="mt-1 block text-3xl font-black">—</strong>
+                            <button type="button" data-dashboard-page="inventory" data-dashboard-low-stock="true" class="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-5 text-left transition hover:border-amber-400/50 hover:bg-amber-500/15 sm:col-span-2 xl:col-span-1">
+                                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-400/15 text-amber-300"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i></span>
+                                <span class="mt-4 block text-xs font-bold text-amber-200">Productos por reponer</span>
+                                <strong id="dashboard-low-stock-count" class="mt-1 block text-3xl font-black">—</strong>
                                 <span id="dashboard-inventory-note" class="mt-2 block text-[11px] text-slate-400">Cargando inventario…</span>
                             </button>
                         </div>
@@ -195,7 +195,7 @@
                 <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
                     <div>
                         <h2 id="inventory-heading" class="text-xl font-black"><i class="fa-solid fa-boxes-stacked mr-2 text-emerald-300"></i>Inventario de productos</h2>
-                        <p class="mt-1 text-xs text-slate-400">Actualiza las unidades disponibles. El stock se descuenta al aprobar un pedido; si cancelas una venta aprobada, repón las unidades aquí.</p>
+                        <p class="mt-1 text-xs text-slate-400">Actualiza las existencias y el mínimo de cada producto. Se marcarán para reponer cuando el stock sea igual o menor al mínimo.</p>
                     </div>
                     <button id="refresh-inventory" type="button" class="rounded-xl border border-slate-700 px-4 py-2 text-xs font-bold hover:bg-slate-800"><i class="fa-solid fa-rotate mr-2"></i>Actualizar inventario</button>
                 </div>
@@ -205,6 +205,10 @@
                     <span class="sr-only">Buscar producto por nombre o código</span>
                     <input id="inventory-search" type="search" autocomplete="off" placeholder="Buscar producto por nombre o código (ej. p32)" class="w-full rounded-xl border border-slate-700 bg-slate-950 py-3 pl-10 pr-4 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-emerald-400">
                 </label>
+                <button id="filter-low-stock" type="button" aria-pressed="false" class="mb-4 inline-flex items-center gap-2 rounded-xl border border-amber-500/30 px-3 py-2 text-xs font-bold text-amber-200 transition hover:bg-amber-500/10">
+                    <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                    <span>Mostrar solo productos por reponer</span>
+                </button>
                 <div id="inventory-list" class="grid gap-3 md:grid-cols-2 2xl:grid-cols-3"></div>
             </section>
 

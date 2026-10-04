@@ -16,6 +16,7 @@ const ordersStatus = document.getElementById('orders-status');
 const inventoryList = document.getElementById('inventory-list');
 const inventoryStatus = document.getElementById('inventory-status');
 const inventorySearch = document.getElementById('inventory-search');
+const filterLowStockButton = document.getElementById('filter-low-stock');
 const ordersSummary = document.getElementById('orders-summary');
 const logoutButton = document.getElementById('logout-button');
 const themeToggle = document.getElementById('theme-toggle');
@@ -33,6 +34,7 @@ let orders = [];
 let inventoryProducts = [];
 let ordersLoaded = false;
 let inventoryLoaded = false;
+let showLowStockOnly = false;
 let dashboardOrdersMessage = 'Cargando pedidos…';
 let dashboardInventoryMessage = 'Cargando inventario…';
 let selectedOrderIds = new Set();
@@ -463,9 +465,10 @@ function renderAdminDashboard() {
     }
 
     if (inventoryLoaded) {
+        const lowStockProducts = inventoryProducts.filter(product => product.stock <= product.min_stock).length;
         const outOfStockProducts = inventoryProducts.filter(product => product.stock <= 0).length;
-        document.getElementById('dashboard-out-of-stock-count').textContent = outOfStockProducts;
-        dashboardInventoryMessage = `${inventoryProducts.length} productos registrados`;
+        document.getElementById('dashboard-low-stock-count').textContent = lowStockProducts;
+        dashboardInventoryMessage = `${outOfStockProducts} agotados · ${inventoryProducts.length} productos registrados`;
         document.getElementById('dashboard-inventory-note').textContent = dashboardInventoryMessage;
     }
 }
@@ -517,26 +520,48 @@ function renderAdminInventory() {
             .normalize('NFD')
             .replace(/[\u0300-\u036f]/g, '')
             .toLocaleLowerCase('es');
-        return searchableText.includes(query);
+        return searchableText.includes(query)
+            && (!showLowStockOnly || product.stock <= product.min_stock);
     });
+    filterLowStockButton.setAttribute('aria-pressed', String(showLowStockOnly));
+    filterLowStockButton.querySelector('span').textContent = showLowStockOnly
+        ? 'Ver todos los productos'
+        : 'Mostrar solo productos por reponer';
 
-    inventoryList.innerHTML = filteredProducts.length ? filteredProducts.map(product => `
-        <form class="inventory-product grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 rounded-2xl border border-slate-800 bg-slate-900 p-4" data-product-id="${escapeHtml(product.product_id)}">
-            <div class="min-w-0">
-                <h3 class="break-words text-sm font-bold leading-snug text-slate-100">${escapeHtml(product.product_name)}</h3>
-                <p class="mt-1 text-[11px] leading-snug text-slate-400">Código ${escapeHtml(product.product_id)} · <span class="${product.stock > 0 ? 'text-emerald-300' : 'text-red-300'}">${product.stock > 0 ? `${product.stock} disponibles` : 'Agotado'}</span></p>
-            </div>
-            <label class="sr-only" for="stock-${escapeHtml(product.product_id)}">Unidades disponibles de ${escapeHtml(product.product_name)}</label>
-            <div class="flex shrink-0 items-center gap-2">
-                <input id="stock-${escapeHtml(product.product_id)}" class="inventory-quantity w-[4.5rem] shrink-0 rounded-lg border border-slate-700 bg-slate-950 px-2 py-2 text-center text-sm text-white outline-none focus:border-emerald-400" type="number" min="0" max="99999" step="1" value="${product.stock}" required>
-                <button class="inventory-save whitespace-nowrap rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-500 disabled:cursor-wait disabled:opacity-50" type="submit">Guardar</button>
-            </div>
-        </form>
-    `).join('') : `<div class="rounded-2xl border border-slate-800 p-6 text-center text-sm text-slate-400 md:col-span-2 2xl:col-span-3">${inventoryProducts.length ? 'No se encontraron productos con esa búsqueda.' : 'No hay productos registrados en el inventario.'}</div>`;
+    inventoryList.innerHTML = filteredProducts.length ? filteredProducts.map(product => {
+        const lowStock = product.stock <= product.min_stock;
+        const stockLabel = product.stock === 0 ? 'Agotado' : lowStock ? 'Stock bajo · reponer pronto' : `${product.stock} disponibles`;
+        return `
+            <article class="inventory-product min-w-0 rounded-2xl border ${lowStock ? 'border-amber-500/40 bg-amber-500/5' : 'border-slate-800 bg-slate-900'} p-4" data-product-id="${escapeHtml(product.product_id)}">
+                <div class="min-w-0">
+                    <div class="flex flex-wrap items-start justify-between gap-2">
+                        <h3 class="min-w-0 break-words text-sm font-bold leading-snug text-slate-100">${escapeHtml(product.product_name)}</h3>
+                        ${lowStock ? '<span class="shrink-0 rounded-full bg-amber-500/15 px-2 py-1 text-[9px] font-black uppercase text-amber-200">Reponer</span>' : ''}
+                    </div>
+                    <p class="mt-1 text-[11px] leading-snug text-slate-400">Código ${escapeHtml(product.product_id)} · <span class="${lowStock ? 'text-amber-300' : 'text-emerald-300'}">${stockLabel}</span></p>
+                </div>
+                <form class="inventory-stock-form mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-800/70 pt-3" data-product-id="${escapeHtml(product.product_id)}">
+                    <label class="text-[11px] font-bold text-slate-400" for="stock-${escapeHtml(product.product_id)}">Existencias</label>
+                    <div class="flex shrink-0 items-center gap-2">
+                        <input id="stock-${escapeHtml(product.product_id)}" class="inventory-quantity w-[4.5rem] shrink-0 rounded-lg border border-slate-700 bg-slate-950 px-2 py-2 text-center text-sm text-white outline-none focus:border-emerald-400" type="number" min="0" max="99999" step="1" value="${product.stock}" required>
+                        <button class="inventory-save whitespace-nowrap rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-500 disabled:cursor-wait disabled:opacity-50" type="submit">Guardar</button>
+                    </div>
+                </form>
+                <form class="inventory-min-stock-form mt-2 flex flex-wrap items-center justify-between gap-2" data-product-id="${escapeHtml(product.product_id)}">
+                    <label class="text-[11px] font-bold text-slate-400" for="min-stock-${escapeHtml(product.product_id)}">Avisarme al llegar a</label>
+                    <div class="flex shrink-0 items-center gap-2">
+                        <input id="min-stock-${escapeHtml(product.product_id)}" class="inventory-min-quantity w-[4.5rem] shrink-0 rounded-lg border border-slate-700 bg-slate-950 px-2 py-2 text-center text-sm text-white outline-none focus:border-amber-400" type="number" min="0" max="99999" step="1" value="${product.min_stock}" required>
+                        <button class="inventory-min-save whitespace-nowrap rounded-lg border border-amber-500/40 px-3 py-2 text-xs font-bold text-amber-200 transition hover:bg-amber-500/10 disabled:cursor-wait disabled:opacity-50" type="submit">Guardar mínimo</button>
+                    </div>
+                </form>
+            </article>`;
+    }).join('') : `<div class="rounded-2xl border border-slate-800 p-6 text-center text-sm text-slate-400 md:col-span-2 2xl:col-span-3">${inventoryProducts.length ? 'No se encontraron productos con esos filtros.' : 'No hay productos registrados en el inventario.'}</div>`;
 
     inventoryStatus.textContent = query
-        ? `${filteredProducts.length} resultado${filteredProducts.length === 1 ? '' : 's'} de ${inventoryProducts.length} productos.`
-        : `${inventoryProducts.length} productos · los cambios se guardan individualmente.`;
+        ? `${filteredProducts.length} resultado${filteredProducts.length === 1 ? '' : 's'} de ${inventoryProducts.length} productos${showLowStockOnly ? ' por reponer' : ''}.`
+        : showLowStockOnly
+            ? `${filteredProducts.length} producto${filteredProducts.length === 1 ? '' : 's'} por reponer de ${inventoryProducts.length}.`
+            : `${inventoryProducts.length} productos · los cambios se guardan individualmente.`;
 }
 
 async function loadAdminInventory() {
@@ -546,13 +571,14 @@ async function loadAdminInventory() {
     try {
         const { data, error } = await supabaseClient
             .from('product_inventory')
-            .select('product_id, product_name, stock')
+            .select('product_id, product_name, stock, min_stock')
             .order('product_name');
         if (error) throw error;
 
         inventoryProducts = (data || []).map(product => ({
             ...product,
-            stock: Number(product.stock)
+            stock: Number(product.stock),
+            min_stock: Number(product.min_stock)
         }));
         inventoryLoaded = true;
         renderAdminInventory();
@@ -596,6 +622,40 @@ async function saveProductStock(form) {
     } catch (error) {
         console.error('Error guardando la existencia:', error);
         inventoryStatus.textContent = error.message || 'No se pudo guardar la existencia.';
+    } finally {
+        saveButton.disabled = false;
+    }
+}
+
+async function saveProductMinStock(form) {
+    const productId = form.dataset.productId;
+    const input = form.querySelector('.inventory-min-quantity');
+    const saveButton = form.querySelector('.inventory-min-save');
+    const minStock = Number(input.value);
+
+    if (!productId || !Number.isInteger(minStock) || minStock < 0 || minStock > 99999) {
+        inventoryStatus.textContent = 'Ingresa un mínimo entero entre 0 y 99999.';
+        input.focus();
+        return;
+    }
+
+    saveButton.disabled = true;
+    inventoryStatus.textContent = 'Guardando el mínimo de reposición...';
+    try {
+        const { data, error } = await supabaseClient.rpc('admin_set_product_min_stock', {
+            p_product_id: productId,
+            p_min_stock: minStock
+        });
+        if (error) throw error;
+
+        const product = inventoryProducts.find(item => item.product_id === productId);
+        if (product) product.min_stock = Number(data);
+        renderAdminInventory();
+        renderAdminDashboard();
+        inventoryStatus.textContent = `Mínimo actualizado: ${product?.product_name || productId} · ${Number(data)} unidades.`;
+    } catch (error) {
+        console.error('Error guardando el mínimo de reposición:', error);
+        inventoryStatus.textContent = error.message || 'No se pudo guardar el mínimo de reposición.';
     } finally {
         saveButton.disabled = false;
     }
@@ -779,14 +839,26 @@ ordersView.addEventListener('click', event => {
         statusFilter.value = button.dataset.dashboardFilter;
         renderOrders();
     }
+    if (button.dataset.dashboardLowStock === 'true') {
+        showLowStockOnly = true;
+        renderAdminInventory();
+    }
     showAdminPage(button.dataset.dashboardPage);
 });
 inventorySearch.addEventListener('input', renderAdminInventory);
+filterLowStockButton.addEventListener('click', () => {
+    showLowStockOnly = !showLowStockOnly;
+    renderAdminInventory();
+});
 inventoryList.addEventListener('submit', event => {
-    const form = event.target.closest('.inventory-product');
+    const form = event.target.closest('.inventory-stock-form, .inventory-min-stock-form');
     if (!form) return;
     event.preventDefault();
-    saveProductStock(form);
+    if (form.matches('.inventory-min-stock-form')) {
+        saveProductMinStock(form);
+    } else {
+        saveProductStock(form);
+    }
 });
 document.getElementById('refresh-chats').addEventListener('click', async () => {
     await loadAdminChats();
