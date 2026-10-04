@@ -182,9 +182,9 @@
                     <span id="selected-count" class="text-xs text-slate-400">0 seleccionados</span>
                     <button id="clear-filters" class="rounded-lg border border-slate-700 px-3 py-2 text-xs font-bold hover:bg-slate-800">Limpiar filtros</button>
                     <div class="ml-auto flex flex-wrap gap-2">
-                        <button id="bulk-approve" class="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold hover:bg-emerald-500">Aprobar seleccionados</button>
-                        <button id="bulk-reject" class="rounded-lg border border-red-500/40 px-3 py-2 text-xs font-bold text-red-300 hover:bg-red-500/10">Rechazar seleccionados</button>
-                        <button id="bulk-delete" class="rounded-lg bg-red-700 px-3 py-2 text-xs font-bold hover:bg-red-600">Eliminar seleccionados</button>
+                        <button id="bulk-approve" disabled class="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50">Aprobar seleccionados</button>
+                        <button id="bulk-reject" disabled class="rounded-lg border border-red-500/40 px-3 py-2 text-xs font-bold text-red-300 hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50">Rechazar seleccionados</button>
+                        <button id="bulk-delete" disabled class="rounded-lg bg-red-700 px-3 py-2 text-xs font-bold hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50">Eliminar seleccionados</button>
                     </div>
                 </div>
             </div>
@@ -202,6 +202,22 @@
                         <div id="order-details-customer" class="grid gap-3 sm:grid-cols-2"></div>
                         <div id="order-details-items" class="mt-5 border-t border-slate-800 pt-4"></div>
                         <div id="order-details-receipt" class="mt-5 border-t border-slate-800 pt-4"></div>
+                    </div>
+                </section>
+            </div>
+            <div id="bulk-action-dialog" class="fixed inset-0 z-[60] hidden items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-labelledby="bulk-action-title" aria-describedby="bulk-action-message">
+                <section class="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-2xl">
+                    <div class="flex items-start gap-3">
+                        <span id="bulk-action-icon" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-400/15 text-amber-300"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i></span>
+                        <div class="min-w-0">
+                            <h3 id="bulk-action-title" class="text-lg font-black">Confirmar acción</h3>
+                            <p id="bulk-action-message" class="mt-2 text-sm leading-relaxed text-slate-300"></p>
+                            <p id="bulk-action-summary" class="mt-3 rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-xs text-slate-400"></p>
+                        </div>
+                    </div>
+                    <div class="mt-5 flex flex-wrap justify-end gap-2">
+                        <button id="bulk-action-cancel" type="button" class="rounded-xl border border-slate-700 px-4 py-2 text-xs font-bold hover:bg-slate-800">Cancelar</button>
+                        <button id="bulk-action-confirm" type="button" class="rounded-xl bg-amber-600 px-4 py-2 text-xs font-bold text-white hover:bg-amber-500">Confirmar</button>
                     </div>
                 </section>
             </div>

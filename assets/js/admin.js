@@ -19,6 +19,8 @@ const orderDetailsCustomer = document.getElementById('order-details-customer');
 const orderDetailsItems = document.getElementById('order-details-items');
 const orderDetailsReceipt = document.getElementById('order-details-receipt');
 let orderDetailsRequest = 0;
+const bulkActionDialog = document.getElementById('bulk-action-dialog');
+let pendingBulkAction = null;
 const inventoryList = document.getElementById('inventory-list');
 const inventoryStatus = document.getElementById('inventory-status');
 const inventorySearch = document.getElementById('inventory-search');
@@ -459,6 +461,9 @@ function renderCounters() {
     document.getElementById('approved-count').textContent = orders.filter(order => order.status === 'approved').length;
     document.getElementById('rejected-count').textContent = orders.filter(order => order.status === 'rejected').length;
     selectedCount.textContent = `${selectedOrderIds.size} seleccionado${selectedOrderIds.size === 1 ? '' : 's'}`;
+    ['bulk-approve', 'bulk-reject', 'bulk-delete'].forEach(id => {
+        document.getElementById(id).disabled = selectedOrderIds.size === 0;
+    });
 }
 
 function renderAdminDashboard() {
@@ -918,12 +923,12 @@ async function updateOrderStatus(ids, status) {
     ordersStatus.textContent = resultParts.join(' ') || 'No hay pedidos seleccionados para ese cambio de estado.';
 }
 
-async function deleteOrders(ids) {
+async function deleteOrders(ids, { confirmed = false } = {}) {
     if (!ids.length) {
         alert('Selecciona al menos un pedido.');
         return;
     }
-    if (!confirm(`¿Eliminar ${ids.length} pedido${ids.length === 1 ? '' : 's'} definitivamente?`)) return;
+    if (!confirmed && !confirm(`¿Eliminar ${ids.length} pedido${ids.length === 1 ? '' : 's'} definitivamente?`)) return;
 
     ordersStatus.textContent = 'Eliminando pedidos...';
     const receipts = orders.filter(order => ids.includes(order.id))
@@ -947,6 +952,79 @@ async function deleteOrders(ids) {
     }
     selectedOrderIds.clear();
     await loadOrders();
+}
+
+function openBulkActionConfirmation(action, ids) {
+    if (!ids.length) {
+        ordersStatus.textContent = 'Selecciona al menos un pedido antes de realizar una acción masiva.';
+        return;
+    }
+
+    const pendingCount = ids.filter(id => orders.some(order => order.id === id && order.status === 'pending')).length;
+    const pendingSummary = `${pendingCount} pendiente${pendingCount === 1 ? '' : 's'} podrá${pendingCount === 1 ? '' : 'n'}`;
+    const labels = {
+        approved: {
+            title: '¿Aprobar pedidos seleccionados?',
+            message: 'Se aprobarán los pedidos pendientes seleccionados y se descontarán las existencias correspondientes.',
+            button: 'Confirmar aprobación',
+            buttonClass: 'bg-emerald-600 hover:bg-emerald-500',
+            iconClass: 'bg-emerald-400/15 text-emerald-300',
+            summary: `${ids.length} seleccionado${ids.length === 1 ? '' : 's'} · ${pendingSummary} aprobarse.`
+        },
+        rejected: {
+            title: '¿Rechazar pedidos seleccionados?',
+            message: 'Se rechazarán los pedidos pendientes seleccionados. Esta acción no descuenta existencias.',
+            button: 'Confirmar rechazo',
+            buttonClass: 'bg-red-700 hover:bg-red-600',
+            iconClass: 'bg-red-400/15 text-red-300',
+            summary: `${ids.length} seleccionado${ids.length === 1 ? '' : 's'} · ${pendingSummary} rechazarse.`
+        },
+        delete: {
+            title: '¿Eliminar pedidos seleccionados?',
+            message: 'Se eliminarán definitivamente los pedidos seleccionados y se intentará borrar sus comprobantes. No se puede deshacer.',
+            button: 'Eliminar definitivamente',
+            buttonClass: 'bg-red-700 hover:bg-red-600',
+            iconClass: 'bg-red-400/15 text-red-300',
+            summary: `${ids.length} pedido${ids.length === 1 ? '' : 's'} seleccionado${ids.length === 1 ? '' : 's'}. Eliminar un pedido aprobado no repone automáticamente el inventario.`
+        }
+    }[action];
+
+    if (!labels) {
+        ordersStatus.textContent = 'Acción masiva no permitida.';
+        return;
+    }
+
+    pendingBulkAction = { action, ids: [...ids] };
+    document.getElementById('bulk-action-title').textContent = labels.title;
+    document.getElementById('bulk-action-message').textContent = labels.message;
+    document.getElementById('bulk-action-summary').textContent = labels.summary;
+    const icon = document.getElementById('bulk-action-icon');
+    icon.className = `flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${labels.iconClass}`;
+    icon.innerHTML = `<i class="fa-solid ${action === 'approved' ? 'fa-circle-check' : action === 'rejected' ? 'fa-ban' : 'fa-trash'}" aria-hidden="true"></i>`;
+    const confirmButton = document.getElementById('bulk-action-confirm');
+    confirmButton.textContent = labels.button;
+    confirmButton.className = `rounded-xl px-4 py-2 text-xs font-bold text-white ${labels.buttonClass}`;
+    bulkActionDialog.classList.remove('hidden');
+    bulkActionDialog.classList.add('flex');
+    document.getElementById('bulk-action-cancel').focus();
+}
+
+function closeBulkActionConfirmation() {
+    pendingBulkAction = null;
+    bulkActionDialog.classList.add('hidden');
+    bulkActionDialog.classList.remove('flex');
+}
+
+async function executeConfirmedBulkAction() {
+    if (!pendingBulkAction) return;
+    const { action, ids } = pendingBulkAction;
+    closeBulkActionConfirmation();
+
+    if (action === 'delete') {
+        await deleteOrders(ids, { confirmed: true });
+        return;
+    }
+    await updateOrderStatus(ids, action);
 }
 
 async function exportReceipts(filtered = false) {
@@ -1086,9 +1164,19 @@ document.getElementById('refresh-chats').addEventListener('click', async () => {
 adminChatPushButton.addEventListener('click', toggleAdminChatPush);
 document.getElementById('export-receipts').addEventListener('click', () => exportReceipts(false));
 document.getElementById('export-filtered-receipts').addEventListener('click', () => exportReceipts(true));
-document.getElementById('bulk-approve').addEventListener('click', () => updateOrderStatus([...selectedOrderIds], 'approved'));
-document.getElementById('bulk-reject').addEventListener('click', () => updateOrderStatus([...selectedOrderIds], 'rejected'));
-document.getElementById('bulk-delete').addEventListener('click', () => deleteOrders([...selectedOrderIds]));
+document.getElementById('bulk-approve').addEventListener('click', () => openBulkActionConfirmation('approved', [...selectedOrderIds]));
+document.getElementById('bulk-reject').addEventListener('click', () => openBulkActionConfirmation('rejected', [...selectedOrderIds]));
+document.getElementById('bulk-delete').addEventListener('click', () => openBulkActionConfirmation('delete', [...selectedOrderIds]));
+document.getElementById('bulk-action-cancel').addEventListener('click', closeBulkActionConfirmation);
+document.getElementById('bulk-action-confirm').addEventListener('click', executeConfirmedBulkAction);
+bulkActionDialog.addEventListener('click', event => {
+    if (event.target === bulkActionDialog) closeBulkActionConfirmation();
+});
+document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && !bulkActionDialog.classList.contains('hidden')) {
+        closeBulkActionConfirmation();
+    }
+});
 statusFilter.addEventListener('change', renderOrders);
 [searchFilter, dateFromFilter, dateToFilter, paymentMethodFilter, receiptFilter, sortFilter].forEach(filter => {
     filter.addEventListener('input', renderOrders);
