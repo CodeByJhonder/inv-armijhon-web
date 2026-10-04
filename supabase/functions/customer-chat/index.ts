@@ -546,9 +546,18 @@ Deno.serve(async (request) => {
       return jsonResponse({ message: data });
     }
 
-    if (action === "client_list" || action === "client_send") {
+    if (action === "client_status" || action === "client_list" || action === "client_send") {
       const { conversation, error: sessionError } = await requireConversation(payload.conversationId, payload.sessionToken);
       if (sessionError || !conversation) return jsonResponse({ error: sessionError }, 403);
+
+      if (action === "client_status") {
+        return jsonResponse({
+          conversation: {
+            status: conversation.status,
+            customer_unread: conversation.customer_unread
+          }
+        });
+      }
 
       if (action === "client_list") {
         const { data, error } = await adminClient

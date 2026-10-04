@@ -1133,6 +1133,7 @@
 
     <button id="support-chat-launcher" type="button" class="fixed bottom-5 left-4 z-40 inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-3 text-xs font-black text-white shadow-xl shadow-indigo-950/30 transition hover:-translate-y-1 hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400" aria-expanded="false" aria-controls="support-chat-panel">
         <i class="fa-solid fa-comments text-base"></i><span>Atención al cliente</span>
+        <span id="support-chat-unread-badge" class="absolute -right-1 -top-2 hidden min-h-5 min-w-5 items-center justify-center rounded-full border-2 border-slate-900 bg-rose-500 px-1 text-[10px] font-black leading-none text-white shadow-lg" aria-live="polite" aria-atomic="true"></span>
     </button>
     <section id="support-chat-panel" class="fixed inset-x-3 bottom-20 z-40 hidden h-[min(70vh,36rem)] max-h-[36rem] flex-col overflow-hidden rounded-3xl border border-slate-700 bg-slate-900 text-slate-100 shadow-2xl shadow-slate-950/50 sm:inset-x-auto sm:bottom-6 sm:right-6 sm:w-96" role="dialog" aria-label="Chat de atención al cliente">
         <header class="flex items-center justify-between border-b border-slate-700 bg-slate-950 px-4 py-3">
@@ -2231,8 +2232,37 @@
         let supportChatSession = null;
         let supportChatPoll = null;
         let supportChatRequestPending = false;
+        let supportChatUnreadRequestPending = false;
+        let supportChatUnreadRefreshVersion = 0;
         let supportChatSelectedFiles = [];
         let supportChatConversationClosed = false;
+        const supportChatUnreadBadge = document.getElementById('support-chat-unread-badge');
+
+        function renderSupportChatUnread(count) {
+            const unread = Math.max(0, Number(count) || 0);
+            supportChatUnreadBadge.textContent = unread > 99 ? '99+' : String(unread);
+            supportChatUnreadBadge.classList.toggle('hidden', unread === 0);
+            supportChatUnreadBadge.classList.toggle('inline-flex', unread > 0);
+            supportChatLauncher.setAttribute('aria-label', unread
+                ? `Atención al cliente, ${unread} mensaje${unread === 1 ? '' : 's'} sin leer`
+                : 'Atención al cliente');
+        }
+
+        async function refreshSupportChatUnread() {
+            if (!supportChatSession || supportChatUnreadRequestPending || !supportChatPanel.classList.contains('hidden') || document.visibilityState !== 'visible') return;
+            const session = supportChatSession;
+            const requestVersion = ++supportChatUnreadRefreshVersion;
+            supportChatUnreadRequestPending = true;
+            try {
+                const data = await callCustomerChat('client_status');
+                if (requestVersion !== supportChatUnreadRefreshVersion || session !== supportChatSession || !supportChatPanel.classList.contains('hidden')) return;
+                renderSupportChatUnread(data.conversation?.customer_unread);
+            } catch (error) {
+                console.warn('No se pudo actualizar el contador de mensajes del chat:', error);
+            } finally {
+                supportChatUnreadRequestPending = false;
+            }
+        }
 
         function readSupportChatSession() {
             try {
@@ -2310,6 +2340,7 @@
                     supportChatSession.phone = data.conversation.customer_phone;
                     localStorage.setItem(chatStorageKey, JSON.stringify(supportChatSession));
                     supportChatConversationClosed = data.conversation.status === 'closed';
+                    renderSupportChatUnread(0);
                     document.getElementById('support-chat-session-label').textContent = `Conversación de ${supportChatSession.name}`;
                     supportChatClosedNotice.classList.toggle('hidden', !supportChatConversationClosed);
                     document.getElementById('support-chat-message-form').classList.toggle('hidden', supportChatConversationClosed);
@@ -2374,6 +2405,8 @@
             supportChatPanel.classList.remove('hidden');
             supportChatPanel.classList.add('flex');
             supportChatLauncher.setAttribute('aria-expanded', 'true');
+            supportChatUnreadRefreshVersion++;
+            renderSupportChatUnread(0);
             if (supportChatSession) {
                 supportChatStartForm.classList.add('hidden');
                 supportChatThread.classList.remove('hidden');
@@ -2475,6 +2508,7 @@
                 const data = await callCustomerChat('start', { name, phone, sessionToken: token });
                 supportChatSession = { conversationId: data.conversation.id, sessionToken: token, name: data.conversation.customer_name, phone: data.conversation.customer_phone };
                 supportChatConversationClosed = false;
+                renderSupportChatUnread(0);
                 localStorage.setItem(chatStorageKey, JSON.stringify(supportChatSession));
                 openSupportChat();
             } catch (error) {
@@ -2607,6 +2641,8 @@
             setInterval(refreshExchangeRates, window.PAYMENT_CONFIG.ratesRefreshMs);
             initFooter();
             supportChatSession = readSupportChatSession();
+            refreshSupportChatUnread();
+            window.setInterval(refreshSupportChatUnread, 3500);
             if (window.location.hash === '#support-chat' && supportChatSession) openSupportChat();
         };
     </script>
