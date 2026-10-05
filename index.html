@@ -1621,8 +1621,10 @@
             } else {
                 detail.textContent = `Quedan ${remainingUnits} unidad${remainingUnits === 1 ? '' : 'es'} con descuento. El descuento se aplica a pedidos con pago móvil o transferencia enviados desde esta web, y se confirma al enviar el pedido y su comprobante.`;
             }
-            launchPromotionPreviousOverflow = document.body.style.overflow;
-            document.body.style.overflow = 'hidden';
+            if (!modal.classList.contains('is-open')) {
+                launchPromotionPreviousOverflow = document.body.style.overflow;
+                document.body.style.overflow = 'hidden';
+            }
             modal.classList.remove('hidden');
             modal.classList.add('is-open');
         }
@@ -1632,6 +1634,7 @@
             modal.classList.add('hidden');
             modal.classList.remove('is-open');
             document.body.style.overflow = launchPromotionPreviousOverflow;
+            launchPromotionPreviousOverflow = '';
         }
 
         function openLaunchPromotion() {
@@ -1645,19 +1648,18 @@
             errorEl.classList.add('hidden');
             try {
                 launchPromotion = await callLaunchPromotion('decision', decision);
-                document.getElementById('launch-promo-actions').classList.add('hidden');
-                document.getElementById('launch-promo-close-action').classList.remove('hidden');
                 if (decision === 'accepted') {
                     document.getElementById('launch-promo-ribbon').classList.remove('hidden');
                     document.getElementById('launch-promo-ribbon').classList.add('flex');
                     document.getElementById('launch-promo-ribbon-label').textContent = launchPromotion.has_active_redemption ? 'Oferta reservada' : launchPromotion.remaining_discounted_units > 0 ? 'Crema al 50%' : 'Oferta agotada';
                     filterCatalog();
                     updateCartUI();
+                    showToast('¡Oferta activada! Ya puedes seguir explorando el catálogo.');
                 } else {
                     document.getElementById('launch-promo-ribbon').classList.add('hidden');
                     showToast('Gracias. No volveremos a mostrarte esta oferta en este navegador.');
                 }
-                showLaunchPromotion();
+                closeLaunchPromotion();
             } catch (error) {
                 console.error('No se pudo guardar la decisión de promoción:', error);
                 errorEl.textContent = error.message || 'No se pudo guardar tu respuesta. Intenta nuevamente.';
