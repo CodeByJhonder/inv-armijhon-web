@@ -1131,6 +1131,26 @@
         <span id="floating-checkout-count" class="bg-white/20 px-2 py-0.5 rounded-lg">0</span>
     </button>
 
+    <button id="launch-promo-ribbon" type="button" onclick="openLaunchPromotion()" class="fixed right-4 top-24 z-30 hidden items-center gap-2 rounded-full border border-amber-200 bg-amber-300 px-4 py-3 text-xs font-black text-slate-950 shadow-xl shadow-amber-950/20 transition hover:-translate-y-0.5 hover:bg-amber-200" aria-label="Ver promoción de crema corporal">
+        <i class="fa-solid fa-gift"></i><span id="launch-promo-ribbon-label">Oferta especial</span>
+    </button>
+    <div id="launch-promo-modal" class="fixed inset-0 z-[110] hidden items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="launch-promo-title">
+        <div class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
+        <section class="relative z-10 w-full max-w-md overflow-hidden rounded-3xl border border-amber-300/40 bg-white p-6 shadow-2xl dark:bg-slate-900">
+            <img src="img/crema-corporal-ideal-citrus-fresh.jpg" alt="Crema Corporal Ideal+ Citrus Fresh" class="mx-auto h-40 w-40 rounded-2xl object-cover">
+            <p class="mt-4 text-center text-[10px] font-black uppercase tracking-[0.2em] text-amber-600 dark:text-amber-300">Oferta de lanzamiento · primeras 50 visitas</p>
+            <h2 id="launch-promo-title" class="mt-2 text-center text-2xl font-black text-slate-900 dark:text-white">50% de descuento</h2>
+            <p class="mt-2 text-center text-sm text-slate-600 dark:text-slate-300">Crema Corporal Ideal+ Citrus Fresh: <span class="font-bold line-through">$10.00</span> <span class="font-black text-emerald-600 dark:text-emerald-400">$5.00</span>.</p>
+            <p id="launch-promo-detail" class="mt-3 rounded-2xl bg-amber-50 p-3 text-center text-xs leading-relaxed text-amber-950 dark:bg-amber-300/10 dark:text-amber-100">El descuento se aplica únicamente a las 2 unidades disponibles y a pedidos enviados por pago móvil o transferencia desde esta web. Se confirma al enviar el pedido y su comprobante.</p>
+            <p id="launch-promo-error" class="mt-3 hidden text-center text-xs text-red-600 dark:text-red-400" role="alert"></p>
+            <div id="launch-promo-actions" class="mt-5 grid grid-cols-2 gap-3">
+                <button type="button" onclick="saveLaunchPromotionDecision('rejected')" class="rounded-2xl border border-slate-300 px-4 py-3 text-xs font-bold text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">No, gracias</button>
+                <button type="button" onclick="saveLaunchPromotionDecision('accepted')" class="rounded-2xl bg-amber-300 px-4 py-3 text-xs font-black text-slate-950 hover:bg-amber-200">Aceptar oferta</button>
+            </div>
+            <button id="launch-promo-close" type="button" onclick="closeLaunchPromotion()" class="mt-3 hidden w-full rounded-2xl bg-slate-100 px-4 py-3 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">Seguir comprando</button>
+        </section>
+    </div>
+
     <button id="support-chat-launcher" type="button" class="fixed bottom-5 left-4 z-40 inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-3 text-xs font-black text-white shadow-xl shadow-indigo-950/30 transition hover:-translate-y-1 hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400" aria-expanded="false" aria-controls="support-chat-panel">
         <i class="fa-solid fa-comments text-base"></i><span>Atención al cliente</span>
         <span id="support-chat-unread-badge" class="absolute -right-1 -top-2 hidden min-h-5 min-w-5 items-center justify-center rounded-full border-2 border-slate-900 bg-rose-500 px-1 text-[10px] font-black leading-none text-white shadow-lg" aria-live="polite" aria-atomic="true"></span>
@@ -1455,6 +1475,11 @@
         // --- App Global State ---
         let cart = [];
         let currentCategory = 'todos';
+        const LAUNCH_PROMO_VISITOR_KEY = 'inv_armijhon_citrus_promo_visitor_v1';
+        const LAUNCH_PROMO_PRODUCT_ID = 'p38';
+        const LAUNCH_PROMO_PRICE = 5;
+        let launchPromotion = null;
+        let launchPromotionVisitorToken = null;
         const exchangeRates = {
             VES: Number(window.PAYMENT_CONFIG?.exchangeRates?.VES || window.PAYMENT_CONFIG?.exchangeRate) || 849.564
         };
@@ -1464,6 +1489,156 @@
         function getAppliedVesRate() {
             const adjustment = Number.isFinite(vesRateAdjustment) && vesRateAdjustment >= 0 ? vesRateAdjustment : 30;
             return exchangeRates.VES + adjustment;
+        }
+
+        function getLaunchPromotionToken() {
+            if (launchPromotionVisitorToken) return launchPromotionVisitorToken;
+            const savedToken = localStorage.getItem(LAUNCH_PROMO_VISITOR_KEY);
+            if (savedToken && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(savedToken)) {
+                launchPromotionVisitorToken = savedToken;
+            } else {
+                launchPromotionVisitorToken = crypto.randomUUID();
+                localStorage.setItem(LAUNCH_PROMO_VISITOR_KEY, launchPromotionVisitorToken);
+            }
+            return launchPromotionVisitorToken;
+        }
+
+        async function callLaunchPromotion(action, decision) {
+            if (!window.supabaseClient) throw new Error('El servicio de promociones aún no está disponible.');
+            const { data, error } = await window.supabaseClient.functions.invoke('launch-promotion', {
+                body: { action, decision, visitorToken: getLaunchPromotionToken() }
+            });
+            if (error) {
+                if (error.context instanceof Response) {
+                    const body = await error.context.clone().json().catch(() => null);
+                    if (typeof body?.error === 'string') throw new Error(body.error);
+                }
+                throw new Error(error.message || 'No se pudo consultar la promoción.');
+            }
+            if (!data?.promotion) throw new Error('La respuesta del servicio de promociones no es válida.');
+            return data.promotion;
+        }
+
+        function showLaunchPromotion() {
+            const modal = document.getElementById('launch-promo-modal');
+            if (!modal) return;
+            document.getElementById('launch-promo-error').classList.add('hidden');
+            const remainingUnits = Math.max(0, Number(launchPromotion?.remaining_discounted_units) || 0);
+            document.getElementById('launch-promo-actions').classList.toggle('hidden', launchPromotion?.decision !== 'pending');
+            document.getElementById('launch-promo-close').classList.toggle('hidden', launchPromotion?.decision === 'pending' && remainingUnits > 0);
+            const acceptButton = document.querySelector('#launch-promo-actions button:last-child');
+            acceptButton.disabled = launchPromotion?.decision === 'pending' && remainingUnits <= 0;
+            acceptButton.classList.toggle('opacity-50', acceptButton.disabled);
+            const detail = document.getElementById('launch-promo-detail');
+            if (launchPromotion?.decision === 'accepted' && launchPromotion.has_active_redemption) {
+                detail.textContent = 'Tu oferta ya está reservada en un pedido pendiente. Si el pedido es rechazado, podrás volver a intentarlo desde este navegador.';
+            } else if (launchPromotion?.decision === 'accepted' && remainingUnits <= 0) {
+                detail.textContent = 'Aceptaste la oferta, pero las 2 unidades con descuento ya fueron reservadas. Puedes comprar el producto a su precio regular de $10.00.';
+            } else if (launchPromotion?.decision === 'accepted') {
+                detail.textContent = `Quedan ${remainingUnits} unidad${remainingUnits === 1 ? '' : 'es'} con descuento. La oferta solo aplica a pedidos con pago y comprobante enviados desde esta web.`;
+            } else if (launchPromotion?.decision === 'rejected') {
+                detail.textContent = 'Elegiste no participar en esta oferta. No volveremos a mostrarla en este navegador.';
+            } else if (remainingUnits <= 0) {
+                detail.textContent = 'Las unidades con descuento ya fueron reservadas. Puedes cerrar esta ventana; el producto sigue disponible a su precio regular de $10.00.';
+            } else {
+                detail.textContent = `Quedan ${remainingUnits} unidad${remainingUnits === 1 ? '' : 'es'} con descuento. El descuento se aplica a pedidos con pago móvil o transferencia enviados desde esta web, y se confirma al enviar el pedido y su comprobante.`;
+            }
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeLaunchPromotion() {
+            const modal = document.getElementById('launch-promo-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function openLaunchPromotion() {
+            showLaunchPromotion();
+        }
+
+        async function saveLaunchPromotionDecision(decision) {
+            const buttons = Array.from(document.querySelectorAll('#launch-promo-actions button'));
+            buttons.forEach(button => { button.disabled = true; });
+            const errorEl = document.getElementById('launch-promo-error');
+            errorEl.classList.add('hidden');
+            try {
+                launchPromotion = await callLaunchPromotion('decision', decision);
+                document.getElementById('launch-promo-actions').classList.add('hidden');
+                document.getElementById('launch-promo-close').classList.remove('hidden');
+                if (decision === 'accepted') {
+                    document.getElementById('launch-promo-ribbon').classList.remove('hidden');
+                    document.getElementById('launch-promo-ribbon').classList.add('flex');
+                    document.getElementById('launch-promo-ribbon-label').textContent = launchPromotion.has_active_redemption ? 'Oferta reservada' : launchPromotion.remaining_discounted_units > 0 ? 'Crema al 50%' : 'Oferta agotada';
+                    filterCatalog();
+                    updateCartUI();
+                } else {
+                    document.getElementById('launch-promo-ribbon').classList.add('hidden');
+                    showToast('Gracias. No volveremos a mostrarte esta oferta en este navegador.');
+                }
+                showLaunchPromotion();
+            } catch (error) {
+                console.error('No se pudo guardar la decisión de promoción:', error);
+                errorEl.textContent = error.message || 'No se pudo guardar tu respuesta. Intenta nuevamente.';
+                errorEl.classList.remove('hidden');
+            } finally {
+                buttons.forEach(button => { button.disabled = false; });
+            }
+        }
+
+        async function initializeLaunchPromotion() {
+            try {
+                launchPromotion = await callLaunchPromotion('visit');
+                if (!launchPromotion.eligible) return;
+                if (launchPromotion.decision === 'pending') {
+                    showLaunchPromotion();
+                } else if (launchPromotion.decision === 'accepted') {
+                    document.getElementById('launch-promo-ribbon').classList.remove('hidden');
+                    document.getElementById('launch-promo-ribbon').classList.add('flex');
+                    document.getElementById('launch-promo-ribbon-label').textContent = launchPromotion.has_active_redemption ? 'Oferta reservada' : launchPromotion.remaining_discounted_units > 0 ? 'Crema al 50%' : 'Oferta agotada';
+                    filterCatalog();
+                    updateCartUI();
+                }
+            } catch (error) {
+                console.error('No se pudo cargar la promoción de lanzamiento:', error);
+                showToast('No pudimos cargar la oferta de lanzamiento. Intenta recargar la página.');
+            }
+        }
+
+        function getDiscountedCartQuantity(item) {
+            if (item.id !== LAUNCH_PROMO_PRODUCT_ID || launchPromotion?.decision !== 'accepted' || launchPromotion.has_active_redemption) return 0;
+            const remaining = Number(launchPromotion.remaining_discounted_units) || 0;
+            return Math.min(item.qty, Math.max(0, remaining));
+        }
+
+        function getCartLineTotal(item, includePromotion = true) {
+            const discountedQuantity = includePromotion ? getDiscountedCartQuantity(item) : 0;
+            return discountedQuantity * LAUNCH_PROMO_PRICE + (item.qty - discountedQuantity) * item.price;
+        }
+
+        function getCartTotal(includePromotion = true) {
+            return cart.reduce((sum, item) => sum + getCartLineTotal(item, includePromotion), 0);
+        }
+
+        function buildOrderItems() {
+            return cart.flatMap(item => {
+                const discountedQuantity = getDiscountedCartQuantity(item);
+                const orderItems = [];
+                if (discountedQuantity > 0) {
+                    orderItems.push({
+                        id: item.id, name: item.name, quantity: discountedQuantity,
+                        unitPriceUsd: LAUNCH_PROMO_PRICE, lineTotalUsd: LAUNCH_PROMO_PRICE * discountedQuantity
+                    });
+                }
+                const regularQuantity = item.qty - discountedQuantity;
+                if (regularQuantity > 0) {
+                    orderItems.push({
+                        id: item.id, name: item.name, quantity: regularQuantity,
+                        unitPriceUsd: item.price, lineTotalUsd: item.price * regularQuantity
+                    });
+                }
+                return orderItems;
+            });
         }
 
         function formatRateDate() {
@@ -1609,6 +1784,9 @@
 
             products.forEach(p => {
                 const canOrder = productCanBeOrdered(p.id);
+                const showLaunchDiscount = p.id === LAUNCH_PROMO_PRODUCT_ID
+                    && launchPromotion?.decision === 'accepted'
+                    && Number(launchPromotion.remaining_discounted_units) > 0;
                 const stockStyle = canOrder
                     ? 'text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
                     : 'text-red-700 dark:text-red-300 border-red-500/30';
@@ -1628,7 +1806,7 @@
 
                     <div>
                         <div class="flex justify-between items-center mb-4">
-                            <span class="text-xl font-black text-slate-900 dark:text-white">$${p.price.toFixed(2)}</span>
+                            <span class="text-xl font-black text-slate-900 dark:text-white">${showLaunchDiscount ? `<span class="mr-1 text-xs font-bold text-slate-400 line-through">$${p.price.toFixed(2)}</span><span class="text-emerald-600 dark:text-emerald-400">$${LAUNCH_PROMO_PRICE.toFixed(2)}</span>` : `$${p.price.toFixed(2)}`}</span>
                             <button onclick="openQuickView('${p.id}')" class="catalog-quick-view text-xs text-indigo-600 dark:text-indigo-400 font-bold">Vista Rápida</button>
                         </div>
                         <button onclick="addToCart('${p.id}', event)" ${canOrder ? '' : 'disabled'} class="catalog-product-action w-full bg-slate-100 dark:bg-slate-800 hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 text-slate-800 dark:text-white font-bold py-3 rounded-2xl transition border border-slate-200 dark:border-slate-700 flex items-center justify-center gap-2 text-xs disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-slate-100 disabled:hover:text-slate-800 dark:disabled:hover:bg-slate-800 dark:disabled:hover:text-white">
@@ -1737,7 +1915,10 @@
             let totalItems = 0;
 
             cart.forEach((item, index) => {
-                subtotal += item.price * item.qty;
+                const lineTotal = getCartLineTotal(item);
+                const discountedQuantity = getDiscountedCartQuantity(item);
+                const regularQuantity = item.qty - discountedQuantity;
+                subtotal += lineTotal;
                 totalItems += item.qty;
 
                 const div = document.createElement('div');
@@ -1745,9 +1926,9 @@
                 div.innerHTML = `
                     <div class="flex-1">
                         <div class="text-xs font-bold text-slate-800 dark:text-white line-clamp-1">${item.name}</div>
-                        <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">$${item.price.toFixed(2)} c/u</div>
-                        <div class="text-xs font-black text-indigo-500 mt-1">$${(item.price * item.qty).toFixed(2)}</div>
-                        <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-1">Bs. ${formatVes(item.price * item.qty * getAppliedVesRate())}</div>
+                        <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">${discountedQuantity ? `<span class="font-bold text-emerald-600 dark:text-emerald-400">${discountedQuantity} al 50% ($${LAUNCH_PROMO_PRICE.toFixed(2)} c/u)</span>${regularQuantity ? ` · ${regularQuantity} a $${item.price.toFixed(2)} c/u` : ''}` : `$${item.price.toFixed(2)} c/u`}</div>
+                        <div class="text-xs font-black text-indigo-500 mt-1">$${lineTotal.toFixed(2)}</div>
+                        <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-1">Bs. ${formatVes(lineTotal * getAppliedVesRate())}</div>
                     </div>
                     <div class="flex items-center gap-2">
                         <button onclick="changeQty(${index}, -1)" class="w-7 h-7 bg-slate-200 dark:bg-slate-900 text-slate-800 dark:text-slate-300 rounded-lg text-xs font-bold">-</button>
@@ -1818,8 +1999,8 @@
             }
 
             const lines = cart.map(item => `• ${item.qty}x ${item.name} - $${(item.price * item.qty).toFixed(2)} (Bs. ${formatVes(item.price * item.qty * getAppliedVesRate())})`);
-            const total = document.getElementById('cart-total').textContent;
-            const totalUsd = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+            const totalUsd = getCartTotal(false);
+            const total = `$${totalUsd.toFixed(2)}`;
             const totalVes = formatVes(totalUsd * getAppliedVesRate());
             const adjustment = getAppliedVesRate() - exchangeRates.VES;
             const message = [
@@ -1827,6 +2008,7 @@
                 '',
                 ...lines,
                 '',
+                ...(launchPromotion?.decision === 'accepted' && cart.some(item => item.id === LAUNCH_PROMO_PRODUCT_ID) ? ['La oferta de la crema aplica solo a pedidos con pago y comprobante enviados desde la web; este pedido por WhatsApp conserva los precios regulares.', ''] : []),
                 `*TOTAL REFERENCIAL: ${total} / Bs. ${totalVes}*`,
                 `Tasa aplicada: Bs. ${formatVes(exchangeRates.VES)} + Bs. ${formatVes(adjustment)} = Bs. ${formatVes(getAppliedVesRate())} por USD (tasa automática referencial; no garantiza ser la tasa oficial BCV).`,
                 '',
@@ -1871,7 +2053,7 @@
                 showToast('Añade productos antes de finalizar la compra.');
                 return;
             }
-            const totalUsd = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+            const totalUsd = getCartTotal();
             renderPaymentTotals(totalUsd);
             updatePaymentMethod();
             const modal = document.getElementById('payment-modal');
@@ -1929,9 +2111,24 @@
                 return;
             }
 
-            const totalUsd = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+            if (launchPromotion?.decision === 'accepted') {
+                try {
+                    launchPromotion = await callLaunchPromotion('visit');
+                } catch (error) {
+                    console.warn('No se pudo confirmar el cupo promocional; se usará el precio regular:', error);
+                    launchPromotion = { ...launchPromotion, remaining_discounted_units: 0 };
+                    showToast('No pudimos confirmar las unidades con descuento; se aplicará el precio regular de la crema.');
+                }
+                filterCatalog();
+                updateCartUI();
+                renderPaymentTotals(getCartTotal());
+            }
+
+            const totalUsd = getCartTotal();
             const rate = getAppliedVesRate();
             const method = document.querySelector('input[name="payment-method"]:checked').value;
+            const items = buildOrderItems();
+            const includesLaunchPromotion = items.some(item => item.id === LAUNCH_PROMO_PRODUCT_ID && item.unitPriceUsd === LAUNCH_PROMO_PRICE);
             submit.disabled = true;
             submit.textContent = 'Enviando comprobante...';
             status.textContent = 'Guardando tu pedido de forma segura.';
@@ -1945,13 +2142,8 @@
                         exchangeRate: rate,
                         totalUsd,
                         totalVes: Number((totalUsd * rate).toFixed(2)),
-                        items: cart.map(item => ({
-                            id: item.id,
-                            name: item.name,
-                            quantity: item.qty,
-                            unitPriceUsd: item.price,
-                            lineTotalUsd: item.price * item.qty
-                        })),
+                        items,
+                        ...(includesLaunchPromotion ? { promoToken: getLaunchPromotionToken() } : {}),
                         receipt: { name: file.name, type: file.type, base64: await readReceipt(file) }
                     }
                 });
@@ -1967,6 +2159,15 @@
                 status.className = 'text-xs text-emerald-600 dark:text-emerald-400';
                 cart = [];
                 updateCartUI();
+                if (includesLaunchPromotion) {
+                    try {
+                        launchPromotion = await callLaunchPromotion('visit');
+                        document.getElementById('launch-promo-ribbon-label').textContent = launchPromotion.has_active_redemption ? 'Oferta reservada' : launchPromotion.remaining_discounted_units > 0 ? 'Crema al 50%' : 'Oferta agotada';
+                        filterCatalog();
+                    } catch (refreshError) {
+                        console.error('No se pudo actualizar el cupo restante de la promoción:', refreshError);
+                    }
+                }
                 submit.textContent = 'Comprobante enviado';
                 const successModal = document.getElementById('payment-success-modal');
                 successModal.classList.remove('hidden');
@@ -1974,6 +2175,17 @@
                 launchReceiptCelebration();
             } catch (error) {
                 console.error(error);
+                if (error instanceof Error && (error.message.includes('unidades con descuento') || error.message.includes('oferta de lanzamiento'))) {
+                    try {
+                        launchPromotion = await callLaunchPromotion('visit');
+                    } catch (refreshError) {
+                        console.warn('No se pudo refrescar el estado de la oferta:', refreshError);
+                        launchPromotion = { ...launchPromotion, remaining_discounted_units: 0 };
+                    }
+                    filterCatalog();
+                    updateCartUI();
+                    renderPaymentTotals(getCartTotal());
+                }
                 status.textContent = error instanceof Error && error.message
                     ? error.message
                     : 'No pudimos enviar el pedido. Intenta nuevamente o usa WhatsApp.';
@@ -2024,6 +2236,10 @@
         function openQuickView(id) {
             const p = productsDB.find(item => item.id === id);
             if (!p) return;
+            const showLaunchDiscount = p.id === LAUNCH_PROMO_PRODUCT_ID
+                && launchPromotion?.decision === 'accepted'
+                && !launchPromotion.has_active_redemption
+                && Number(launchPromotion.remaining_discounted_units) > 0;
 
             document.getElementById('quickview-content').innerHTML = `
                 <div class="h-56 rounded-2xl bg-slate-100 dark:bg-slate-950 overflow-hidden mb-4">
@@ -2032,7 +2248,7 @@
                 <h3 class="text-lg font-black text-slate-900 dark:text-white">${p.name}</h3>
                 <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed my-2">${p.desc}</p>
                 <p class="text-xs font-bold ${productCanBeOrdered(p.id) ? 'text-emerald-600 dark:text-emerald-300' : 'text-red-600 dark:text-red-300'}">${productStockLabel(p.id)}</p>
-                <div class="text-2xl font-black text-indigo-500 my-4">$${p.price.toFixed(2)}</div>
+                <div class="my-4 text-2xl font-black text-indigo-500">${showLaunchDiscount ? `<span class="mr-2 text-sm text-slate-400 line-through">$${p.price.toFixed(2)}</span>$${LAUNCH_PROMO_PRICE.toFixed(2)}<p class="mt-1 text-[10px] font-semibold text-slate-500">Oferta disponible en pedidos con pago enviados desde la web; WhatsApp conserva el precio regular.</p>` : `$${p.price.toFixed(2)}`}</div>
                 <button onclick="if (addToCart('${p.id}', event)) closeQuickView();" ${productCanBeOrdered(p.id) ? '' : 'disabled'} class="catalog-product-action w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 rounded-2xl transition text-xs disabled:cursor-not-allowed disabled:opacity-50">
                     <i class="fa-solid ${productCanBeOrdered(p.id) ? 'fa-cart-plus' : 'fa-ban'} mr-2"></i> ${productCanBeOrdered(p.id) ? 'Añadir a mi Carrito' : productStockLabel(p.id)}
                 </button>
@@ -2640,6 +2856,7 @@
             }, 60000);
             refreshExchangeRates();
             setInterval(refreshExchangeRates, window.PAYMENT_CONFIG.ratesRefreshMs);
+            initializeLaunchPromotion();
             initFooter();
             supportChatSession = readSupportChatSession();
             refreshSupportChatUnread();

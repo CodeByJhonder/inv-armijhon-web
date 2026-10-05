@@ -1,2 +1,5 @@
 [functions.customer-chat]
 verify_jwt = false
+
+[functions.launch-promotion]
+verify_jwt = false
