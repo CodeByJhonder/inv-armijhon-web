@@ -46,6 +46,7 @@ let orders = [];
 let inventoryProducts = [];
 let ordersLoaded = false;
 let inventoryLoaded = false;
+let promotionSummaryRequest = 0;
 let showLowStockOnly = false;
 let dashboardOrdersMessage = 'Cargando pedidos…';
 let dashboardInventoryMessage = 'Cargando inventario…';
@@ -129,6 +130,7 @@ function showOrders() {
     logoutButton.classList.remove('hidden');
     loadOrders();
     loadAdminInventory();
+    loadAdminPromotionSummary();
     subscribeToOrders();
     loadAdminChats();
     subscribeToAdminChats();
@@ -171,6 +173,7 @@ function subscribeToOrders() {
     ordersChannel = supabaseClient.channel('admin-orders-realtime')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, payload => {
             loadOrders();
+            loadAdminPromotionSummary();
             ordersStatus.textContent = payload.eventType === 'INSERT' ? 'Nuevo pedido recibido.' : 'Pedido actualizado.';
         })
         .subscribe(status => {
@@ -542,6 +545,49 @@ function renderAdminDashboard() {
         document.getElementById('dashboard-low-stock-count').textContent = lowStockProducts;
         dashboardInventoryMessage = `${outOfStockProducts} agotados · ${inventoryProducts.length} productos registrados`;
         document.getElementById('dashboard-inventory-note').textContent = dashboardInventoryMessage;
+    }
+}
+
+async function loadAdminPromotionSummary() {
+    const requestId = ++promotionSummaryRequest;
+    const units = document.getElementById('dashboard-promo-units-remaining');
+    const visitors = document.getElementById('dashboard-promo-visitors');
+    const status = document.getElementById('dashboard-promo-status');
+    status.textContent = 'Consultando cupos…';
+
+    try {
+        const { data, error } = await supabaseClient.rpc('admin_launch_promo_summary');
+        if (requestId !== promotionSummaryRequest) return;
+        if (error) {
+            units.textContent = '—';
+            visitors.textContent = 'No se pudo cargar el resumen de la promoción.';
+            status.textContent = 'Verifica que launch-promotion-admin-summary.sql esté aplicado en Supabase.';
+            console.error('No se pudo cargar el resumen de la promoción:', error);
+            return;
+        }
+
+        const visitorLimit = Number(data?.visitor_limit);
+        const registeredVisitors = Number(data?.registered_visitors);
+        const visitorSlotsRemaining = Number(data?.visitor_slots_remaining);
+        const discountedUnitLimit = Number(data?.discounted_unit_limit);
+        const reservedUnits = Number(data?.reserved_discounted_units);
+        const discountedUnitsRemaining = Number(data?.discounted_units_remaining);
+        if (![visitorLimit, registeredVisitors, visitorSlotsRemaining, discountedUnitLimit, reservedUnits, discountedUnitsRemaining].every(Number.isSafeInteger)) {
+            units.textContent = '—';
+            visitors.textContent = 'El resumen recibido no tiene un formato válido.';
+            status.textContent = 'Actualiza el panel e inténtalo de nuevo.';
+            console.error('Respuesta inválida del resumen de promoción:', data);
+            return;
+        }
+
+        units.textContent = `${discountedUnitsRemaining} de ${discountedUnitLimit}`;
+        visitors.textContent = `${visitorSlotsRemaining} visitas disponibles · ${registeredVisitors} de ${visitorLimit} registradas`;
+        status.textContent = `${reservedUnits} unidad${reservedUnits === 1 ? '' : 'es'} reservada${reservedUnits === 1 ? '' : 's'}`;
+    } catch (error) {
+        units.textContent = '—';
+        visitors.textContent = 'No se pudo cargar el resumen de la promoción.';
+        status.textContent = 'Revisa tu conexión e inténtalo de nuevo.';
+        console.error('Error inesperado cargando el resumen de la promoción:', error);
     }
 }
 
@@ -1355,7 +1401,7 @@ logoutButton.addEventListener('click', async () => {
 document.getElementById('refresh-orders').addEventListener('click', loadOrders);
 document.getElementById('refresh-inventory').addEventListener('click', loadAdminInventory);
 document.getElementById('refresh-dashboard').addEventListener('click', () => {
-    Promise.all([loadOrders(), loadAdminInventory()]);
+    Promise.all([loadOrders(), loadAdminInventory(), loadAdminPromotionSummary()]);
 });
 document.getElementById('dashboard-period').addEventListener('change', renderDashboardReport);
 document.getElementById('export-dashboard-report').addEventListener('click', exportDashboardReport);

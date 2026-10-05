@@ -102,7 +102,7 @@
                                 <button id="refresh-dashboard" type="button" class="rounded-xl border border-slate-700 px-4 py-2 text-xs font-bold hover:bg-slate-800"><i class="fa-solid fa-rotate mr-2"></i>Actualizar resumen</button>
                             </div>
                         </div>
-                        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                             <button type="button" data-dashboard-page="orders" data-dashboard-filter="pending" class="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-5 text-left transition hover:border-amber-400/50 hover:bg-amber-500/15">
                                 <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-400/15 text-amber-300"><i class="fa-solid fa-hourglass-half" aria-hidden="true"></i></span>
                                 <span class="mt-4 block text-xs font-bold text-amber-200">Pedidos pendientes</span>
@@ -115,12 +115,19 @@
                                 <strong id="dashboard-approved-count" class="mt-1 block text-3xl font-black">—</strong>
                                 <span id="dashboard-approved-total" class="mt-2 block text-[11px] text-slate-400">Cargando ventas…</span>
                             </button>
-                            <button type="button" data-dashboard-page="inventory" data-dashboard-low-stock="true" class="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-5 text-left transition hover:border-amber-400/50 hover:bg-amber-500/15 sm:col-span-2 xl:col-span-1">
+                            <button type="button" data-dashboard-page="inventory" data-dashboard-low-stock="true" class="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-5 text-left transition hover:border-amber-400/50 hover:bg-amber-500/15">
                                 <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-400/15 text-amber-300"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i></span>
                                 <span class="mt-4 block text-xs font-bold text-amber-200">Productos por reponer</span>
                                 <strong id="dashboard-low-stock-count" class="mt-1 block text-3xl font-black">—</strong>
                                 <span id="dashboard-inventory-note" class="mt-2 block text-[11px] text-slate-400">Cargando inventario…</span>
                             </button>
+                            <article class="rounded-2xl border border-violet-400/20 bg-violet-500/10 p-5">
+                                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-400/15 text-violet-300"><i class="fa-solid fa-gift" aria-hidden="true"></i></span>
+                                <span class="mt-4 block text-xs font-bold text-violet-200">Promoción Citrus Fresh</span>
+                                <strong id="dashboard-promo-units-remaining" class="mt-1 block text-3xl font-black">—</strong>
+                                <span id="dashboard-promo-visitors" class="mt-2 block text-[11px] text-slate-400">Cargando cupos…</span>
+                                <p id="dashboard-promo-status" class="mt-2 text-[10px] text-slate-500" role="status" aria-live="polite"></p>
+                            </article>
                         </div>
                         <section class="mt-5 rounded-2xl border border-slate-800 bg-slate-900 p-4 sm:p-5" aria-labelledby="dashboard-report-heading">
                             <div class="mb-4 flex flex-wrap items-end justify-between gap-2">
