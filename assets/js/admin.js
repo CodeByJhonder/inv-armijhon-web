@@ -533,6 +533,7 @@ function renderAdminDashboard() {
         document.getElementById('dashboard-approved-count').textContent = approvedOrders.length;
         document.getElementById('dashboard-approved-total').textContent =
             `Total aprobado: ${formatVes(approvedOrders.reduce((total, order) => total + Number(order.total_ves || 0), 0))} VES`;
+        renderDashboardReport();
     }
 
     if (inventoryLoaded) {
@@ -542,6 +543,195 @@ function renderAdminDashboard() {
         dashboardInventoryMessage = `${outOfStockProducts} agotados · ${inventoryProducts.length} productos registrados`;
         document.getElementById('dashboard-inventory-note').textContent = dashboardInventoryMessage;
     }
+}
+
+function getDashboardReportOrders() {
+    const period = document.getElementById('dashboard-period').value;
+    if (period === 'all') return orders;
+    const days = Number(period);
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    start.setDate(start.getDate() - days + 1);
+    return orders.filter(order => {
+        const createdAt = new Date(order.created_at);
+        return createdAt >= start && createdAt <= new Date();
+    });
+}
+
+function getDashboardTrendBuckets(reportOrders) {
+    const now = new Date();
+    const period = document.getElementById('dashboard-period').value;
+    const buckets = [];
+    if (period === '7') {
+        const start = new Date(now);
+        start.setHours(0, 0, 0, 0);
+        start.setDate(start.getDate() - 6);
+        for (let offset = 0; offset < 7; offset++) {
+            const bucketStart = new Date(start);
+            bucketStart.setDate(start.getDate() + offset);
+            const bucketEnd = new Date(bucketStart);
+            bucketEnd.setDate(bucketEnd.getDate() + 1);
+            buckets.push({
+                start: bucketStart,
+                end: bucketEnd,
+                label: bucketStart.toLocaleDateString('es-VE', { weekday: 'short' }).replace('.', ''),
+                revenue: 0
+            });
+        }
+        document.getElementById('dashboard-chart-unit').textContent = 'Por día · VES';
+    } else if (period === 'all') {
+        const firstMonth = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+        for (let offset = 0; offset < 12; offset++) {
+            const bucketStart = new Date(firstMonth.getFullYear(), firstMonth.getMonth() + offset, 1);
+            buckets.push({
+                start: bucketStart,
+                end: new Date(bucketStart.getFullYear(), bucketStart.getMonth() + 1, 1),
+                label: bucketStart.toLocaleDateString('es-VE', { month: 'short' }).replace('.', ''),
+                revenue: 0
+            });
+        }
+        document.getElementById('dashboard-chart-unit').textContent = 'Últimos 12 meses · VES';
+    } else {
+        const days = Number(period);
+        const start = new Date(now);
+        start.setHours(0, 0, 0, 0);
+        start.setDate(start.getDate() - days + 1);
+        const bucketCount = Math.ceil(days / 7);
+        for (let offset = 0; offset < bucketCount; offset++) {
+            const bucketStart = new Date(start);
+            bucketStart.setDate(start.getDate() + offset * 7);
+            const bucketEnd = new Date(bucketStart);
+            bucketEnd.setDate(bucketEnd.getDate() + 7);
+            buckets.push({
+                start: bucketStart,
+                end: bucketEnd,
+                label: `${bucketStart.getDate()}/${bucketStart.getMonth() + 1}`,
+                revenue: 0
+            });
+        }
+        document.getElementById('dashboard-chart-unit').textContent = 'Por semana · VES';
+    }
+
+    reportOrders
+        .filter(order => ['approved', 'completed'].includes(order.status))
+        .forEach(order => {
+            const createdAt = new Date(order.created_at);
+            const bucket = buckets.find(item => createdAt >= item.start && createdAt < item.end);
+            if (bucket) bucket.revenue += Number(order.total_ves || 0);
+        });
+    return buckets;
+}
+
+function renderDashboardReport() {
+    const reportOrders = getDashboardReportOrders();
+    const paidOrders = reportOrders.filter(order => ['approved', 'completed'].includes(order.status));
+    const totalVes = paidOrders.reduce((total, order) => total + Number(order.total_ves || 0), 0);
+    const totalUsd = paidOrders.reduce((total, order) => total + Number(order.total_usd || 0), 0);
+    const averageVes = paidOrders.length ? totalVes / paidOrders.length : 0;
+    const averageUsd = paidOrders.length ? totalUsd / paidOrders.length : 0;
+    const period = document.getElementById('dashboard-period').value;
+    const periodLabel = period === 'all'
+        ? 'Todo el historial disponible'
+        : `Últimos ${period} días`;
+
+    document.getElementById('dashboard-report-period').textContent = `${periodLabel} · ${reportOrders.length} pedido${reportOrders.length === 1 ? '' : 's'}`;
+    document.getElementById('dashboard-period-orders').textContent = reportOrders.length;
+    document.getElementById('dashboard-period-sales-count').textContent = paidOrders.length;
+    document.getElementById('dashboard-period-revenue').textContent = `${formatVes(totalVes)} VES`;
+    document.getElementById('dashboard-period-revenue-usd').textContent = `$${totalUsd.toFixed(2)} USD`;
+    document.getElementById('dashboard-period-average').textContent = `${formatVes(averageVes)} VES`;
+    document.getElementById('dashboard-period-average').title = `$${averageUsd.toFixed(2)} USD`;
+
+    renderDashboardSalesChart(getDashboardTrendBuckets(reportOrders));
+    renderDashboardTopProducts(paidOrders);
+}
+
+function renderDashboardSalesChart(buckets) {
+    const chart = document.getElementById('dashboard-sales-chart');
+    const maximum = Math.max(...buckets.map(bucket => bucket.revenue), 0);
+    if (!maximum) {
+        chart.innerHTML = '<p class="py-8 text-center text-xs text-slate-500">No hay ventas aprobadas en este período.</p>';
+        return;
+    }
+
+    chart.innerHTML = `<div class="grid h-40 items-end gap-1.5" style="grid-template-columns:repeat(${buckets.length},minmax(0,1fr))">${buckets.map(bucket => {
+        const height = bucket.revenue ? Math.max(5, Math.round(bucket.revenue / maximum * 100)) : 0;
+        const label = `${bucket.label}: ${formatVes(bucket.revenue)} VES`;
+        return `<div class="flex h-full min-w-0 flex-col items-center justify-end gap-2" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}">
+            <span class="w-full truncate text-center text-[8px] text-slate-500">${bucket.revenue ? formatVes(bucket.revenue) : ''}</span>
+            <span class="w-full max-w-10 rounded-t-md bg-violet-400/80 transition-all" style="height:${height}%;min-height:${bucket.revenue ? '4px' : '0'}"></span>
+            <span class="w-full truncate text-center text-[9px] text-slate-400">${escapeHtml(bucket.label)}</span>
+        </div>`;
+    }).join('')}</div>`;
+}
+
+function renderDashboardTopProducts(paidOrders) {
+    const list = document.getElementById('dashboard-top-products');
+    const totals = new Map();
+    paidOrders.forEach(order => {
+        (order.order_items || []).forEach(item => {
+            const name = String(item.product_name || 'Producto');
+            const current = totals.get(name) || { quantity: 0, revenueUsd: 0 };
+            current.quantity += Number(item.quantity || 0);
+            current.revenueUsd += Number(item.line_total_usd || 0);
+            totals.set(name, current);
+        });
+    });
+
+    const topProducts = [...totals.entries()]
+        .map(([name, values]) => ({ name, ...values }))
+        .sort((a, b) => b.quantity - a.quantity || b.revenueUsd - a.revenueUsd)
+        .slice(0, 5);
+    if (!topProducts.length) {
+        list.innerHTML = '<li class="text-xs text-slate-500">No hay productos vendidos en este período.</li>';
+        return;
+    }
+
+    const maximum = topProducts[0].quantity;
+    list.innerHTML = topProducts.map((product, index) => {
+        const width = Math.max(4, Math.round(product.quantity / maximum * 100));
+        return `<li>
+            <div class="flex items-center justify-between gap-3 text-[10px]">
+                <span class="min-w-0 truncate text-slate-200">${index + 1}. ${escapeHtml(product.name)}</span>
+                <strong class="shrink-0 text-violet-200">${product.quantity} u.</strong>
+            </div>
+            <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-800"><span class="block h-full rounded-full bg-violet-400" style="width:${width}%"></span></div>
+        </li>`;
+    }).join('');
+}
+
+function exportDashboardReport() {
+    if (!ordersLoaded) {
+        window.alert('Espera a que termine de cargar el reporte.');
+        return;
+    }
+    const reportOrders = getDashboardReportOrders();
+    const headers = ['ID', 'Fecha', 'Cliente', 'Telefono', 'Estado', 'Metodo de pago', 'Total USD', 'Total VES', 'Productos'];
+    const rows = reportOrders.map(order => [
+        order.id,
+        new Date(order.created_at).toLocaleString('es-VE'),
+        order.customer_name,
+        order.customer_phone,
+        order.status,
+        order.payment_method,
+        Number(order.total_usd || 0).toFixed(2),
+        Number(order.total_ves || 0).toFixed(2),
+        (order.order_items || []).map(item => `${item.quantity}x ${item.product_name}`).join('; ')
+    ]);
+    const csvValue = value => {
+        const text = String(value ?? '');
+        const safeText = /^[=+\-@\t\r]/.test(text) ? `'${text}` : text;
+        return `"${safeText.replace(/"/g, '""')}"`;
+    };
+    const csv = `\uFEFF${[headers, ...rows].map(row => row.map(csvValue).join(',')).join('\r\n')}`;
+    const blobUrl = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = `reporte-pedidos-${document.getElementById('dashboard-period').value}-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
 }
 
 function renderOrders() {
@@ -1167,6 +1357,8 @@ document.getElementById('refresh-inventory').addEventListener('click', loadAdmin
 document.getElementById('refresh-dashboard').addEventListener('click', () => {
     Promise.all([loadOrders(), loadAdminInventory()]);
 });
+document.getElementById('dashboard-period').addEventListener('change', renderDashboardReport);
+document.getElementById('export-dashboard-report').addEventListener('click', exportDashboardReport);
 adminNavigation.addEventListener('click', event => {
     const button = event.target.closest('[data-admin-page]');
     if (!button) return;

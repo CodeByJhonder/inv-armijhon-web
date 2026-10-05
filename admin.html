@@ -88,9 +88,19 @@
                         <div class="mb-5 flex flex-wrap items-end justify-between gap-3">
                             <div>
                                 <h2 id="dashboard-heading" class="text-xl font-black">Resumen de tu tienda</h2>
-                                <p class="mt-1 text-xs text-slate-400">Un vistazo rápido a los pedidos, las ventas aprobadas y el inventario.</p>
+                                <p class="mt-1 text-xs text-slate-400">Pedidos, ventas e inventario con métricas del período seleccionado.</p>
                             </div>
-                            <button id="refresh-dashboard" type="button" class="rounded-xl border border-slate-700 px-4 py-2 text-xs font-bold hover:bg-slate-800"><i class="fa-solid fa-rotate mr-2"></i>Actualizar resumen</button>
+                            <div class="flex flex-wrap gap-2">
+                                <label class="sr-only" for="dashboard-period">Período del reporte</label>
+                                <select id="dashboard-period" class="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-bold text-slate-200 outline-none focus:border-violet-400">
+                                    <option value="7">Últimos 7 días</option>
+                                    <option value="30" selected>Últimos 30 días</option>
+                                    <option value="90">Últimos 90 días</option>
+                                    <option value="all">Todo el historial</option>
+                                </select>
+                                <button id="export-dashboard-report" type="button" class="rounded-xl border border-violet-400/40 px-4 py-2 text-xs font-bold text-violet-200 hover:bg-violet-500/10"><i class="fa-solid fa-file-csv mr-2"></i>Exportar CSV</button>
+                                <button id="refresh-dashboard" type="button" class="rounded-xl border border-slate-700 px-4 py-2 text-xs font-bold hover:bg-slate-800"><i class="fa-solid fa-rotate mr-2"></i>Actualizar resumen</button>
+                            </div>
                         </div>
                         <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                             <button type="button" data-dashboard-page="orders" data-dashboard-filter="pending" class="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-5 text-left transition hover:border-amber-400/50 hover:bg-amber-500/15">
@@ -112,6 +122,52 @@
                                 <span id="dashboard-inventory-note" class="mt-2 block text-[11px] text-slate-400">Cargando inventario…</span>
                             </button>
                         </div>
+                        <section class="mt-5 rounded-2xl border border-slate-800 bg-slate-900 p-4 sm:p-5" aria-labelledby="dashboard-report-heading">
+                            <div class="mb-4 flex flex-wrap items-end justify-between gap-2">
+                                <div>
+                                    <h3 id="dashboard-report-heading" class="text-sm font-black">Reporte de ventas y pedidos</h3>
+                                    <p id="dashboard-report-period" class="mt-1 text-[10px] text-slate-400">Cargando período…</p>
+                                </div>
+                                <span class="text-[10px] text-slate-500">Ventas = aprobadas o completadas</span>
+                            </div>
+                            <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                                <div class="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+                                    <p class="text-[10px] font-bold uppercase tracking-wide text-slate-400">Pedidos recibidos</p>
+                                    <strong id="dashboard-period-orders" class="mt-1 block text-2xl font-black">—</strong>
+                                </div>
+                                <div class="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+                                    <p class="text-[10px] font-bold uppercase tracking-wide text-emerald-300">Ventas aprobadas</p>
+                                    <strong id="dashboard-period-sales-count" class="mt-1 block text-2xl font-black">—</strong>
+                                </div>
+                                <div class="rounded-xl border border-violet-400/20 bg-violet-500/5 p-4">
+                                    <p class="text-[10px] font-bold uppercase tracking-wide text-violet-200">Ingresos aprobados</p>
+                                    <strong id="dashboard-period-revenue" class="mt-1 block text-lg font-black">—</strong>
+                                    <span id="dashboard-period-revenue-usd" class="mt-1 block text-[10px] text-slate-400"></span>
+                                </div>
+                                <div class="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+                                    <p class="text-[10px] font-bold uppercase tracking-wide text-slate-400">Ticket promedio</p>
+                                    <strong id="dashboard-period-average" class="mt-1 block text-lg font-black">—</strong>
+                                    <span class="mt-1 block text-[10px] text-slate-400">Por venta aprobada</span>
+                                </div>
+                            </div>
+                            <div class="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(16rem,0.8fr)]">
+                                <div class="min-w-0 rounded-xl border border-slate-800 bg-slate-950/40 p-4">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <h4 class="text-xs font-bold text-slate-200">Tendencia de ingresos</h4>
+                                        <span id="dashboard-chart-unit" class="text-[9px] text-slate-500"></span>
+                                    </div>
+                                    <div id="dashboard-sales-chart" class="mt-4" role="img" aria-label="Gráfico de ingresos por período">
+                                        <p class="text-xs text-slate-500">Cargando reporte…</p>
+                                    </div>
+                                </div>
+                                <div class="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
+                                    <h4 class="text-xs font-bold text-slate-200">Productos más vendidos</h4>
+                                    <ol id="dashboard-top-products" class="mt-3 space-y-3">
+                                        <li class="text-xs text-slate-500">Cargando reporte…</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </section>
                     </section>
                     <section id="admin-page-orders" data-admin-page-view>
             <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
