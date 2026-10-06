@@ -367,6 +367,17 @@
         #back-to-top:hover {
             transform: translateY(-4px) scale(1.05);
         }
+        #floating-checkout {
+            bottom: 20px !important;
+        }
+        @media (max-width: 767px) {
+            #floating-checkout {
+                bottom: 5rem !important;
+            }
+        }
+        body.cart-drawer-open #floating-checkout {
+            display: none !important;
+        }
 
         /* Métodos de pago */
         .footer-payment-badge {
@@ -1197,7 +1208,7 @@
         </div>
     </div>
 
-    <button id="floating-checkout" onclick="toggleCartDrawer()" style="position:fixed !important; top:auto !important; left:auto !important; bottom:20px !important; right:16px !important;" class="hidden z-[999] bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-4 py-3 rounded-2xl shadow-xl shadow-emerald-500/25 transition transform hover:-translate-y-0.5 items-center gap-2 text-xs" aria-label="Ver carrito">
+    <button id="floating-checkout" onclick="toggleCartDrawer()" style="position:fixed !important; top:auto !important; left:auto !important; right:16px !important;" class="hidden z-[999] bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-4 py-3 rounded-2xl shadow-xl shadow-emerald-500/25 transition transform hover:-translate-y-0.5 items-center gap-2 text-xs" aria-label="Ver carrito">
         <i class="fa-solid fa-cart-shopping"></i>
         <span>Ver carrito</span>
         <span id="floating-checkout-count" class="bg-white/20 px-2 py-0.5 rounded-lg">0</span>
@@ -2030,8 +2041,9 @@
             const floatingCheckout = document.getElementById('floating-checkout');
             const floatingCheckoutCount = document.getElementById('floating-checkout-count');
             floatingCheckoutCount.textContent = totalItems;
-            floatingCheckout.classList.toggle('hidden', cart.length === 0);
-            floatingCheckout.classList.toggle('flex', cart.length > 0);
+            const cartDrawerOpen = !document.getElementById('cart-drawer').classList.contains('opacity-0');
+            floatingCheckout.classList.toggle('hidden', cart.length === 0 || cartDrawerOpen);
+            floatingCheckout.classList.toggle('flex', cart.length > 0 && !cartDrawerOpen);
             document.getElementById('cart-subtotal').textContent = `$${subtotal.toFixed(2)}`;
             document.getElementById('cart-total').textContent = `$${subtotal.toFixed(2)}`;
             renderExchangeTotals(subtotal);
@@ -2056,9 +2068,16 @@
             if (drawer.classList.contains('opacity-0')) {
                 drawer.classList.remove('opacity-0', 'pointer-events-none');
                 panel.classList.remove('translate-x-full');
+                document.body.classList.add('cart-drawer-open');
+                document.getElementById('floating-checkout').classList.add('hidden');
+                document.getElementById('floating-checkout').classList.remove('flex');
             } else {
                 drawer.classList.add('opacity-0', 'pointer-events-none');
                 panel.classList.add('translate-x-full');
+                document.body.classList.remove('cart-drawer-open');
+                const floatingCheckout = document.getElementById('floating-checkout');
+                floatingCheckout.classList.toggle('hidden', cart.length === 0);
+                floatingCheckout.classList.toggle('flex', cart.length > 0);
             }
         }
 
