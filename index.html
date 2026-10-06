@@ -1214,9 +1214,6 @@
         <span id="floating-checkout-count" class="bg-white/20 px-2 py-0.5 rounded-lg">0</span>
     </button>
 
-    <button id="launch-promo-ribbon" type="button" onclick="openLaunchPromotion()" class="fixed right-4 top-24 z-30 hidden items-center gap-2 rounded-full border border-amber-200 bg-amber-300 px-4 py-3 text-xs font-black text-slate-950 shadow-xl shadow-amber-950/20 transition hover:-translate-y-0.5 hover:bg-amber-200" aria-label="Ver promoción de crema corporal">
-        <i class="fa-solid fa-gift"></i><span id="launch-promo-ribbon-label">Oferta especial</span>
-    </button>
     <div id="launch-promo-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="launch-promo-title">
         <section class="launch-promo-card">
             <button type="button" class="launch-promo-close" onclick="closeLaunchPromotion()" aria-label="Cerrar oferta"><i class="fa-solid fa-xmark"></i></button>
@@ -1648,10 +1645,6 @@
             launchPromotionPreviousOverflow = '';
         }
 
-        function openLaunchPromotion() {
-            showLaunchPromotion();
-        }
-
         async function saveLaunchPromotionDecision(decision) {
             const buttons = Array.from(document.querySelectorAll('#launch-promo-actions button'));
             buttons.forEach(button => { button.disabled = true; });
@@ -1660,14 +1653,10 @@
             try {
                 launchPromotion = await callLaunchPromotion('decision', decision);
                 if (decision === 'accepted') {
-                    document.getElementById('launch-promo-ribbon').classList.remove('hidden');
-                    document.getElementById('launch-promo-ribbon').classList.add('flex');
-                    document.getElementById('launch-promo-ribbon-label').textContent = launchPromotion.has_active_redemption ? 'Oferta reservada' : launchPromotion.remaining_discounted_units > 0 ? 'Crema al 50%' : 'Oferta agotada';
                     filterCatalog();
                     updateCartUI();
                     showToast('¡Oferta activada! Ya puedes seguir explorando el catálogo.');
                 } else {
-                    document.getElementById('launch-promo-ribbon').classList.add('hidden');
                     showToast('Gracias. No volveremos a mostrarte esta oferta en este navegador.');
                 }
                 closeLaunchPromotion();
@@ -1687,9 +1676,6 @@
                 if (launchPromotion.decision === 'pending') {
                     showLaunchPromotion();
                 } else if (launchPromotion.decision === 'accepted') {
-                    document.getElementById('launch-promo-ribbon').classList.remove('hidden');
-                    document.getElementById('launch-promo-ribbon').classList.add('flex');
-                    document.getElementById('launch-promo-ribbon-label').textContent = launchPromotion.has_active_redemption ? 'Oferta reservada' : launchPromotion.remaining_discounted_units > 0 ? 'Crema al 50%' : 'Oferta agotada';
                     filterCatalog();
                     updateCartUI();
                 }
@@ -2264,7 +2250,6 @@
                 if (includesLaunchPromotion) {
                     try {
                         launchPromotion = await callLaunchPromotion('visit');
-                        document.getElementById('launch-promo-ribbon-label').textContent = launchPromotion.has_active_redemption ? 'Oferta reservada' : launchPromotion.remaining_discounted_units > 0 ? 'Crema al 50%' : 'Oferta agotada';
                         filterCatalog();
                     } catch (refreshError) {
                         console.error('No se pudo actualizar el cupo restante de la promoción:', refreshError);
