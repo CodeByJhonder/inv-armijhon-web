@@ -1165,7 +1165,77 @@ function closeStockHistory() {
     stockHistoryDialog.classList.remove('flex');
 }
 
-async function updateOrderStatus(ids, status) {
+function getWhatsAppPhone(phone) {
+    const value = String(phone || '').trim();
+    let digits = value.replace(/\D/g, '');
+    if (digits.startsWith('00')) digits = digits.slice(2);
+    if (value.startsWith('+')) return digits.length >= 8 && digits.length <= 15 ? digits : null;
+    if (digits.startsWith('58') && digits.length === 12) return digits;
+    if (digits.length === 11 && digits.startsWith('0')) return `58${digits.slice(1)}`;
+    if (digits.length === 10) return `58${digits}`;
+    return null;
+}
+
+function getOrderWhatsAppLink(order) {
+    const phone = getWhatsAppPhone(order.customer_phone);
+    if (!phone) return null;
+
+    const items = (order.order_items || []).map(item =>
+        `• ${Number(item.quantity)} × ${item.product_name} — $${Number(item.line_total_usd).toFixed(2)}`
+    );
+    const orderNumber = String(order.id || '').slice(-8).toUpperCase();
+    const message = [
+        `Hola ${order.customer_name}, te confirmamos que el pago de tu pedido #${orderNumber} fue verificado y el pedido está aprobado.`,
+        '',
+        'Detalle del pedido:',
+        ...items,
+        '',
+        `Total: $${Number(order.total_usd).toFixed(2)} / Bs. ${formatVes(order.total_ves)}`,
+        `Método de pago: ${order.payment_method === 'pago_movil' ? 'Pago Móvil' : 'Transferencia'}`,
+        '',
+        'Puedes responder por este medio para coordinar los siguientes pasos.',
+        'INV. Armijhon'
+    ].join('\n');
+
+    return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+}
+
+function showApprovalWhatsAppLinks(message, approvedOrders, autoOpenedOrderId = null) {
+    ordersStatus.replaceChildren();
+    const summary = document.createElement('span');
+    summary.textContent = message;
+    ordersStatus.append(summary);
+
+    if (!approvedOrders.length) return;
+
+    const list = document.createElement('div');
+    list.className = 'mt-2 flex flex-col items-start gap-1';
+    approvedOrders.forEach(order => {
+        const link = getOrderWhatsAppLink(order);
+        const recipient = document.createElement('span');
+        recipient.className = 'text-emerald-300';
+        recipient.textContent = `${order.customer_name}: `;
+
+        if (!link) {
+            recipient.append('no se pudo preparar el enlace; revisa el formato del número registrado.');
+        } else {
+            const anchor = document.createElement('a');
+            anchor.href = link;
+            anchor.target = '_blank';
+            anchor.rel = 'noopener noreferrer';
+            anchor.className = 'font-bold underline underline-offset-2 hover:text-emerald-200';
+            anchor.textContent = autoOpenedOrderId === order.id
+                ? 'Abrir WhatsApp si no se abrió automáticamente'
+                : 'Abrir chat y revisar mensaje';
+            recipient.append(anchor);
+        }
+
+        list.append(recipient);
+    });
+    ordersStatus.append(list);
+}
+
+async function updateOrderStatus(ids, status, { autoOpenWhatsApp = false } = {}) {
     if (!ids.length) {
         alert('Selecciona al menos un pedido.');
         return;
@@ -1179,7 +1249,14 @@ async function updateOrderStatus(ids, status) {
     const eligibleIds = ids.filter(id => orders.some(order => order.id === id && order.status === expectedStatus));
     const skipped = ids.length - eligibleIds.length;
     const failures = [];
+    const approvedOrders = [];
     let updated = 0;
+    const singleOrderToNotify = autoOpenWhatsApp && status === 'approved' && eligibleIds.length === 1
+        ? orders.find(order => order.id === eligibleIds[0])
+        : null;
+    const singleOrderWhatsAppLink = singleOrderToNotify ? getOrderWhatsAppLink(singleOrderToNotify) : null;
+    let whatsappWindow = null;
+    if (singleOrderWhatsAppLink) whatsappWindow = window.open('about:blank', '_blank');
     ordersStatus.textContent = status === 'approved' ? 'Aprobando pedidos y comprobando existencias...' : 'Actualizando pedidos...';
 
     for (const id of eligibleIds) {
@@ -1189,6 +1266,10 @@ async function updateOrderStatus(ids, status) {
                 : await supabaseClient.rpc('admin_set_order_status', { p_order_id: id, p_status: status });
             if (error) throw error;
             updated++;
+            if (status === 'approved') {
+                const approvedOrder = orders.find(order => order.id === id);
+                if (approvedOrder) approvedOrders.push(approvedOrder);
+            }
         } catch (error) {
             const message = typeof error === 'object' && error !== null
                 && 'message' in error && typeof error.message === 'string'
@@ -1196,6 +1277,24 @@ async function updateOrderStatus(ids, status) {
                 : `Pedido ${id}`;
             failures.push(message);
             console.error(`No se pudo actualizar el pedido ${id}:`, error);
+        }
+    }
+
+    let autoOpenedOrderId = approvedOrders.length === 1 && approvedOrders[0].id === singleOrderToNotify?.id
+        && whatsappWindow
+        ? approvedOrders[0].id
+        : null;
+    if (whatsappWindow) {
+        if (singleOrderWhatsAppLink && autoOpenedOrderId) {
+            try {
+                whatsappWindow.location.replace(singleOrderWhatsAppLink);
+            } catch (error) {
+                console.error('El pedido fue aprobado, pero no se pudo abrir WhatsApp automáticamente:', error);
+                autoOpenedOrderId = null;
+                whatsappWindow.close();
+            }
+        } else {
+            whatsappWindow.close();
         }
     }
 
@@ -1212,7 +1311,12 @@ async function updateOrderStatus(ids, status) {
     }
     if (failures.length) resultParts.push(`${failures.length} ${failures.length === 1 ? 'no se pudo' : 'no se pudieron'} actualizar: ${failures.join(' · ')}`);
     if (skipped) resultParts.push(`${skipped} pedido${skipped === 1 ? '' : 's'} omitido${skipped === 1 ? '' : 's'} por tener un estado distinto.`);
-    ordersStatus.textContent = resultParts.join(' ') || 'No hay pedidos seleccionados para ese cambio de estado.';
+    const resultMessage = resultParts.join(' ') || 'No hay pedidos seleccionados para ese cambio de estado.';
+    if (status === 'approved') {
+        showApprovalWhatsAppLinks(resultMessage, approvedOrders, autoOpenedOrderId);
+    } else {
+        ordersStatus.textContent = resultMessage;
+    }
 }
 
 async function deleteOrders(ids, { confirmed = false } = {}) {
@@ -1642,7 +1746,9 @@ ordersList.addEventListener('click', async event => {
         await openOrderDetails(detailsButton.dataset.orderDetailsId);
         return;
     }
-    if (statusButton) await updateOrderStatus([statusButton.dataset.id], statusButton.dataset.status);
+    if (statusButton) {
+        await updateOrderStatus([statusButton.dataset.id], statusButton.dataset.status, { autoOpenWhatsApp: true });
+    }
     if (deleteButton) await deleteOrders([deleteButton.dataset.deleteId]);
     if (!receiptButton) return;
     const { data, error } = await supabaseClient.storage.from('payment-receipts')
