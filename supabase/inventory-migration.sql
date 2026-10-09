@@ -46,7 +46,9 @@ values
     ('p34', 'Pinturas al Frío Black Color', 0),
     ('p35', 'Celoven 18mm 25m', 0),
     ('p36', 'Pinceles Artist Brushes', 0),
-    ('p37', 'Lápices Pointer con Agarre Suave', 0)
+    ('p37', 'Lápices Pointer con Agarre Suave', 0),
+    ('p39', 'Borrador de Pizarra XMK', 0),
+    ('p40', 'Láminas de Papel Bond', 0)
 on conflict (product_id) do update
 set product_name = excluded.product_name;
 
