@@ -1909,13 +1909,25 @@
             filterCatalog();
         }
 
+        function normalizeCatalogSearch(value) {
+            return String(value ?? '')
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, ' ')
+                .trim()
+                .replace(/\s+/g, ' ');
+        }
+
         function filterCatalog() {
-            const query = document.getElementById('catalog-search').value.toLowerCase();
+            const query = normalizeCatalogSearch(document.getElementById('catalog-search').value);
+            const queryTerms = query ? query.split(' ') : [];
             const sort = document.getElementById('catalog-sort').value;
 
             let filtered = productsDB.filter(p => {
                 const matchCat = currentCategory === 'todos' || p.category === currentCategory;
-                const matchQuery = p.name.toLowerCase().includes(query) || p.desc.toLowerCase().includes(query);
+                const searchableText = normalizeCatalogSearch(`${p.name} ${p.desc}`);
+                const matchQuery = queryTerms.every(term => searchableText.includes(term));
                 return matchCat && matchQuery;
             });
 
