@@ -1249,6 +1249,7 @@ async function updateOrderStatus(ids, status, { autoOpenWhatsApp = false } = {})
     const eligibleIds = ids.filter(id => orders.some(order => order.id === id && order.status === expectedStatus));
     const skipped = ids.length - eligibleIds.length;
     const failures = [];
+    const telegramSyncFailures = [];
     const approvedOrders = [];
     let updated = 0;
     const singleOrderToNotify = autoOpenWhatsApp && status === 'approved' && eligibleIds.length === 1
@@ -1266,6 +1267,21 @@ async function updateOrderStatus(ids, status, { autoOpenWhatsApp = false } = {})
                 : await supabaseClient.rpc('admin_set_order_status', { p_order_id: id, p_status: status });
             if (error) throw error;
             updated++;
+            if (status === 'approved' || status === 'rejected') {
+                try {
+                    const { error: telegramError } = await supabaseClient.functions.invoke('telegram-webhook', {
+                        body: { action: 'update_status_from_panel', orderId: id, status }
+                    });
+                    if (telegramError) throw telegramError;
+                } catch (error) {
+                    const message = typeof error === 'object' && error !== null
+                        && 'message' in error && typeof error.message === 'string'
+                        ? error.message
+                        : 'No se pudo actualizar el mensaje de Telegram.';
+                    telegramSyncFailures.push(`Pedido ${id}: ${message}`);
+                    console.error(`El pedido ${id} cambió de estado, pero no se pudo sincronizar con Telegram:`, error);
+                }
+            }
             if (status === 'approved') {
                 const approvedOrder = orders.find(order => order.id === id);
                 if (approvedOrder) approvedOrders.push(approvedOrder);
@@ -1312,10 +1328,13 @@ async function updateOrderStatus(ids, status, { autoOpenWhatsApp = false } = {})
     if (failures.length) resultParts.push(`${failures.length} ${failures.length === 1 ? 'no se pudo' : 'no se pudieron'} actualizar: ${failures.join(' · ')}`);
     if (skipped) resultParts.push(`${skipped} pedido${skipped === 1 ? '' : 's'} omitido${skipped === 1 ? '' : 's'} por tener un estado distinto.`);
     const resultMessage = resultParts.join(' ') || 'No hay pedidos seleccionados para ese cambio de estado.';
+    const telegramSyncMessage = telegramSyncFailures.length
+        ? ` No se pudo actualizar Telegram para ${telegramSyncFailures.length} pedido${telegramSyncFailures.length === 1 ? '' : 's'}: ${telegramSyncFailures.join(' · ')}`
+        : '';
     if (status === 'approved') {
-        showApprovalWhatsAppLinks(resultMessage, approvedOrders, autoOpenedOrderId);
+        showApprovalWhatsAppLinks(`${resultMessage}${telegramSyncMessage}`, approvedOrders, autoOpenedOrderId);
     } else {
-        ordersStatus.textContent = resultMessage;
+        ordersStatus.textContent = `${resultMessage}${telegramSyncMessage}`;
     }
 }
 
