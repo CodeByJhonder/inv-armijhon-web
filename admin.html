@@ -129,6 +129,18 @@
                                 <p id="dashboard-promo-status" class="mt-2 text-[10px] text-slate-500" role="status" aria-live="polite"></p>
                             </article>
                         </div>
+                        <section class="mt-5 grid gap-3 sm:grid-cols-2" aria-label="Valor del inventario">
+                            <article class="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-5">
+                                <p class="text-xs font-bold text-emerald-200">Valor del inventario · USD</p>
+                                <strong data-inventory-total-usd class="mt-2 block text-2xl font-black">Cargando…</strong>
+                                <p class="mt-1 text-[10px] text-slate-400">Calculado con existencias × precio de venta del catálogo</p>
+                            </article>
+                            <article class="rounded-2xl border border-sky-500/20 bg-sky-500/5 p-5">
+                                <p class="text-xs font-bold text-sky-200">Valor referencial · COP</p>
+                                <strong data-inventory-total-cop class="mt-2 block text-2xl font-black">Consultando tasa…</strong>
+                                <p data-inventory-rate class="mt-1 text-[10px] text-slate-400" aria-live="polite">Tasa USD/COP de referencia</p>
+                            </article>
+                        </section>
                         <section class="mt-5 rounded-2xl border border-slate-800 bg-slate-900 p-4 sm:p-5" aria-labelledby="dashboard-report-heading">
                             <div class="mb-4 flex flex-wrap items-end justify-between gap-2">
                                 <div>
@@ -294,6 +306,18 @@
                     </div>
                     <button id="refresh-inventory" type="button" class="rounded-xl border border-slate-700 px-4 py-2 text-xs font-bold hover:bg-slate-800"><i class="fa-solid fa-rotate mr-2"></i>Actualizar inventario</button>
                 </div>
+                <section class="mb-4 grid gap-3 sm:grid-cols-2" aria-label="Valor del inventario">
+                    <article class="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-5">
+                        <p class="text-xs font-bold text-emerald-200">Valor del inventario · USD</p>
+                        <strong data-inventory-total-usd class="mt-2 block text-2xl font-black">Cargando…</strong>
+                        <p class="mt-1 text-[10px] text-slate-400">Existencias × precio de venta del catálogo</p>
+                    </article>
+                    <article class="rounded-2xl border border-sky-500/20 bg-sky-500/5 p-5">
+                        <p class="text-xs font-bold text-sky-200">Valor referencial · COP</p>
+                        <strong data-inventory-total-cop class="mt-2 block text-2xl font-black">Consultando tasa…</strong>
+                        <p data-inventory-rate class="mt-1 text-[10px] text-slate-400" aria-live="polite">Tasa USD/COP de referencia</p>
+                    </article>
+                </section>
                 <p id="inventory-status" class="mb-3 min-h-4 text-xs text-slate-400" role="status" aria-live="polite"></p>
                 <label class="relative mb-4 block max-w-xl">
                     <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" aria-hidden="true"></i>

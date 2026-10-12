@@ -46,6 +46,19 @@ let orders = [];
 let inventoryProducts = [];
 let ordersLoaded = false;
 let inventoryLoaded = false;
+let usdCopRate = null;
+let usdCopRateDate = null;
+let usdCopRateStatus = 'Consultando tasa USD/COP…';
+let usdCopRateRequest = null;
+let usdCopRateRefreshTimer = null;
+const inventoryUnitPricesUsd = {
+    p1: 11.28, p2: 9.66, p3: 11.28, p4: 1.18, p5: 10, p6: 9.99, p7: 0.97, p8: 4.51,
+    p9: 1.18, p10: 0.48, p11: 0.97, p12: 0.97, p13: 0.81, p14: 1.18, p15: 11.28,
+    p16: 0.32, p17: 0.64, p18: 4.83, p19: 1.61, p20: 1.18, p21: 0.64, p22: 0.64,
+    p23: 0.64, p24: 0.32, p25: 0.97, p26: 0.64, p27: 0.64, p28: 0.48, p29: 0.64,
+    p30: 0.64, p31: 0.48, p32: 2.07, p33: 4.55, p34: 1.30, p35: 1.95, p36: 0.44,
+    p37: 0.43, p38: 10, p39: 0.62, p40: 0.60, p48: 0.63
+};
 let promotionSummaryRequest = 0;
 let showLowStockOnly = false;
 let dashboardOrdersMessage = 'Cargando pedidos…';
@@ -70,6 +83,54 @@ const formatVes = value => new Intl.NumberFormat('es-VE', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
 }).format(Number(value || 0));
+
+function renderInventoryValuation() {
+    const totalUsd = inventoryLoaded
+        ? inventoryProducts.reduce((total, product) => total + product.stock * (inventoryUnitPricesUsd[product.product_id] || 0), 0)
+        : null;
+    document.querySelectorAll('[data-inventory-total-usd]').forEach(element => {
+        element.textContent = totalUsd === null
+            ? 'Cargando…'
+            : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(totalUsd);
+    });
+    document.querySelectorAll('[data-inventory-total-cop]').forEach(element => {
+        element.textContent = totalUsd === null
+            ? 'Cargando…'
+            : usdCopRate
+                ? new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(totalUsd * usdCopRate)
+                : 'Tasa no disponible';
+    });
+    document.querySelectorAll('[data-inventory-rate]').forEach(element => {
+        element.textContent = usdCopRate
+            ? `1 USD = ${new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 2 }).format(usdCopRate)} · referencia ${usdCopRateDate || ''}`
+            : usdCopRateStatus;
+    });
+}
+
+async function loadUsdCopRate() {
+    if (usdCopRateRequest) return usdCopRateRequest;
+    usdCopRateStatus = 'Consultando tasa USD/COP…';
+    renderInventoryValuation();
+    usdCopRateRequest = (async () => {
+        try {
+            const response = await fetch('https://api.frankfurter.dev/v2/rate/usd/cop', { cache: 'no-store' });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const result = await response.json();
+            const rate = Number(result?.rate);
+            if (!Number.isFinite(rate) || rate <= 0) throw new Error('Tasa inválida');
+            usdCopRate = rate;
+            usdCopRateDate = result.date || '';
+            usdCopRateStatus = '';
+        } catch (error) {
+            usdCopRateStatus = 'No se pudo consultar la tasa gratuita USD/COP.';
+            console.warn('No se pudo cargar la tasa USD/COP:', error);
+        } finally {
+            usdCopRateRequest = null;
+            renderInventoryValuation();
+        }
+    })();
+    return usdCopRateRequest;
+}
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, char => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
@@ -131,6 +192,8 @@ function showOrders() {
     loadOrders();
     loadAdminInventory();
     loadAdminPromotionSummary();
+    loadUsdCopRate();
+    if (!usdCopRateRefreshTimer) usdCopRateRefreshTimer = setInterval(loadUsdCopRate, 30 * 60 * 1000);
     subscribeToOrders();
     loadAdminChats();
     subscribeToAdminChats();
@@ -526,6 +589,7 @@ function renderCounters() {
 }
 
 function renderAdminDashboard() {
+    renderInventoryValuation();
     document.getElementById('dashboard-orders-note').textContent = dashboardOrdersMessage;
     document.getElementById('dashboard-inventory-note').textContent = dashboardInventoryMessage;
 
@@ -948,6 +1012,7 @@ function closeOrderDetails() {
 }
 
 function renderAdminInventory() {
+    renderInventoryValuation();
     const query = inventorySearch.value.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es');
     const filteredProducts = inventoryProducts.filter(product => {
         const searchableText = `${product.product_name} ${product.product_id}`
