@@ -134,12 +134,27 @@ añadirse al sitio ni compartirse.
 No habilitar acceso anónimo directo a las tablas del chat ni copiar la clave `service_role`
 en archivos JavaScript, HTML o configuración pública.
 
+## Sincronizar el estado de pedidos con Telegram
+
+Al aprobar o rechazar un pedido desde el panel, `assets/js/admin.js` invoca la Edge
+Function `telegram-webhook` con la acción `update_status_from_panel`. La actualización
+del pedido se conserva aunque falle la edición del mensaje de Telegram; el panel muestra
+un aviso separado para esos casos.
+
+La función debe estar desplegada en el mismo proyecto indicado en
+`assets/js/supabase-config.js` y aceptar las acciones autenticadas del panel. Después de
+actualizar el panel, publica `admin.html` y `assets/js/admin.js` en el sitio web (por
+ejemplo, subiendo los cambios al repositorio que despliega GitHub Pages o Vercel). Luego
+abre el panel publicado y recárgalo completamente. Si aparece un error de sincronización,
+revisa la pestaña **Network** del navegador para la respuesta de `telegram-webhook` y los
+logs de esa función en Supabase.
+
 ## 7. Controlar el inventario
 
 1. Ejecutar `supabase/inventory-migration.sql` en SQL Editor despues de `schema.sql` y
-   `chat-migration.sql`. El script registra los 37 productos actuales con existencia
-   inicial de cero. Es seguro volver a ejecutarlo y conserva las cantidades que ya se
-   hayan configurado.
+   `chat-migration.sql`. El script registra los productos del catálogo; el Hilo de Cola
+   de ratón inicia con 55 metros y los demás productos con existencia inicial de cero.
+   Es seguro volver a ejecutarlo y conserva las cantidades que ya se hayan configurado.
 2. Confirmar que el usuario que administra la tienda está agregado a `public.chat_admins`
    (ver el paso anterior). Solo esos usuarios pueden cambiar existencias o aprobar pedidos.
 3. Publicar los archivos actualizados `index.html`, `admin.html` y `assets/js/admin.js`.
@@ -161,9 +176,10 @@ en archivos JavaScript, HTML o configuración pública.
    panel. Eliminar un pedido aprobado tampoco repone unidades automáticamente; si cancelas
    una venta, corrige la existencia desde el panel.
 
-Publica primero la migración SQL y después los archivos y la función actualizados. Antes
-de habilitar el catálogo, registra las existencias reales: todos los productos aparecerán
-agotados hasta que tengan unidades cargadas.
+Si el inventario ya está instalado, ejecuta `supabase/inventory-add-p48.sql` para registrar
+los 55 metros iniciales sin modificar una existencia que ya se haya actualizado. Publica
+primero la migración SQL y después los archivos y la función actualizados. Los productos
+sin existencia cargada aparecerán agotados.
 
 ## 8. Alertas de inventario bajo
 

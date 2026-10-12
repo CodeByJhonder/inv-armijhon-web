@@ -48,7 +48,8 @@ values
     ('p36', 'Pinceles Artist Brushes', 0),
     ('p37', 'Lápices Pointer con Agarre Suave', 0),
     ('p39', 'Borrador de Pizarra XMK', 0),
-    ('p40', 'Láminas de Papel Bond', 0)
+    ('p40', 'Láminas de Papel Bond', 0),
+    ('p48', 'Hilo de Cola de ratón', 55)
 on conflict (product_id) do update
 set product_name = excluded.product_name;
 

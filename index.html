@@ -1555,6 +1555,7 @@
             { id: 'p38', name: 'Crema Corporal Ideal+ Citrus Fresh', category: 'cuidado', price: 10.00, stock: 'Disponible', img: 'img/crema-corporal-ideal-citrus-fresh.jpg', desc: 'Crema corporal Ideal+ Citrus Fresh con una fragancia cítrica y fresca para dejar tu piel suave y perfumada.' },
             { id: 'p39', name: 'Borrador de Pizarra XMK', category: 'escolares', price: 0.62, stock: 'Disponible', img: 'img/borrador-pizarra-xmk.webp', desc: 'Borrador XMK para limpiar pizarras blancas y retirar trazos de marcador de forma práctica.' },
             { id: 'p40', name: 'Láminas de Papel Bond', category: 'escolares', price: 0.60, stock: 'Disponible', img: 'img/laminas-papel-bond.jpg', desc: 'Láminas de papel bond ideales para impresiones, tareas, dibujos y actividades escolares.' },
+            { id: 'p48', name: 'Hilo de Cola de ratón', category: 'escolares', price: 0.63, stock: 'Disponible', img: 'img/cola-de-raton-55m.webp', desc: 'Hilo suave y resistente para manualidades y trabajos escolares. Se vende por metro.', unit: 'metro' },
             { id: 'p41', name: 'Carpeta Amarilla', category: 'escolares', price: null, comingSoon: true, img: 'img/proximamente-carpeta-amarilla.svg', desc: 'Carpeta amarilla práctica para organizar documentos y trabajos escolares. Tamaño por confirmar.' },
             { id: 'p42', name: 'Carpeta Marrón', category: 'escolares', price: null, comingSoon: true, img: 'img/proximamente-carpeta-marron.svg', desc: 'Carpeta marrón para guardar y proteger hojas y documentos. Tamaño por confirmar.' },
             { id: 'p43', name: 'Cartulina Tipo Póster', category: 'escolares', price: null, comingSoon: true, img: 'img/proximamente-cartulina-poster.svg', desc: 'Cartulina amplia para afiches, exposiciones, proyectos y trabajos creativos.' },
@@ -2035,13 +2036,13 @@
                 div.innerHTML = `
                     <div class="flex-1">
                         <div class="text-xs font-bold text-slate-800 dark:text-white line-clamp-1">${item.name}</div>
-                        <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">${discountedQuantity ? `<span class="font-bold text-emerald-600 dark:text-emerald-400">${discountedQuantity} al 50% ($${LAUNCH_PROMO_PRICE.toFixed(2)} c/u)</span>${regularQuantity ? ` · ${regularQuantity} a $${item.price.toFixed(2)} c/u` : ''}` : `$${item.price.toFixed(2)} c/u`}</div>
+                        <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">${item.unit === 'metro' ? `$${item.price.toFixed(2)} por metro` : discountedQuantity ? `<span class="font-bold text-emerald-600 dark:text-emerald-400">${discountedQuantity} al 50% ($${LAUNCH_PROMO_PRICE.toFixed(2)} c/u)</span>${regularQuantity ? ` · ${regularQuantity} a $${item.price.toFixed(2)} c/u` : ''}` : `$${item.price.toFixed(2)} c/u`}</div>
                         <div class="text-xs font-black text-indigo-500 mt-1">$${lineTotal.toFixed(2)}</div>
                         <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-1">Bs. ${formatVes(lineTotal * getAppliedVesRate())}</div>
                     </div>
                     <div class="flex items-center gap-2">
                         <button onclick="changeQty(${index}, -1)" class="w-7 h-7 bg-slate-200 dark:bg-slate-900 text-slate-800 dark:text-slate-300 rounded-lg text-xs font-bold">-</button>
-                        <span class="text-xs font-bold text-slate-800 dark:text-white">${item.qty}</span>
+                        <span class="text-xs font-bold text-slate-800 dark:text-white">${item.qty}${item.unit === 'metro' ? ' m' : ''}</span>
                         <button onclick="changeQty(${index}, 1)" ${item.qty >= (productInventory.get(item.id) || 0) ? 'disabled' : ''} class="w-7 h-7 bg-slate-200 dark:bg-slate-900 text-slate-800 dark:text-slate-300 rounded-lg text-xs font-bold disabled:cursor-not-allowed disabled:opacity-40">+</button>
                     </div>
                 `;
@@ -2115,7 +2116,7 @@
                 return;
             }
 
-            const lines = cart.map(item => `• ${item.qty}x ${item.name} - $${(item.price * item.qty).toFixed(2)} (Bs. ${formatVes(item.price * item.qty * getAppliedVesRate())})`);
+            const lines = cart.map(item => `• ${item.qty}${item.unit === 'metro' ? ' m' : 'x'} ${item.name} - $${(item.price * item.qty).toFixed(2)} (Bs. ${formatVes(item.price * item.qty * getAppliedVesRate())})`);
             const totalUsd = getCartTotal(false);
             const total = `$${totalUsd.toFixed(2)}`;
             const totalVes = formatVes(totalUsd * getAppliedVesRate());
@@ -2151,9 +2152,9 @@
                 'Hola, quiero consultar/pedir este producto de INV. Armijhon:',
                 '',
                 `• ${product.name}`,
-                '• Cantidad: 1',
-                `• Existencias consultadas: ${productInventory.get(productId)}`,
-                `• Precio referencial: $${product.price.toFixed(2)}`,
+                `• Cantidad: 1${product.unit === 'metro' ? ' metro' : ''}`,
+                `• Existencias consultadas: ${productInventory.get(productId)}${product.unit === 'metro' ? ' metros' : ''}`,
+                `• Precio referencial: $${product.price.toFixed(2)}${product.unit === 'metro' ? ' por metro' : ''}`,
                 '',
                 '¿Me confirman disponibilidad y precio final?'
             ].join('\n');
