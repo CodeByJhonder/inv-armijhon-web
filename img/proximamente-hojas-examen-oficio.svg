@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" role="img" aria-labelledby="title desc">
+  <title id="title">Ilustración referencial de hojas de examen tamaño oficio</title>
+  <desc id="desc">Hojas de examen tamaño oficio con líneas para responder; imagen provisional.</desc>
+  <rect width="640" height="480" rx="36" fill="#eff6ff"/>
+  <rect x="176" y="62" width="290" height="325" rx="14" fill="#bfdbfe" transform="rotate(6 176 62)"/>
+  <rect x="164" y="74" width="290" height="325" rx="14" fill="#fff" stroke="#1d4ed8" stroke-width="9"/>
+  <text x="309" y="119" fill="#1e3a8a" font-family="Arial,sans-serif" font-size="22" font-weight="700" text-anchor="middle">HOJA DE EXAMEN</text>
+  <path d="M204 151h209m-209 43h209m-209 43h209m-209 43h209m-209 43h209" stroke="#93c5fd" stroke-width="7" stroke-linecap="round"/>
+  <rect x="144" y="414" width="352" height="34" rx="17" fill="#dbeafe"/>
+  <text x="320" y="437" fill="#1e3a8a" font-family="Arial,sans-serif" font-size="17" font-weight="700" text-anchor="middle">OFICIO · IMAGEN REFERENCIAL</text>
+</svg>

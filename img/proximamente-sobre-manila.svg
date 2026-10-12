@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" role="img" aria-labelledby="title desc">
+  <title id="title">Ilustración referencial de sobre manila</title>
+  <desc id="desc">Sobre color kraft para documentos; imagen provisional.</desc>
+  <rect width="640" height="480" rx="36" fill="#fff7ed"/>
+  <rect x="120" y="132" width="400" height="238" rx="20" fill="#d6a16e" stroke="#854d0e" stroke-width="10"/>
+  <path d="m130 154 190 137 190-137" fill="#edc18f" stroke="#854d0e" stroke-width="10" stroke-linejoin="round"/>
+  <path d="m131 352 132-113m246 113L377 239" fill="none" stroke="#a16207" stroke-width="8" stroke-linecap="round"/>
+  <rect x="144" y="405" width="352" height="38" rx="19" fill="#fed7aa"/>
+  <text x="320" y="431" fill="#7c2d12" font-family="Arial,sans-serif" font-size="18" font-weight="700" text-anchor="middle">IMAGEN REFERENCIAL · TEMPORAL</text>
+</svg>

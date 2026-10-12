@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" role="img" aria-labelledby="title desc">
+  <title id="title">Ilustración referencial de cartulina tipo póster</title>
+  <desc id="desc">Lámina grande de cartulina de colores para proyectos; imagen provisional.</desc>
+  <rect width="640" height="480" rx="36" fill="#eef2ff"/>
+  <rect x="169" y="78" width="308" height="270" rx="20" fill="#c4b5fd" transform="rotate(-9 169 78)"/>
+  <rect x="188" y="91" width="300" height="263" rx="18" fill="#fb7185" transform="rotate(5 188 91)"/>
+  <rect x="173" y="112" width="292" height="244" rx="16" fill="#60a5fa" stroke="#1e3a8a" stroke-width="8"/>
+  <path d="m238 298 73-91 47 54 41-43 45 80H238Z" fill="#dbeafe"/>
+  <circle cx="387" cy="164" r="23" fill="#fde68a"/>
+  <rect x="144" y="405" width="352" height="38" rx="19" fill="#c7d2fe"/>
+  <text x="320" y="431" fill="#3730a3" font-family="Arial,sans-serif" font-size="18" font-weight="700" text-anchor="middle">IMAGEN REFERENCIAL · TEMPORAL</text>
+</svg>
