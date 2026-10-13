@@ -23,6 +23,11 @@ const bulkActionDialog = document.getElementById('bulk-action-dialog');
 let pendingBulkAction = null;
 const inventoryList = document.getElementById('inventory-list');
 const inventoryStatus = document.getElementById('inventory-status');
+const addProductForm = document.getElementById('add-product-form');
+const addProductFormStatus = document.getElementById('add-product-form-status');
+const newProductCategory = document.getElementById('new-product-category');
+const newProductCategoryCustomWrap = document.getElementById('new-product-category-custom-wrap');
+const newProductCategoryCustom = document.getElementById('new-product-category-custom');
 const inventorySearch = document.getElementById('inventory-search');
 const filterLowStockButton = document.getElementById('filter-low-stock');
 const stockHistoryDialog = document.getElementById('stock-history-dialog');
@@ -86,7 +91,7 @@ const formatVes = value => new Intl.NumberFormat('es-VE', {
 
 function renderInventoryValuation() {
     const totalUsd = inventoryLoaded
-        ? inventoryProducts.reduce((total, product) => total + product.stock * (inventoryUnitPricesUsd[product.product_id] || 0), 0)
+        ? inventoryProducts.reduce((total, product) => total + product.stock * (Number.isFinite(product.price_usd) ? product.price_usd : inventoryUnitPricesUsd[product.product_id] || 0), 0)
         : null;
     document.querySelectorAll('[data-inventory-total-usd]').forEach(element => {
         element.textContent = totalUsd === null
@@ -192,6 +197,7 @@ function showOrders() {
     logoutButton.classList.remove('hidden');
     loadOrders();
     loadAdminInventory();
+    loadAdminProductCategories();
     loadAdminPromotionSummary();
     loadUsdCopRate();
     if (!usdCopRateRefreshTimer) usdCopRateRefreshTimer = setInterval(loadUsdCopRate, 30 * 60 * 1000);
@@ -827,7 +833,7 @@ function exportDashboardReport() {
         order.payment_method,
         Number(order.total_usd || 0).toFixed(2),
         Number(order.total_ves || 0).toFixed(2),
-        (order.order_items || []).map(item => `${item.quantity}x ${item.product_name}`).join('; ')
+        (order.order_items || []).map(item => `${item.quantity}${item.unit === 'metro' ? ' m' : 'x'} ${item.product_name}`).join('; ')
     ]);
     const csvValue = value => {
         const text = String(value ?? '');
@@ -859,7 +865,7 @@ function renderOrders() {
 
 function renderOrder(order) {
     const items = (order.order_items || []).map(item =>
-        `<li>${item.quantity}x ${escapeHtml(item.product_name)} <span class="text-slate-500">($${Number(item.line_total_usd).toFixed(2)})</span></li>`
+        `<li>${item.quantity}${item.unit === 'metro' ? ' m' : 'x'} ${escapeHtml(item.product_name)} <span class="text-slate-500">($${Number(item.line_total_usd).toFixed(2)})</span></li>`
     ).join('');
     const receipt = order.payment_receipts?.[0];
     const receiptButton = receipt
@@ -941,7 +947,7 @@ async function openOrderDetails(orderId) {
         row.className = 'flex flex-wrap justify-between gap-2 rounded-lg bg-slate-950/50 px-3 py-2 text-xs';
         const description = document.createElement('span');
         description.className = 'text-slate-200';
-        description.textContent = `${item.quantity} × ${item.product_name} · $${Number(item.unit_price_usd).toFixed(2)} c/u`;
+        description.textContent = `${item.quantity}${item.unit === 'metro' ? ' m' : ' ×'} ${item.product_name} · $${Number(item.unit_price_usd).toFixed(2)} ${item.unit === 'metro' ? 'por metro' : 'c/u'}`;
         const total = document.createElement('strong');
         total.className = 'text-slate-300';
         total.textContent = `$${Number(item.line_total_usd).toFixed(2)}`;
@@ -1030,8 +1036,9 @@ function renderAdminInventory() {
 
     inventoryList.innerHTML = filteredProducts.length ? filteredProducts.map(product => {
         const lowStock = product.stock <= product.min_stock;
-        const stockLabel = product.stock === 0 ? 'Agotado' : lowStock ? 'Stock bajo · reponer pronto' : `${product.stock} disponibles`;
-        const unitPriceUsd = inventoryUnitPricesUsd[product.product_id];
+        const stockUnit = product.unit === 'metro' ? 'm' : 'unidades';
+        const stockLabel = product.stock === 0 ? 'Agotado' : lowStock ? 'Stock bajo · reponer pronto' : `${product.stock} ${stockUnit} disponibles`;
+        const unitPriceUsd = Number.isFinite(product.price_usd) ? product.price_usd : inventoryUnitPricesUsd[product.product_id];
         const productTotalUsd = Number.isFinite(unitPriceUsd) ? product.stock * unitPriceUsd : null;
         const productTotalCop = productTotalUsd !== null && usdCopRate
             ? new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(productTotalUsd * usdCopRate)
@@ -1056,14 +1063,14 @@ function renderAdminInventory() {
                     </div>
                 </div>
                 <form class="inventory-stock-form mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-800/70 pt-3" data-product-id="${escapeHtml(product.product_id)}">
-                    <label class="text-[11px] font-bold text-slate-400" for="stock-${escapeHtml(product.product_id)}">Existencias</label>
+                    <label class="text-[11px] font-bold text-slate-400" for="stock-${escapeHtml(product.product_id)}">${product.unit === 'metro' ? 'Existencias (metros)' : 'Existencias (unidades)'}</label>
                     <div class="flex shrink-0 items-center gap-2">
                         <input id="stock-${escapeHtml(product.product_id)}" class="inventory-quantity w-[4.5rem] shrink-0 rounded-lg border border-slate-700 bg-slate-950 px-2 py-2 text-center text-sm text-white outline-none focus:border-emerald-400" type="number" min="0" max="99999" step="1" value="${product.stock}" required>
                         <button class="inventory-save whitespace-nowrap rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-500 disabled:cursor-wait disabled:opacity-50" type="submit">Guardar</button>
                     </div>
                 </form>
                 <form class="inventory-min-stock-form mt-2 flex flex-wrap items-center justify-between gap-2" data-product-id="${escapeHtml(product.product_id)}">
-                    <label class="text-[11px] font-bold text-slate-400" for="min-stock-${escapeHtml(product.product_id)}">Avisarme al llegar a</label>
+                    <label class="text-[11px] font-bold text-slate-400" for="min-stock-${escapeHtml(product.product_id)}">${product.unit === 'metro' ? 'Avisarme al llegar a (m)' : 'Avisarme al llegar a'}</label>
                     <div class="flex shrink-0 items-center gap-2">
                         <input id="min-stock-${escapeHtml(product.product_id)}" class="inventory-min-quantity w-[4.5rem] shrink-0 rounded-lg border border-slate-700 bg-slate-950 px-2 py-2 text-center text-sm text-white outline-none focus:border-amber-400" type="number" min="0" max="99999" step="1" value="${product.min_stock}" required>
                         <button class="inventory-min-save whitespace-nowrap rounded-lg border border-amber-500/40 px-3 py-2 text-xs font-bold text-amber-200 transition hover:bg-amber-500/10 disabled:cursor-wait disabled:opacity-50" type="submit">Guardar mínimo</button>
@@ -1089,14 +1096,16 @@ async function loadAdminInventory() {
     try {
         const { data, error } = await supabaseClient
             .from('product_inventory')
-            .select('product_id, product_name, stock, min_stock')
+            .select('product_id, product_name, stock, min_stock, category_slug, price_usd, description, unit, image_url, coming_soon')
+            .eq('coming_soon', false)
             .order('product_name');
         if (error) throw error;
 
         inventoryProducts = (data || []).map(product => ({
             ...product,
             stock: Number(product.stock),
-            min_stock: Number(product.min_stock)
+            min_stock: Number(product.min_stock),
+            price_usd: product.price_usd === null ? null : Number(product.price_usd)
         }));
         inventoryLoaded = true;
         renderAdminInventory();
@@ -1108,6 +1117,61 @@ async function loadAdminInventory() {
         renderAdminDashboard();
         console.error('Error cargando el inventario:', error);
         return;
+    }
+}
+
+async function loadAdminProductCategories() {
+    try {
+        const { data, error } = await supabaseClient
+            .from('product_categories')
+            .select('slug, name')
+            .order('name');
+        if (error) throw error;
+        newProductCategory.innerHTML = '<option value="">Selecciona una categoría</option>'
+            + (data || []).map(category => `<option value="${escapeHtml(category.slug)}">${escapeHtml(category.name)}</option>`).join('')
+            + '<option value="__new__">＋ Crear una categoría nueva</option>';
+    } catch (error) {
+        newProductCategory.innerHTML = '<option value="">No se pudieron cargar las categorías</option>';
+        addProductFormStatus.textContent = 'No se cargaron las categorías. Ejecuta la migración del catálogo y vuelve a actualizar.';
+        console.error('Error cargando las categorías del catálogo:', error);
+    }
+}
+
+async function addInventoryProduct(event) {
+    event.preventDefault();
+    const formData = new FormData(addProductForm);
+    const category = newProductCategory.value === '__new__'
+        ? String(formData.get('customCategory') || '').trim()
+        : newProductCategory.selectedOptions[0]?.textContent.trim();
+    const saveButton = document.getElementById('save-new-product');
+    if (!category) {
+        addProductFormStatus.textContent = 'Selecciona o escribe una categoría.';
+        return;
+    }
+
+    saveButton.disabled = true;
+    addProductFormStatus.textContent = 'Guardando producto…';
+    try {
+        const { data, error } = await supabaseClient.rpc('admin_add_inventory_product', {
+            p_name: String(formData.get('name') || '').trim(),
+            p_category: category,
+            p_price_usd: Number(formData.get('price')),
+            p_description: String(formData.get('description') || '').trim(),
+            p_unit: String(formData.get('unit') || ''),
+            p_stock: Number(formData.get('stock'))
+        });
+        if (error) throw error;
+        addProductForm.reset();
+        newProductCategory.value = '';
+        newProductCategoryCustomWrap.classList.add('hidden');
+        newProductCategoryCustom.required = false;
+        addProductFormStatus.textContent = `${data.product_name} se guardó correctamente y ya está disponible para el catálogo.`;
+        await Promise.all([loadAdminInventory(), loadAdminProductCategories()]);
+    } catch (error) {
+        console.error('Error registrando el producto:', error);
+        addProductFormStatus.textContent = error.message || 'No se pudo guardar el producto. Revisa la migración y tus permisos administrativos.';
+    } finally {
+        saveButton.disabled = false;
     }
 }
 
@@ -1136,7 +1200,7 @@ async function saveProductStock(form) {
         if (product) product.stock = Number(data);
         renderAdminInventory();
         renderAdminDashboard();
-        inventoryStatus.textContent = `Inventario actualizado: ${product?.product_name || productId} · ${Number(data)} unidades.`;
+        inventoryStatus.textContent = `Inventario actualizado: ${product?.product_name || productId} · ${Number(data)} ${product?.unit === 'metro' ? 'metros' : 'unidades'}.`;
     } catch (error) {
         console.error('Error guardando la existencia:', error);
         inventoryStatus.textContent = error.message || 'No se pudo guardar la existencia.';
@@ -1262,7 +1326,7 @@ function getOrderWhatsAppLink(order) {
     if (!phone) return null;
 
     const items = (order.order_items || []).map(item =>
-        `• ${Number(item.quantity)} × ${item.product_name} — $${Number(item.line_total_usd).toFixed(2)}`
+        `• ${Number(item.quantity)}${item.unit === 'metro' ? ' m' : ' ×'} ${item.product_name} — $${Number(item.line_total_usd).toFixed(2)}`
     );
     const orderNumber = String(order.id || '').slice(-8).toUpperCase();
     const message = [
@@ -1604,6 +1668,18 @@ logoutButton.addEventListener('click', async () => {
 
 document.getElementById('refresh-orders').addEventListener('click', loadOrders);
 document.getElementById('refresh-inventory').addEventListener('click', loadAdminInventory);
+document.getElementById('toggle-add-product').addEventListener('click', event => {
+    const isHidden = addProductForm.classList.toggle('hidden');
+    event.currentTarget.setAttribute('aria-expanded', String(!isHidden));
+    if (!isHidden) addProductForm.querySelector('[name="name"]').focus();
+});
+newProductCategory.addEventListener('change', () => {
+    const isCustomCategory = newProductCategory.value === '__new__';
+    newProductCategoryCustomWrap.classList.toggle('hidden', !isCustomCategory);
+    newProductCategoryCustom.required = isCustomCategory;
+    if (isCustomCategory) newProductCategoryCustom.focus();
+});
+addProductForm.addEventListener('submit', addInventoryProduct);
 document.getElementById('refresh-dashboard').addEventListener('click', () => {
     Promise.all([loadOrders(), loadAdminInventory(), loadAdminPromotionSummary()]);
 });

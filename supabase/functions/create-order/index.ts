@@ -168,22 +168,31 @@ Deno.serve(async request => {
         });
         const { data: inventory, error: inventoryError } = await supabase
             .from('product_inventory')
-            .select('product_id, product_name, stock')
+            .select('product_id, product_name, stock, price_usd, coming_soon, unit')
             .in('product_id', [...requestedQuantities.keys()]);
         if (inventoryError) return json({ error: 'No se pudo verificar la disponibilidad del inventario.' }, 500);
         const availableByProduct = new Map((inventory || []).map(item => [item.product_id, {
             name: item.product_name,
-            stock: Number(item.stock)
+            stock: Number(item.stock),
+            price: item.price_usd === null ? null : Number(item.price_usd),
+            comingSoon: Boolean(item.coming_soon),
+            unit: item.unit || 'unidad'
         }]));
         for (const [productId, requested] of requestedQuantities) {
             const product = availableByProduct.get(productId);
-            if (!product || requested > product.stock) {
+            if (!product || product.comingSoon || requested > product.stock) {
                 return json({
                     error: `Existencias insuficientes para ${product?.name || productId}. Disponibles: ${product?.stock ?? 0}.`
                 }, 409);
             }
         }
-
+        for (const item of validItems) {
+            const product = availableByProduct.get(item.id);
+            const isCitrusPromotionPrice = item.id === 'p38' && item.unitPriceUsd === 5;
+            if (!product || product.price === null || (!isCitrusPromotionPrice && item.unitPriceUsd !== product.price)) {
+                return json({ error: `El precio de ${product?.name || item.id} cambió. Actualiza el catálogo e inténtalo de nuevo.` }, 409);
+            }
+        }
         const orderId = crypto.randomUUID();
         const extension = receipt.type === 'image/jpeg' ? 'jpg'
             : receipt.type === 'image/png' ? 'png'
@@ -222,6 +231,7 @@ Deno.serve(async request => {
             product_id: item.id,
             product_name: availableByProduct.get(item.id)?.name || item.name,
             quantity: item.quantity,
+            unit: availableByProduct.get(item.id)?.unit || 'unidad',
             unit_price_usd: item.unitPriceUsd,
             line_total_usd: item.lineTotalUsd
         }));

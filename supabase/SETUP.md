@@ -181,6 +181,31 @@ los 55 metros iniciales sin modificar una existencia que ya se haya actualizado.
 primero la migración SQL y después los archivos y la función actualizados. Los productos
 sin existencia cargada aparecerán agotados.
 
+### Registrar productos desde el panel y publicar el catálogo en vivo
+
+1. Ejecutar `supabase/product-catalog-migration.sql` en SQL Editor después de
+   `inventory-migration.sql`, `stock-alerts-migration.sql` y `chat-migration.sql`. La
+   migración añade los datos de catálogo a los productos actuales sin reemplazar las
+   existencias ya configuradas, habilita lecturas públicas y crea la función protegida
+   que el panel usa para registrar productos y categorías.
+2. Publicar `admin.html`, `assets/js/admin.js`, `index.html` y el resto de los archivos
+   que hayan cambiado. Desplegar también la función actualizada:
+
+   ```bash
+   supabase functions deploy create-order
+   ```
+
+3. En **Inventario**, abrir **Añadir producto**, escribir el nombre, elegir una categoría
+   existente o crear una nueva, e ingresar precio, descripción, unidad de venta y stock
+   inicial. Los productos nuevos usan una imagen genérica de su categoría.
+4. Los productos y categorías se guardan en Supabase. Las páginas abiertas reciben los
+   cambios mediante Realtime; una página que no tenga Realtime disponible vuelve a
+   consultar el catálogo periódicamente. No hace falta hacer otro `git push` por cada alta.
+
+La primera instalación requiere la migración SQL y publicar el código una vez. Las altas
+posteriores desde el panel se reflejan en el catálogo tanto en Vercel como en GitHub Pages,
+si ambos sitios apuntan a la misma configuración de Supabase.
+
 ## 8. Alertas de inventario bajo
 
 1. Ejecutar `supabase/stock-alerts-migration.sql` en SQL Editor después de

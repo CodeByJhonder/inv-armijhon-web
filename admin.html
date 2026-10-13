@@ -306,6 +306,49 @@
                     </div>
                     <button id="refresh-inventory" type="button" class="rounded-xl border border-slate-700 px-4 py-2 text-xs font-bold hover:bg-slate-800"><i class="fa-solid fa-rotate mr-2"></i>Actualizar inventario</button>
                 </div>
+                <section class="mb-4 rounded-2xl border border-violet-400/20 bg-violet-500/5 p-4 sm:p-5">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <h3 class="text-sm font-black">Registrar producto</h3>
+                            <p class="mt-1 text-[11px] text-slate-400">Al guardarlo, aparecerá en el catálogo público conectado a Supabase.</p>
+                        </div>
+                        <button id="toggle-add-product" type="button" aria-expanded="false" aria-controls="add-product-panel" class="rounded-xl bg-violet-500 px-4 py-2.5 text-xs font-black text-white transition hover:bg-violet-400"><i class="fa-solid fa-plus mr-2"></i>Añadir producto</button>
+                    </div>
+                    <form id="add-product-form" class="mt-4 hidden space-y-4 border-t border-violet-400/10 pt-4">
+                        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                            <label class="text-xs font-bold text-slate-300">Nombre del producto
+                                <input name="name" type="text" maxlength="120" required class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-violet-400" placeholder="Ej. Marcador permanente">
+                            </label>
+                            <label class="text-xs font-bold text-slate-300">Categoría
+                                <select id="new-product-category" name="category" required class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-violet-400">
+                                    <option value="">Cargando categorías…</option>
+                                </select>
+                            </label>
+                            <label id="new-product-category-custom-wrap" class="hidden text-xs font-bold text-slate-300">Nombre de la nueva categoría
+                                <input id="new-product-category-custom" name="customCategory" type="text" maxlength="60" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-violet-400" placeholder="Ej. Manualidades">
+                            </label>
+                            <label class="text-xs font-bold text-slate-300">Precio en USD
+                                <input name="price" type="number" min="0.01" max="999999.99" step="0.01" required class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-violet-400" placeholder="0.00">
+                            </label>
+                            <label class="text-xs font-bold text-slate-300">Se vende por
+                                <select name="unit" required class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-violet-400">
+                                    <option value="unidad">Unidad</option>
+                                    <option value="metro">Metro</option>
+                                </select>
+                            </label>
+                            <label class="text-xs font-bold text-slate-300">Existencias iniciales
+                                <input name="stock" type="number" min="0" max="99999" step="1" required value="0" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-violet-400">
+                            </label>
+                            <label class="text-xs font-bold text-slate-300 sm:col-span-2 xl:col-span-3">Descripción
+                                <textarea name="description" maxlength="500" rows="3" required class="mt-1 w-full resize-y rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-violet-400" placeholder="Describe brevemente el producto"></textarea>
+                            </label>
+                        </div>
+                        <p id="add-product-form-status" class="min-h-4 text-xs text-slate-400" role="status" aria-live="polite"></p>
+                        <div class="flex justify-end">
+                            <button id="save-new-product" type="submit" class="rounded-xl bg-emerald-600 px-5 py-3 text-xs font-black text-white transition hover:bg-emerald-500 disabled:cursor-wait disabled:opacity-50"><i class="fa-solid fa-floppy-disk mr-2"></i>Guardar y publicar producto</button>
+                        </div>
+                    </form>
+                </section>
                 <section class="mb-4 grid gap-3 sm:grid-cols-2" aria-label="Valor del inventario">
                     <article class="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-5">
                         <p class="text-xs font-bold text-emerald-200">Valor del inventario · USD</p>
@@ -413,7 +456,7 @@
     </main>
     <script src="assets/js/chat-push.js"></script>
     <script src="assets/js/chat-attachments.js"></script>
-    <script src="assets/js/admin.js?v=20261010-1"></script>
+    <script src="assets/js/admin.js?v=20261012-1"></script>
     <script>
         if (!window.supabaseClient && !window.supabase) {
             document.getElementById('login-status').textContent = 'No se pudo cargar Supabase. Revisa tu conexión a internet y recarga la página.';

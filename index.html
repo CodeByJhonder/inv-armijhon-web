@@ -861,7 +861,7 @@
             </div>
 
             <!-- Category Pills -->
-            <div class="flex flex-wrap gap-2 mb-10 overflow-x-auto pb-2 scrollbar-none">
+            <div id="catalog-category-filters" class="flex flex-wrap gap-2 mb-10 overflow-x-auto pb-2 scrollbar-none">
                 <button onclick="selectCategory('todos', this)" class="cat-pill catalog-filter is-active bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold px-5 py-2.5 rounded-2xl text-xs transition">Todos</button>
                 <button id="filter-papeleria" onclick="selectCategory('escolares', this)" class="cat-pill catalog-filter bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold px-5 py-2.5 rounded-2xl text-xs border border-slate-200 dark:border-slate-800 transition">Papelería y Útiles</button>
                 <button onclick="selectCategory('lubricantes', this)" class="cat-pill catalog-filter bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold px-5 py-2.5 rounded-2xl text-xs border border-slate-200 dark:border-slate-800 transition">Lubricantes</button>
@@ -1512,9 +1512,9 @@
             cuidado: 'https://images.unsplash.com/photo-1694101395787-516200bb2515?auto=format&fit=crop&w=500&q=60',
             limpieza: 'https://images.unsplash.com/photo-1716625300720-b34970a2d890?auto=format&fit=crop&w=500&q=60'
         };
-        const catLabel = { escolares: 'Papelería y Útiles', lubricantes: 'Lubricantes', cuidado: 'Cuidado Personal', limpieza: 'Limpieza' };
+        let catLabel = { escolares: 'Papelería y Útiles', lubricantes: 'Lubricantes', cuidado: 'Cuidado Personal', limpieza: 'Limpieza' };
         const categoryOrder = { copiado: 1, escolares: 2 };
-        const productsDB = [
+        let productsDB = [
             { id: 'p1', name: 'FC Semisintético SAE 15W-40', category: 'lubricantes', price: 11.28, stock: 'Disponible', img: 'img/fc-semisintetico-sae-15w-40.jpeg', desc: 'Aceite semisintético para vehículos, presentación de 946 ml.' },
             { id: 'p2', name: 'FC Aceite Mineral 20W-50', category: 'lubricantes', price: 9.66, stock: 'Disponible', img: 'img/fc-aceite-mineral-20w-50.jpeg', desc: 'Aceite mineral para motor, presentación de 946 ml.' },
             { id: 'p3', name: 'Mobil Super 15W50 Moto 4T MX', category: 'lubricantes', price: 11.28, stock: 'Disponible', img: 'img/mobil-super-15w50-moto-4t-mx.jpeg', desc: 'Aceite para motos de cuatro tiempos, presentación de 1 L.' },
@@ -1566,6 +1566,8 @@
         ];
         const productInventory = new Map();
         let inventoryLoadState = 'loading';
+        let catalogRealtimeChannel = null;
+        let catalogRealtimeRefreshTimer = null;
 
         // --- App Global State ---
         let cart = [];
@@ -1820,11 +1822,28 @@
             if (inventoryLoadState === 'loading') return 'Consultando inventario...';
             if (inventoryLoadState === 'error') return 'Stock no disponible';
             const stock = productInventory.get(productId) || 0;
-            return stock > 0 ? `${stock} disponibles` : 'Agotado';
+            return stock > 0 ? `${stock}${product?.unit === 'metro' ? ' m disponibles' : ' disponibles'}` : 'Agotado';
         }
 
         function productCanBeOrdered(productId) {
             return inventoryLoadState === 'ready' && (productInventory.get(productId) || 0) > 0;
+        }
+
+        function renderCatalogCategories(categories) {
+            const container = document.getElementById('catalog-category-filters');
+            const builtIn = new Set(['escolares', 'lubricantes', 'cuidado', 'limpieza']);
+            container.querySelectorAll('[data-dynamic-category]').forEach(button => button.remove());
+            catLabel = Object.fromEntries((categories || []).map(category => [category.slug, category.name]));
+            (categories || []).forEach(category => {
+                if (builtIn.has(category.slug)) return;
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.dataset.dynamicCategory = 'true';
+                button.className = 'cat-pill catalog-filter bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold px-5 py-2.5 rounded-2xl text-xs border border-slate-200 dark:border-slate-800 transition';
+                button.textContent = category.name;
+                button.addEventListener('click', () => selectCategory(category.slug, button));
+                container.appendChild(button);
+            });
         }
 
         async function loadProductInventory() {
@@ -1836,13 +1855,36 @@
 
             inventoryLoadState = 'loading';
             try {
-                const { data, error } = await window.supabaseClient
+                const [{ data, error }, { data: categories, error: categoriesError }] = await Promise.all([
+                    window.supabaseClient
                     .from('product_inventory')
-                    .select('product_id, stock');
+                    .select('product_id, product_name, stock, category_slug, price_usd, description, unit, image_url, coming_soon'),
+                    window.supabaseClient
+                    .from('product_categories')
+                    .select('slug, name')
+                    .order('name')
+                ]);
                 if (error) throw error;
+                if (categoriesError) throw categoriesError;
 
                 productInventory.clear();
                 (data || []).forEach(item => productInventory.set(item.product_id, Number(item.stock)));
+                const staticProducts = new Map(productsDB.map(product => [product.id, product]));
+                productsDB = (data || []).map(item => {
+                    const existing = staticProducts.get(item.product_id);
+                    return {
+                        id: item.product_id,
+                        name: item.product_name,
+                        category: item.category_slug,
+                        price: item.price_usd === null ? null : Number(item.price_usd),
+                        stock: 'Disponible',
+                        img: item.image_url || existing?.img || catImg[item.category_slug] || catImg.escolares,
+                        desc: item.description || existing?.desc || '',
+                        unit: item.unit || 'unidad',
+                        comingSoon: Boolean(item.coming_soon)
+                    };
+                });
+                renderCatalogCategories(categories || []);
                 inventoryLoadState = 'ready';
             } catch (error) {
                 inventoryLoadState = 'error';
@@ -1870,6 +1912,23 @@
             return true;
         }
 
+        function subscribeToCatalogChanges() {
+            if (!window.supabaseClient || catalogRealtimeChannel) return;
+            catalogRealtimeChannel = window.supabaseClient.channel('public-catalog-live-updates')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'product_inventory' }, () => {
+                    if (catalogRealtimeRefreshTimer) clearTimeout(catalogRealtimeRefreshTimer);
+                    catalogRealtimeRefreshTimer = window.setTimeout(() => {
+                        catalogRealtimeRefreshTimer = null;
+                        if (document.visibilityState === 'visible') loadProductInventory();
+                    }, 150);
+                })
+                .subscribe(status => {
+                    if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                        console.warn('No se pudo activar la actualización instantánea del catálogo; se mantiene la consulta periódica.');
+                    }
+                });
+        }
+
         function renderCatalog(products) {
             const grid = document.getElementById('product-grid');
             grid.innerHTML = '';
@@ -1889,18 +1948,18 @@
                 card.innerHTML = `
                     <div>
                         <button type="button" class="catalog-image-preview group/image h-44 w-full rounded-2xl bg-slate-100 dark:bg-slate-950 overflow-hidden relative mb-4 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#E3CC9A] focus-visible:outline-offset-2" data-image="${escapeHtml(p.img)}" data-image-name="${escapeHtml(p.name)}" aria-label="Ver imagen completa de ${escapeHtml(p.name)}">
-                            <img src="${p.img}" alt="${p.name}" loading="lazy" decoding="async" fetchpriority="low" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+                            <img src="${escapeHtml(p.img)}" alt="${escapeHtml(p.name)}" loading="lazy" decoding="async" fetchpriority="low" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
                             <span class="catalog-image-overlay absolute inset-0 flex items-center justify-center bg-slate-950/55 px-3 text-center text-xs font-black uppercase tracking-wide text-white">Ver imagen completa</span>
                             <span class="absolute top-3 right-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md text-[10px] font-extrabold px-2.5 py-1 rounded-lg border ${stockStyle}">${productStockLabel(p.id)}</span>
                         </button>
-                        <div class="text-[10px] font-bold uppercase tracking-widest text-violet-600 dark:text-violet-400 mb-1">${catLabel[p.category]}</div>
-                        <h4 class="font-bold text-slate-900 dark:text-white text-sm line-clamp-1 mb-2">${p.name}</h4>
-                        <p class="text-slate-600 dark:text-slate-400 text-xs line-clamp-2 mb-4 leading-relaxed">${p.desc}</p>
+                        <div class="text-[10px] font-bold uppercase tracking-widest text-violet-600 dark:text-violet-400 mb-1">${escapeHtml(catLabel[p.category] || 'Otros')}</div>
+                        <h4 class="font-bold text-slate-900 dark:text-white text-sm line-clamp-1 mb-2">${escapeHtml(p.name)}</h4>
+                        <p class="text-slate-600 dark:text-slate-400 text-xs line-clamp-2 mb-4 leading-relaxed">${escapeHtml(p.desc)}</p>
                     </div>
 
                     <div>
                         <div class="flex justify-between items-center mb-4">
-                            <span class="text-xl font-black ${p.comingSoon ? 'text-violet-600 dark:text-violet-300' : 'text-slate-900 dark:text-white'}">${p.comingSoon ? 'Precio por confirmar' : showLaunchDiscount ? `<span class="mr-1 text-xs font-bold text-slate-400 line-through">$${p.price.toFixed(2)}</span><span class="text-emerald-600 dark:text-emerald-400">$${LAUNCH_PROMO_PRICE.toFixed(2)}</span>` : `$${p.price.toFixed(2)}`}</span>
+                            <span class="text-xl font-black ${p.comingSoon ? 'text-violet-600 dark:text-violet-300' : 'text-slate-900 dark:text-white'}">${p.comingSoon ? 'Precio por confirmar' : showLaunchDiscount ? `<span class="mr-1 text-xs font-bold text-slate-400 line-through">$${p.price.toFixed(2)}</span><span class="text-emerald-600 dark:text-emerald-400">$${LAUNCH_PROMO_PRICE.toFixed(2)}</span>` : `$${p.price.toFixed(2)}${p.unit === 'metro' ? ' / m' : ''}`}</span>
                             <button onclick="openQuickView('${p.id}')" class="catalog-quick-view text-xs text-indigo-600 dark:text-indigo-400 font-bold">Vista Rápida</button>
                         </div>
                         ${p.comingSoon
@@ -1969,7 +2028,7 @@
             const existing = cart.find(i => i.id === productId);
             if (existing) {
                 if (existing.qty >= productInventory.get(productId)) {
-                    showToast('No hay más unidades disponibles de este producto.');
+                    showToast(`No hay más ${item.unit === 'metro' ? 'metros' : 'unidades'} disponibles de este producto.`);
                     return false;
                 }
                 existing.qty++;
@@ -2035,7 +2094,7 @@
                 div.className = 'bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex justify-between items-center gap-3';
                 div.innerHTML = `
                     <div class="flex-1">
-                        <div class="text-xs font-bold text-slate-800 dark:text-white line-clamp-1">${item.name}</div>
+                        <div class="text-xs font-bold text-slate-800 dark:text-white line-clamp-1">${escapeHtml(item.name)}</div>
                         <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">${item.unit === 'metro' ? `$${item.price.toFixed(2)} por metro` : discountedQuantity ? `<span class="font-bold text-emerald-600 dark:text-emerald-400">${discountedQuantity} al 50% ($${LAUNCH_PROMO_PRICE.toFixed(2)} c/u)</span>${regularQuantity ? ` · ${regularQuantity} a $${item.price.toFixed(2)} c/u` : ''}` : `$${item.price.toFixed(2)} c/u`}</div>
                         <div class="text-xs font-black text-indigo-500 mt-1">$${lineTotal.toFixed(2)}</div>
                         <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-1">Bs. ${formatVes(lineTotal * getAppliedVesRate())}</div>
@@ -2069,7 +2128,7 @@
             const item = cart[index];
             if (!item) return;
             if (delta > 0 && item.qty >= (productInventory.get(item.id) || 0)) {
-                showToast('No hay más unidades disponibles de este producto.');
+                showToast(`No hay más ${item.unit === 'metro' ? 'metros' : 'unidades'} disponibles de este producto.`);
                 return;
             }
             item.qty += delta;
@@ -2360,7 +2419,7 @@
 
             const comingSoonContent = p.comingSoon
                 ? '<p class="my-4 text-lg font-black text-violet-600 dark:text-violet-300">Próximamente · Precio por confirmar</p><p class="mb-4 rounded-xl bg-violet-500/10 p-3 text-xs font-semibold text-violet-700 dark:text-violet-300">Estamos preparando este producto para el catálogo.</p>'
-                : `<p class="my-4 text-2xl font-black text-indigo-500">${showLaunchDiscount ? `<span class="mr-2 text-sm text-slate-400 line-through">$${p.price.toFixed(2)}</span>$${LAUNCH_PROMO_PRICE.toFixed(2)}<p class="mt-1 text-[10px] font-semibold text-slate-500">Oferta disponible en pedidos con pago enviados desde la web; WhatsApp conserva el precio regular.</p>` : `$${p.price.toFixed(2)}`}</p>
+                : `<p class="my-4 text-2xl font-black text-indigo-500">${showLaunchDiscount ? `<span class="mr-2 text-sm text-slate-400 line-through">$${p.price.toFixed(2)}</span>$${LAUNCH_PROMO_PRICE.toFixed(2)}<p class="mt-1 text-[10px] font-semibold text-slate-500">Oferta disponible en pedidos con pago enviados desde la web; WhatsApp conserva el precio regular.</p>` : `$${p.price.toFixed(2)}${p.unit === 'metro' ? ' / m' : ''}`}</p>
                 <button onclick="if (addToCart('${p.id}', event)) closeQuickView();" ${productCanBeOrdered(p.id) ? '' : 'disabled'} class="catalog-product-action w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 rounded-2xl transition text-xs disabled:cursor-not-allowed disabled:opacity-50">
                     <i class="fa-solid ${productCanBeOrdered(p.id) ? 'fa-cart-plus' : 'fa-ban'} mr-2"></i> ${productCanBeOrdered(p.id) ? 'Añadir a mi Carrito' : productStockLabel(p.id)}
                 </button>
@@ -2370,10 +2429,10 @@
 
             document.getElementById('quickview-content').innerHTML = `
                 <div class="h-56 rounded-2xl bg-slate-100 dark:bg-slate-950 overflow-hidden mb-4">
-                    <img src="${p.img}" alt="${p.name}" class="w-full h-full object-cover">
+                    <img src="${escapeHtml(p.img)}" alt="${escapeHtml(p.name)}" class="w-full h-full object-cover">
                 </div>
-                <h3 class="text-lg font-black text-slate-900 dark:text-white">${p.name}</h3>
-                <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed my-2">${p.desc}</p>
+                <h3 class="text-lg font-black text-slate-900 dark:text-white">${escapeHtml(p.name)}</h3>
+                <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed my-2">${escapeHtml(p.desc)}</p>
                 ${p.comingSoon ? '' : `<p class="text-xs font-bold ${productCanBeOrdered(p.id) ? 'text-emerald-600 dark:text-emerald-300' : 'text-red-600 dark:text-red-300'}">${productStockLabel(p.id)}</p>`}
                 ${comingSoonContent}
             `;
@@ -2972,6 +3031,7 @@
             filterCatalog();
             updateCartUI();
             loadProductInventory();
+            subscribeToCatalogChanges();
             window.setInterval(() => {
                 if (document.visibilityState === 'visible') loadProductInventory();
             }, 60000);
