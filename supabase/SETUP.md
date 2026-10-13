@@ -315,3 +315,13 @@ conversación. Nunca habilitar el bucket como público.
 4. Probar desde una conversación de cliente enviando una imagen, un PDF y una foto tomada
    con la cámara del teléfono; comprobar que el administrador puede verlos y responder
    con un adjunto. Repetir si el administrador debe enviar archivos a clientes.
+
+### Eliminar productos del inventario y catálogo
+
+1. Ejecutar `supabase/product-archive-migration.sql` en SQL Editor después de
+   `product-catalog-migration.sql`.
+2. Publicar `admin.html`, `assets/js/admin.js`, `index.html` y desplegar de nuevo
+   `create-order`.
+3. En Inventario, usar **Eliminar del inventario y catálogo** en la ficha del producto y
+   confirmar. El producto se oculta del panel y del catálogo público; su historial de
+   pedidos y existencias se conserva.

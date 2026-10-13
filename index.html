@@ -1858,7 +1858,8 @@
                 const [{ data, error }, { data: categories, error: categoriesError }] = await Promise.all([
                     window.supabaseClient
                     .from('product_inventory')
-                    .select('product_id, product_name, stock, category_slug, price_usd, description, unit, image_url, coming_soon'),
+                    .select('product_id, product_name, stock, category_slug, price_usd, description, unit, image_url, coming_soon, is_active')
+                    .eq('is_active', true),
                     window.supabaseClient
                     .from('product_categories')
                     .select('slug, name')

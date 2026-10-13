@@ -168,7 +168,7 @@ Deno.serve(async request => {
         });
         const { data: inventory, error: inventoryError } = await supabase
             .from('product_inventory')
-            .select('product_id, product_name, stock, price_usd, coming_soon, unit')
+            .select('product_id, product_name, stock, price_usd, coming_soon, unit, is_active')
             .in('product_id', [...requestedQuantities.keys()]);
         if (inventoryError) return json({ error: 'No se pudo verificar la disponibilidad del inventario.' }, 500);
         const availableByProduct = new Map((inventory || []).map(item => [item.product_id, {
@@ -176,11 +176,12 @@ Deno.serve(async request => {
             stock: Number(item.stock),
             price: item.price_usd === null ? null : Number(item.price_usd),
             comingSoon: Boolean(item.coming_soon),
+            isActive: Boolean(item.is_active),
             unit: item.unit || 'unidad'
         }]));
         for (const [productId, requested] of requestedQuantities) {
             const product = availableByProduct.get(productId);
-            if (!product || product.comingSoon || requested > product.stock) {
+            if (!product || !product.isActive || product.comingSoon || requested > product.stock) {
                 return json({
                     error: `Existencias insuficientes para ${product?.name || productId}. Disponibles: ${product?.stock ?? 0}.`
                 }, 409);

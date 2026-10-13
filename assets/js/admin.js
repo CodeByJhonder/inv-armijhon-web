@@ -1079,6 +1079,9 @@ function renderAdminInventory() {
                 <button class="stock-history-button mt-3 w-full rounded-lg border border-slate-700 px-3 py-2 text-xs font-bold text-slate-300 transition hover:bg-slate-800" type="button" data-product-id="${escapeHtml(product.product_id)}">
                     <i class="fa-solid fa-clock-rotate-left mr-2" aria-hidden="true"></i>Ver historial
                 </button>
+                <button class="archive-product-button mt-2 w-full rounded-lg border border-red-500/40 px-3 py-2 text-xs font-bold text-red-300 transition hover:bg-red-500/10" type="button" data-product-id="${escapeHtml(product.product_id)}" data-product-name="${escapeHtml(product.product_name)}">
+                    <i class="fa-solid fa-trash-can mr-2" aria-hidden="true"></i>Eliminar del inventario y catálogo
+                </button>
             </article>`;
     }).join('') : `<div class="rounded-2xl border border-slate-800 p-6 text-center text-sm text-slate-400 md:col-span-2 2xl:col-span-3">${inventoryProducts.length ? 'No se encontraron productos con esos filtros.' : 'No hay productos registrados en el inventario.'}</div>`;
 
@@ -1096,8 +1099,9 @@ async function loadAdminInventory() {
     try {
         const { data, error } = await supabaseClient
             .from('product_inventory')
-            .select('product_id, product_name, stock, min_stock, category_slug, price_usd, description, unit, image_url, coming_soon')
+            .select('product_id, product_name, stock, min_stock, category_slug, price_usd, description, unit, image_url, coming_soon, is_active')
             .eq('coming_soon', false)
+            .eq('is_active', true)
             .order('product_name');
         if (error) throw error;
 
@@ -1172,6 +1176,26 @@ async function addInventoryProduct(event) {
         addProductFormStatus.textContent = error.message || 'No se pudo guardar el producto. Revisa la migración y tus permisos administrativos.';
     } finally {
         saveButton.disabled = false;
+    }
+}
+
+async function archiveInventoryProduct(productId, productName) {
+    const confirmed = window.confirm(
+        `¿Eliminar “${productName}” del inventario y del catálogo público? Se ocultará de inmediato. El historial de pedidos y existencias se conservará.`
+    );
+    if (!confirmed) return;
+
+    inventoryStatus.textContent = `Eliminando ${productName} del inventario...`;
+    try {
+        const { error } = await supabaseClient.rpc('admin_archive_inventory_product', {
+            p_product_id: productId
+        });
+        if (error) throw error;
+        await loadAdminInventory();
+        inventoryStatus.textContent = `${productName} se eliminó del inventario y del catálogo.`;
+    } catch (error) {
+        console.error('Error eliminando el producto del catálogo:', error);
+        inventoryStatus.textContent = error.message || 'No se pudo eliminar el producto. Verifica la migración y tus permisos.';
     }
 }
 
@@ -1729,6 +1753,11 @@ inventoryList.addEventListener('submit', event => {
     }
 });
 inventoryList.addEventListener('click', event => {
+    const archiveButton = event.target.closest('.archive-product-button');
+    if (archiveButton) {
+        archiveInventoryProduct(archiveButton.dataset.productId, archiveButton.dataset.productName);
+        return;
+    }
     const button = event.target.closest('.stock-history-button');
     if (button) openStockHistory(button.dataset.productId);
 });
