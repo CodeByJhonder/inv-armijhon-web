@@ -48,6 +48,15 @@ const paymentMethodFilter = document.getElementById('payment-method-filter');
 const receiptFilter = document.getElementById('receipt-filter');
 const sortFilter = document.getElementById('sort-filter');
 let orders = [];
+const productCatalogImageOverrides = {
+    p41: 'img/carpeta-amarilla.webp',
+    p42: 'img/carpeta-marron.jpg',
+    p43: 'img/cartulina-escolar-pequena.jpg',
+    p44: 'img/cuadernos-pequenos.jpg',
+    p45: 'img/boligrafo-crisvi-color-negro.webp',
+    p46: 'img/sobre-manila-tamano-oficio.jpg',
+    p47: 'img/hoja-examen-tamano-oficio.webp'
+};
 let inventoryProducts = [];
 let ordersLoaded = false;
 let inventoryLoaded = false;
@@ -1066,11 +1075,8 @@ function renderAdminInventory() {
                     <label class="block text-[10px] font-bold text-slate-400" for="catalog-price-${escapeHtml(product.product_id)}">Precio de venta en USD
                         <input id="catalog-price-${escapeHtml(product.product_id)}" name="price" type="number" min="0.01" max="999999.99" step="0.01" value="${product.price_usd ?? ''}" placeholder="Sin precio · Próximamente" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white outline-none focus:border-violet-400">
                     </label>
-                    <label class="block text-[10px] font-bold text-slate-400" for="catalog-image-${escapeHtml(product.product_id)}">Ruta o URL de imagen
-                        <input id="catalog-image-${escapeHtml(product.product_id)}" name="imageUrl" type="text" maxlength="1000" value="${escapeHtml(product.image_url || '')}" placeholder="Ej. img/carpeta-amarilla.jpg" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white outline-none focus:border-violet-400">
-                    </label>
-                    <p class="text-[10px] leading-relaxed text-slate-500">Sin precio queda como Próximamente; al guardar un precio válido se publica para compra. La imagen debe estar publicada en el sitio o usar https://.</p>
-                    <button class="w-full rounded-lg border border-violet-400/30 px-3 py-2 text-xs font-bold text-violet-200 transition hover:bg-violet-500/10 disabled:cursor-wait disabled:opacity-50" type="submit">Guardar precio e imagen</button>
+                    <p class="text-[10px] leading-relaxed text-slate-500">Sin precio queda como Próximamente; al guardar un precio válido se publica para compra. La imagen está asignada en el catálogo.</p>
+                    <button class="w-full rounded-lg border border-violet-400/30 px-3 py-2 text-xs font-bold text-violet-200 transition hover:bg-violet-500/10 disabled:cursor-wait disabled:opacity-50" type="submit">Guardar precio</button>
                 </form>
                 <form class="inventory-stock-form mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-800/70 pt-3" data-product-id="${escapeHtml(product.product_id)}">
                     <label class="text-[11px] font-bold text-slate-400" for="stock-${escapeHtml(product.product_id)}">${product.unit === 'metro' ? 'Existencias (metros)' : 'Existencias (unidades)'}</label>
@@ -1178,7 +1184,7 @@ async function addInventoryProduct(event) {
             p_description: String(formData.get('description') || '').trim(),
             p_unit: String(formData.get('unit') || ''),
             p_stock: Number(formData.get('stock')),
-            p_image_url: String(formData.get('imageUrl') || '').trim() || null
+            p_image_url: null
         });
         if (error) throw error;
         addProductForm.reset();
@@ -1186,7 +1192,7 @@ async function addInventoryProduct(event) {
         newProductCategoryCustomWrap.classList.add('hidden');
         newProductCategoryCustom.required = false;
         addProductFormStatus.textContent = price === null
-            ? `${data.product_name} se guardó como Próximamente. Puedes agregar el precio y la imagen desde su tarjeta en el inventario.`
+            ? `${data.product_name} se guardó como Próximamente. Puedes agregar el precio desde su tarjeta en el inventario.`
             : `${data.product_name} se guardó correctamente y ya está disponible para el catálogo.`;
         await Promise.all([loadAdminInventory(), loadAdminProductCategories()]);
     } catch (error) {
@@ -1217,12 +1223,12 @@ async function saveInventoryCatalogDetails(event) {
 
     const button = form.querySelector('button[type="submit"]');
     button.disabled = true;
-    inventoryStatus.textContent = `Guardando precio e imagen de ${product.product_name}…`;
+    inventoryStatus.textContent = `Guardando precio de ${product.product_name}…`;
     try {
         const { error } = await supabaseClient.rpc('admin_update_inventory_catalog_details', {
             p_product_id: productId,
             p_price_usd: price,
-            p_image_url: String(formData.get('imageUrl') || '').trim() || null
+            p_image_url: productCatalogImageOverrides[productId] || product.image_url || null
         });
         if (error) throw error;
         await loadAdminInventory();

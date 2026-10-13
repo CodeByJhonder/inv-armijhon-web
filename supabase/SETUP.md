@@ -189,8 +189,8 @@ sin existencia cargada aparecerán agotados.
    existencias ya configuradas, habilita lecturas públicas y crea la función protegida
    que el panel usa para registrar productos y categorías.
 2. Ejecutar `supabase/catalog-product-details-migration.sql` después de la migración
-   anterior. Añade las acciones protegidas para registrar productos sin precio y
-   completar el precio y la imagen desde el panel. No repitas la migración inicial del
+   anterior. Añade acciones protegidas para registrar productos sin precio y completar detalles.
+   Las imágenes de estos productos se asignan en el código del catálogo. No repitas la migración inicial del
    catálogo después de editar estos datos: su carga inicial vuelve a establecer los
    valores de catálogo de los productos precargados.
 3. Publicar `admin.html`, `assets/js/admin.js`, `index.html` y el resto de los archivos
@@ -203,9 +203,7 @@ sin existencia cargada aparecerán agotados.
 4. En **Inventario**, abrir **Añadir producto**, escribir el nombre, elegir una categoría
    existente o crear una nueva, e ingresar descripción, unidad de venta y stock inicial.
    El precio es opcional: si se deja vacío, el producto aparecerá como **Próximamente**.
-   Puedes guardar una ruta como `img/nombre-del-producto.jpg` o una URL `https://`; la
-   imagen local debe existir y publicarse en el sitio. En la tarjeta del producto podrás
-   completar el precio y cambiar la imagen más adelante. Al guardar un precio válido,
+   Las imágenes de los siete productos están asignadas en el código del catálogo y se publican con el sitio. El precio se puede completar desde el panel; al guardar uno válido,
    el producto se publica para compra, sujeto a las existencias disponibles.
 5. Los productos y categorías se guardan en Supabase. Las páginas abiertas reciben los
    cambios mediante Realtime; una página que no tenga Realtime disponible vuelve a

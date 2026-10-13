@@ -1556,14 +1556,23 @@
             { id: 'p39', name: 'Borrador de Pizarra XMK', category: 'escolares', price: 0.62, stock: 'Disponible', img: 'img/borrador-pizarra-xmk.webp', desc: 'Borrador XMK para limpiar pizarras blancas y retirar trazos de marcador de forma práctica.' },
             { id: 'p40', name: 'Láminas de Papel Bond', category: 'escolares', price: 0.60, stock: 'Disponible', img: 'img/laminas-papel-bond.jpg', desc: 'Láminas de papel bond ideales para impresiones, tareas, dibujos y actividades escolares.' },
             { id: 'p48', name: 'Hilo de Cola de ratón', category: 'escolares', price: 0.63, stock: 'Disponible', img: 'img/cola-de-raton-55m.webp', desc: 'Hilo suave y resistente para manualidades y trabajos escolares. Se vende por metro.', unit: 'metro' },
-            { id: 'p41', name: 'Carpeta Amarilla', category: 'escolares', price: null, comingSoon: true, img: 'img/proximamente-carpeta-amarilla.svg', desc: 'Carpeta amarilla práctica para organizar documentos y trabajos escolares. Tamaño por confirmar.' },
-            { id: 'p42', name: 'Carpeta Marrón', category: 'escolares', price: null, comingSoon: true, img: 'img/proximamente-carpeta-marron.svg', desc: 'Carpeta marrón para guardar y proteger hojas y documentos. Tamaño por confirmar.' },
-            { id: 'p43', name: 'Cartulina Tipo Póster', category: 'escolares', price: null, comingSoon: true, img: 'img/proximamente-cartulina-poster.svg', desc: 'Cartulina amplia para afiches, exposiciones, proyectos y trabajos creativos.' },
-            { id: 'p44', name: 'Cuadernos Pequeños', category: 'escolares', price: null, comingSoon: true, img: 'img/proximamente-cuadernos-pequenos.svg', desc: 'Cuadernos compactos, cómodos para apuntes y actividades escolares.' },
-            { id: 'p45', name: 'Lápiz de Tinta Color Negro', category: 'escolares', price: null, comingSoon: true, img: 'img/proximamente-lapiz-tinta-negro.svg', desc: 'Lápiz de tinta negra para escribir con claridad en tareas y apuntes.' },
-            { id: 'p46', name: 'Sobre Manila', category: 'escolares', price: null, comingSoon: true, img: 'img/proximamente-sobre-manila.svg', desc: 'Sobre manila para almacenar y transportar documentos. Tamaño por confirmar.' },
-            { id: 'p47', name: 'Hojas de Examen Tamaño Oficio', category: 'escolares', price: null, comingSoon: true, img: 'img/proximamente-hojas-examen-oficio.svg', desc: 'Hojas de examen tamaño oficio para evaluaciones, prácticas y actividades escolares.' }
+            { id: 'p41', name: 'Carpeta Amarilla', category: 'escolares', price: null, comingSoon: true, img: 'img/carpeta-amarilla.webp', desc: 'Carpeta amarilla práctica para organizar documentos y trabajos escolares. Tamaño por confirmar.' },
+            { id: 'p42', name: 'Carpeta Marrón', category: 'escolares', price: null, comingSoon: true, img: 'img/carpeta-marron.jpg', desc: 'Carpeta marrón para guardar y proteger hojas y documentos. Tamaño por confirmar.' },
+            { id: 'p43', name: 'Cartulina Tipo Póster', category: 'escolares', price: null, comingSoon: true, img: 'img/cartulina-escolar-pequena.jpg', desc: 'Cartulina amplia para afiches, exposiciones, proyectos y trabajos creativos.' },
+            { id: 'p44', name: 'Cuadernos Pequeños', category: 'escolares', price: null, comingSoon: true, img: 'img/cuadernos-pequenos.jpg', desc: 'Cuadernos compactos, cómodos para apuntes y actividades escolares.' },
+            { id: 'p45', name: 'Lápiz de Tinta Color Negro', category: 'escolares', price: null, comingSoon: true, img: 'img/boligrafo-crisvi-color-negro.webp', desc: 'Lápiz de tinta negra para escribir con claridad en tareas y apuntes.' },
+            { id: 'p46', name: 'Sobre Manila', category: 'escolares', price: null, comingSoon: true, img: 'img/sobre-manila-tamano-oficio.jpg', desc: 'Sobre manila para almacenar y transportar documentos. Tamaño por confirmar.' },
+            { id: 'p47', name: 'Hojas de Examen Tamaño Oficio', category: 'escolares', price: null, comingSoon: true, img: 'img/hoja-examen-tamano-oficio.webp', desc: 'Hojas de examen tamaño oficio para evaluaciones, prácticas y actividades escolares.' }
         ];
+        const catalogProductImageOverrides = {
+            p41: 'img/carpeta-amarilla.webp',
+            p42: 'img/carpeta-marron.jpg',
+            p43: 'img/cartulina-escolar-pequena.jpg',
+            p44: 'img/cuadernos-pequenos.jpg',
+            p45: 'img/boligrafo-crisvi-color-negro.webp',
+            p46: 'img/sobre-manila-tamano-oficio.jpg',
+            p47: 'img/hoja-examen-tamano-oficio.webp'
+        };
         const productInventory = new Map();
         let inventoryLoadState = 'loading';
         let catalogRealtimeChannel = null;
@@ -1882,7 +1891,7 @@
                         category: item.category_slug,
                         price: item.price_usd === null ? null : Number(item.price_usd),
                         stock: 'Disponible',
-                        img: item.image_url || existing?.img || catImg[item.category_slug] || catImg.escolares,
+                        img: catalogProductImageOverrides[item.product_id] || item.image_url || existing?.img || catImg[item.category_slug] || catImg.escolares,
                         desc: item.description || existing?.desc || '',
                         unit: item.unit || 'unidad',
                         comingSoon: Boolean(item.coming_soon)

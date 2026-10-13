@@ -342,10 +342,6 @@
                             <label class="text-xs font-bold text-slate-300 sm:col-span-2 xl:col-span-3">Descripción
                                 <textarea name="description" maxlength="500" rows="3" required class="mt-1 w-full resize-y rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-violet-400" placeholder="Describe brevemente el producto"></textarea>
                             </label>
-                            <label class="text-xs font-bold text-slate-300 sm:col-span-2 xl:col-span-3">Ruta o URL de la imagen (opcional)
-                                <input name="imageUrl" type="text" maxlength="1000" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-violet-400" placeholder="Ej. img/carpeta-amarilla.jpg">
-                                <span class="mt-1 block text-[10px] font-normal text-slate-500">La imagen debe estar publicada en el sitio o usar una URL https://. Sin precio, el producto aparecerá como Próximamente.</span>
-                            </label>
                         </div>
                         <p id="add-product-form-status" class="min-h-4 text-xs text-slate-400" role="status" aria-live="polite"></p>
                         <div class="flex justify-end">
@@ -460,7 +456,7 @@
     </main>
     <script src="assets/js/chat-push.js"></script>
     <script src="assets/js/chat-attachments.js"></script>
-    <script src="assets/js/admin.js?v=20261013-1"></script>
+    <script src="assets/js/admin.js?v=20261013-2"></script>
     <script>
         if (!window.supabaseClient && !window.supabase) {
             document.getElementById('login-status').textContent = 'No se pudo cargar Supabase. Revisa tu conexión a internet y recarga la página.';
