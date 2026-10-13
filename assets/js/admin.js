@@ -127,6 +127,7 @@ async function loadUsdCopRate() {
         } finally {
             usdCopRateRequest = null;
             renderInventoryValuation();
+            if (inventoryLoaded) renderAdminInventory();
         }
     })();
     return usdCopRateRequest;
@@ -1030,6 +1031,11 @@ function renderAdminInventory() {
     inventoryList.innerHTML = filteredProducts.length ? filteredProducts.map(product => {
         const lowStock = product.stock <= product.min_stock;
         const stockLabel = product.stock === 0 ? 'Agotado' : lowStock ? 'Stock bajo · reponer pronto' : `${product.stock} disponibles`;
+        const unitPriceUsd = inventoryUnitPricesUsd[product.product_id];
+        const productTotalUsd = Number.isFinite(unitPriceUsd) ? product.stock * unitPriceUsd : null;
+        const productTotalCop = productTotalUsd !== null && usdCopRate
+            ? new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(productTotalUsd * usdCopRate)
+            : usdCopRateStatus.startsWith('Consultando') ? 'Calculando…' : 'Tasa no disponible';
         return `
             <article class="inventory-product min-w-0 rounded-2xl border ${lowStock ? 'border-amber-500/40 bg-amber-500/5' : 'border-slate-800 bg-slate-900'} p-4" data-product-id="${escapeHtml(product.product_id)}">
                 <div class="min-w-0">
@@ -1038,6 +1044,16 @@ function renderAdminInventory() {
                         ${lowStock ? '<span class="shrink-0 rounded-full bg-amber-500/15 px-2 py-1 text-[9px] font-black uppercase text-amber-200">Reponer</span>' : ''}
                     </div>
                     <p class="mt-1 text-[11px] leading-snug text-slate-400">Código ${escapeHtml(product.product_id)} · <span class="${lowStock ? 'text-amber-300' : 'text-emerald-300'}">${stockLabel}</span></p>
+                </div>
+                <div class="mt-3 grid grid-cols-2 gap-2 rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+                    <div>
+                        <p class="text-[9px] font-bold uppercase tracking-wide text-slate-500">Total en USD</p>
+                        <p class="mt-1 text-sm font-black text-emerald-200">${productTotalUsd === null ? 'Precio no disponible' : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(productTotalUsd)}</p>
+                    </div>
+                    <div>
+                        <p class="text-[9px] font-bold uppercase tracking-wide text-slate-500">Total en COP</p>
+                        <p class="mt-1 text-sm font-black text-sky-200">${productTotalUsd === null ? 'Precio no disponible' : productTotalCop}</p>
+                    </div>
                 </div>
                 <form class="inventory-stock-form mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-800/70 pt-3" data-product-id="${escapeHtml(product.product_id)}">
                     <label class="text-[11px] font-bold text-slate-400" for="stock-${escapeHtml(product.product_id)}">Existencias</label>
