@@ -611,8 +611,8 @@ function renderAdminDashboard() {
     }
 
     if (inventoryLoaded) {
-        const lowStockProducts = inventoryProducts.filter(product => product.stock <= product.min_stock).length;
-        const outOfStockProducts = inventoryProducts.filter(product => product.stock <= 0).length;
+        const lowStockProducts = inventoryProducts.filter(product => !product.coming_soon && product.stock <= product.min_stock).length;
+        const outOfStockProducts = inventoryProducts.filter(product => !product.coming_soon && product.stock <= 0).length;
         document.getElementById('dashboard-low-stock-count').textContent = lowStockProducts;
         dashboardInventoryMessage = `${outOfStockProducts} agotados · ${inventoryProducts.length} productos registrados`;
         document.getElementById('dashboard-inventory-note').textContent = dashboardInventoryMessage;
@@ -1027,7 +1027,7 @@ function renderAdminInventory() {
             .replace(/[\u0300-\u036f]/g, '')
             .toLocaleLowerCase('es');
         return searchableText.includes(query)
-            && (!showLowStockOnly || product.stock <= product.min_stock);
+            && (!showLowStockOnly || (!product.coming_soon && product.stock <= product.min_stock));
     });
     filterLowStockButton.setAttribute('aria-pressed', String(showLowStockOnly));
     filterLowStockButton.querySelector('span').textContent = showLowStockOnly
@@ -1035,7 +1035,7 @@ function renderAdminInventory() {
         : 'Mostrar solo productos por reponer';
 
     inventoryList.innerHTML = filteredProducts.length ? filteredProducts.map(product => {
-        const lowStock = product.stock <= product.min_stock;
+        const lowStock = !product.coming_soon && product.stock <= product.min_stock;
         const stockUnit = product.unit === 'metro' ? 'm' : 'unidades';
         const stockLabel = product.stock === 0 ? 'Agotado' : lowStock ? 'Stock bajo · reponer pronto' : `${product.stock} ${stockUnit} disponibles`;
         const unitPriceUsd = Number.isFinite(product.price_usd) ? product.price_usd : inventoryUnitPricesUsd[product.product_id];
@@ -1048,9 +1048,9 @@ function renderAdminInventory() {
                 <div class="min-w-0">
                     <div class="flex flex-wrap items-start justify-between gap-2">
                         <h3 class="min-w-0 break-words text-sm font-bold leading-snug text-slate-100">${escapeHtml(product.product_name)}</h3>
-                        ${lowStock ? '<span class="shrink-0 rounded-full bg-amber-500/15 px-2 py-1 text-[9px] font-black uppercase text-amber-200">Reponer</span>' : ''}
+                        ${product.coming_soon ? '<span class="shrink-0 rounded-full bg-violet-500/15 px-2 py-1 text-[9px] font-black uppercase text-violet-200">Próximamente</span>' : lowStock ? '<span class="shrink-0 rounded-full bg-amber-500/15 px-2 py-1 text-[9px] font-black uppercase text-amber-200">Reponer</span>' : ''}
                     </div>
-                    <p class="mt-1 text-[11px] leading-snug text-slate-400">Código ${escapeHtml(product.product_id)} · <span class="${lowStock ? 'text-amber-300' : 'text-emerald-300'}">${stockLabel}</span></p>
+                    <p class="mt-1 text-[11px] leading-snug text-slate-400">Código ${escapeHtml(product.product_id)} · <span class="${product.coming_soon ? 'text-violet-300' : lowStock ? 'text-amber-300' : 'text-emerald-300'}">${product.coming_soon ? 'Sin precio · no disponible para compra' : stockLabel}</span></p>
                 </div>
                 <div class="mt-3 grid grid-cols-2 gap-2 rounded-xl border border-slate-800 bg-slate-950/60 p-3">
                     <div>
@@ -1062,6 +1062,16 @@ function renderAdminInventory() {
                         <p class="mt-1 text-sm font-black text-sky-200">${productTotalUsd === null ? 'Precio no disponible' : productTotalCop}</p>
                     </div>
                 </div>
+                <form class="inventory-catalog-form mt-3 space-y-2 rounded-xl border border-violet-500/20 bg-violet-500/5 p-3" data-product-id="${escapeHtml(product.product_id)}">
+                    <label class="block text-[10px] font-bold text-slate-400" for="catalog-price-${escapeHtml(product.product_id)}">Precio de venta en USD
+                        <input id="catalog-price-${escapeHtml(product.product_id)}" name="price" type="number" min="0.01" max="999999.99" step="0.01" value="${product.price_usd ?? ''}" placeholder="Sin precio · Próximamente" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white outline-none focus:border-violet-400">
+                    </label>
+                    <label class="block text-[10px] font-bold text-slate-400" for="catalog-image-${escapeHtml(product.product_id)}">Ruta o URL de imagen
+                        <input id="catalog-image-${escapeHtml(product.product_id)}" name="imageUrl" type="text" maxlength="1000" value="${escapeHtml(product.image_url || '')}" placeholder="Ej. img/carpeta-amarilla.jpg" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white outline-none focus:border-violet-400">
+                    </label>
+                    <p class="text-[10px] leading-relaxed text-slate-500">Sin precio queda como Próximamente; al guardar un precio válido se publica para compra. La imagen debe estar publicada en el sitio o usar https://.</p>
+                    <button class="w-full rounded-lg border border-violet-400/30 px-3 py-2 text-xs font-bold text-violet-200 transition hover:bg-violet-500/10 disabled:cursor-wait disabled:opacity-50" type="submit">Guardar precio e imagen</button>
+                </form>
                 <form class="inventory-stock-form mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-800/70 pt-3" data-product-id="${escapeHtml(product.product_id)}">
                     <label class="text-[11px] font-bold text-slate-400" for="stock-${escapeHtml(product.product_id)}">${product.unit === 'metro' ? 'Existencias (metros)' : 'Existencias (unidades)'}</label>
                     <div class="flex shrink-0 items-center gap-2">
@@ -1100,7 +1110,6 @@ async function loadAdminInventory() {
         const { data, error } = await supabaseClient
             .from('product_inventory')
             .select('product_id, product_name, stock, min_stock, category_slug, price_usd, description, unit, image_url, coming_soon, is_active')
-            .eq('coming_soon', false)
             .eq('is_active', true)
             .order('product_name');
         if (error) throw error;
@@ -1152,30 +1161,79 @@ async function addInventoryProduct(event) {
         addProductFormStatus.textContent = 'Selecciona o escribe una categoría.';
         return;
     }
+    const priceValue = String(formData.get('price') || '').trim();
+    const price = priceValue ? Number(priceValue) : null;
+    if (priceValue && (!Number.isFinite(price) || price <= 0 || price > 999999.99)) {
+        addProductFormStatus.textContent = 'El precio debe ser mayor que cero y no superar 999999.99 USD.';
+        return;
+    }
 
     saveButton.disabled = true;
-    addProductFormStatus.textContent = 'Guardando producto…';
+    addProductFormStatus.textContent = price === null ? 'Guardando producto como Próximamente…' : 'Guardando producto…';
     try {
-        const { data, error } = await supabaseClient.rpc('admin_add_inventory_product', {
+        const { data, error } = await supabaseClient.rpc('admin_add_inventory_product_with_image', {
             p_name: String(formData.get('name') || '').trim(),
             p_category: category,
-            p_price_usd: Number(formData.get('price')),
+            p_price_usd: price,
             p_description: String(formData.get('description') || '').trim(),
             p_unit: String(formData.get('unit') || ''),
-            p_stock: Number(formData.get('stock'))
+            p_stock: Number(formData.get('stock')),
+            p_image_url: String(formData.get('imageUrl') || '').trim() || null
         });
         if (error) throw error;
         addProductForm.reset();
         newProductCategory.value = '';
         newProductCategoryCustomWrap.classList.add('hidden');
         newProductCategoryCustom.required = false;
-        addProductFormStatus.textContent = `${data.product_name} se guardó correctamente y ya está disponible para el catálogo.`;
+        addProductFormStatus.textContent = price === null
+            ? `${data.product_name} se guardó como Próximamente. Puedes agregar el precio y la imagen desde su tarjeta en el inventario.`
+            : `${data.product_name} se guardó correctamente y ya está disponible para el catálogo.`;
         await Promise.all([loadAdminInventory(), loadAdminProductCategories()]);
     } catch (error) {
         console.error('Error registrando el producto:', error);
         addProductFormStatus.textContent = error.message || 'No se pudo guardar el producto. Revisa la migración y tus permisos administrativos.';
     } finally {
         saveButton.disabled = false;
+    }
+}
+
+async function saveInventoryCatalogDetails(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const productId = form.dataset.productId;
+    const product = inventoryProducts.find(item => item.product_id === productId);
+    if (!product) {
+        inventoryStatus.textContent = 'No se encontró el producto que intentas actualizar.';
+        return;
+    }
+
+    const formData = new FormData(form);
+    const priceValue = String(formData.get('price') || '').trim();
+    const price = priceValue ? Number(priceValue) : null;
+    if (priceValue && (!Number.isFinite(price) || price <= 0 || price > 999999.99)) {
+        inventoryStatus.textContent = 'El precio debe ser mayor que cero y no superar 999999.99 USD.';
+        return;
+    }
+
+    const button = form.querySelector('button[type="submit"]');
+    button.disabled = true;
+    inventoryStatus.textContent = `Guardando precio e imagen de ${product.product_name}…`;
+    try {
+        const { error } = await supabaseClient.rpc('admin_update_inventory_catalog_details', {
+            p_product_id: productId,
+            p_price_usd: price,
+            p_image_url: String(formData.get('imageUrl') || '').trim() || null
+        });
+        if (error) throw error;
+        await loadAdminInventory();
+        inventoryStatus.textContent = price === null
+            ? `${product.product_name} permanece como Próximamente.`
+            : `${product.product_name} actualizado y publicado en el catálogo.`;
+    } catch (error) {
+        console.error(`Error guardando los datos de catálogo de ${product.product_name}:`, error);
+        inventoryStatus.textContent = error.message || `No se pudieron guardar los datos de ${product.product_name}.`;
+    } finally {
+        button.disabled = false;
     }
 }
 
@@ -1743,10 +1801,12 @@ filterLowStockButton.addEventListener('click', () => {
     renderAdminInventory();
 });
 inventoryList.addEventListener('submit', event => {
-    const form = event.target.closest('.inventory-stock-form, .inventory-min-stock-form');
+    const form = event.target.closest('.inventory-catalog-form, .inventory-stock-form, .inventory-min-stock-form');
     if (!form) return;
     event.preventDefault();
-    if (form.matches('.inventory-min-stock-form')) {
+    if (form.matches('.inventory-catalog-form')) {
+        saveInventoryCatalogDetails(event);
+    } else if (form.matches('.inventory-min-stock-form')) {
         saveProductMinStock(form);
     } else {
         saveProductStock(form);

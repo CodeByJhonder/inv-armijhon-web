@@ -1826,7 +1826,10 @@
         }
 
         function productCanBeOrdered(productId) {
-            return inventoryLoadState === 'ready' && (productInventory.get(productId) || 0) > 0;
+            const product = productsDB.find(item => item.id === productId);
+            return !product?.comingSoon
+                && inventoryLoadState === 'ready'
+                && (productInventory.get(productId) || 0) > 0;
         }
 
         function renderCatalogCategories(categories) {
@@ -1897,7 +1900,8 @@
             let adjustedCart = false;
             cart = cart.filter(item => {
                 const stock = productInventory.get(item.id) || 0;
-                if (stock <= 0) {
+                const product = productsDB.find(catalogProduct => catalogProduct.id === item.id);
+                if (stock <= 0 || product?.comingSoon) {
                     adjustedCart = true;
                     return false;
                 }
