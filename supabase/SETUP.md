@@ -333,6 +333,24 @@ conversación. Nunca habilitar el bucket como público.
    confirmar. El producto se oculta del panel y del catálogo público; su historial de
    pedidos y existencias se conserva.
 
+## Imagenes del catalogo en Supabase Storage
+
+1. En SQL Editor, ejecuta `supabase/product-image-storage-migration.sql` despues de
+   `product-catalog-migration.sql` y `catalog-product-details-migration.sql`.
+2. Publica `admin.html` y `assets/js/admin.js`.
+3. En el panel, abre Inventario y pulsa **Pasar fotos actuales a Supabase** para copiar
+   las fotos locales de los productos activos. El panel las convierte a WebP antes de
+   subirlas; los originales se mantienen en `img/` como respaldo.
+4. Para un producto existente, pulsa **Subir foto** o **Cambiar foto** en su tarjeta.
+   Al registrar un producto nuevo, puedes elegir una foto opcional en el formulario.
+   Se aceptan JPG, PNG y WebP de hasta 10 MB; el panel las optimiza automaticamente.
+
+El bucket `product-images` es publico para que el catalogo pueda mostrar las fotos. Solo
+administradores autenticados pueden subir, reemplazar o borrar objetos. Storage incluye
+1 GB en el plan gratuito; conviene revisar uso y transferencia en Supabase si el catalogo
+recibe mucho trafico. Conserva `img/` hasta comprobar las imagenes en produccion y retirar
+las rutas de respaldo del catalogo.
+
 ## Cambiar nombres de productos
 
 1. Ejecutar supabase/product-name-edit-migration.sql en Supabase después de

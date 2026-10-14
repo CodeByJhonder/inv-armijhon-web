@@ -6,6 +6,8 @@ if (!window.supabase || !config.url || !config.publishableKey) {
 }
 
 const supabaseClient = window.supabase.createClient(config.url, config.publishableKey);
+const PRODUCT_IMAGE_BUCKET = 'product-images';
+const PRODUCT_IMAGE_MAX_BYTES = 10 * 1024 * 1024;
 const loginView = document.getElementById('login-view');
 const ordersView = document.getElementById('orders-view');
 const adminNavigation = document.getElementById('admin-navigation');
@@ -1072,6 +1074,15 @@ function renderAdminInventory() {
                         <p class="mt-1 text-sm font-black text-sky-200">${productTotalUsd === null ? 'Precio no disponible' : productTotalCop}</p>
                     </div>
                 </div>
+                <div class="mt-3 flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-950/50 p-2">
+                    <img src="${escapeHtml(product.image_url && product.image_url.includes('/product-images/') ? product.image_url : (productCatalogImageOverrides[product.product_id] || product.image_url || ''))}" alt="" class="h-14 w-14 rounded-lg bg-slate-900 object-contain" loading="lazy" onerror="this.classList.add('hidden')">
+                    <div class="min-w-0 flex-1">
+                        <p class="text-[10px] font-bold text-slate-300">Foto del catalogo</p>
+                        <p class="mt-1 text-[10px] text-slate-500">${product.image_url && product.image_url.includes('/product-images/') ? 'Guardada en Supabase' : 'Foto local o generica'}</p>
+                    </div>
+                    <input class="inventory-product-image-input hidden" type="file" accept="image/jpeg,image/png,image/webp" data-product-id="${escapeHtml(product.product_id)}">
+                    <button class="upload-product-image-button rounded-lg border border-sky-500/30 px-3 py-2 text-[10px] font-bold text-sky-200 hover:bg-sky-500/10" type="button" data-product-id="${escapeHtml(product.product_id)}">${product.image_url && product.image_url.includes('/product-images/') ? 'Cambiar foto' : 'Subir foto'}</button>
+                </div>
                 <form class="inventory-catalog-form mt-3 space-y-2 rounded-xl border border-violet-500/20 bg-violet-500/5 p-3" data-product-id="${escapeHtml(product.product_id)}">
                     <label class="block text-[10px] font-bold text-slate-400" for="catalog-price-${escapeHtml(product.product_id)}">Precio de venta en USD
                         <input id="catalog-price-${escapeHtml(product.product_id)}" name="price" type="number" min="0.01" max="999999.99" step="0.01" value="${product.price_usd ?? ''}" placeholder="Sin precio · Próximamente" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white outline-none focus:border-violet-400">
@@ -1157,6 +1168,112 @@ async function loadAdminProductCategories() {
     }
 }
 
+async function compressProductImage(sourceBlob) {
+    if (!sourceBlob || !String(sourceBlob.type || '').startsWith('image/')) {
+        throw new Error('Selecciona un archivo de imagen valido.');
+    }
+    if (sourceBlob.size > PRODUCT_IMAGE_MAX_BYTES) {
+        throw new Error('La imagen debe pesar 10 MB o menos.');
+    }
+    const bitmap = await createImageBitmap(sourceBlob);
+    const maxDimension = 1400;
+    const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    const context = canvas.getContext('2d');
+    if (!context) {
+        bitmap.close();
+        throw new Error('El navegador no pudo preparar la imagen.');
+    }
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+    let quality = 0.84;
+    let output = await new Promise(resolve => canvas.toBlob(resolve, 'image/webp', quality));
+    while (output && output.size > 1.5 * 1024 * 1024 && quality > 0.55) {
+        quality -= 0.1;
+        output = await new Promise(resolve => canvas.toBlob(resolve, 'image/webp', quality));
+    }
+    if (!output) throw new Error('No se pudo comprimir la imagen. Prueba con otra foto.');
+    return output;
+}
+
+async function uploadProductImage(productId, source, sourceUrl = null) {
+    let originalBlob = source;
+    if (sourceUrl) {
+        const response = await fetch(sourceUrl);
+        if (!response.ok) throw new Error(`No se pudo leer la imagen existente (${response.status}).`);
+        originalBlob = await response.blob();
+    }
+    const optimized = await compressProductImage(originalBlob);
+    const storagePath = `${productId}/main.webp`;
+    const { error: uploadError } = await supabaseClient.storage.from(PRODUCT_IMAGE_BUCKET).upload(storagePath, optimized, {
+        contentType: 'image/webp', cacheControl: '3600', upsert: true
+    });
+    if (uploadError) throw uploadError;
+    const { data: publicData } = supabaseClient.storage.from(PRODUCT_IMAGE_BUCKET).getPublicUrl(storagePath);
+    const imageUrl = `${publicData.publicUrl}?v=${Date.now()}`;
+    const { error: updateError } = await supabaseClient.rpc('admin_set_inventory_product_image', {
+        p_product_id: productId, p_image_url: imageUrl
+    });
+    if (updateError) throw updateError;
+    return { imageUrl, optimizedSize: optimized.size };
+}
+
+async function changeInventoryProductImage(productId, fileInput) {
+    const file = fileInput.files?.[0];
+    fileInput.value = '';
+    if (!file) return;
+    const product = inventoryProducts.find(item => item.product_id === productId);
+    if (!product) return;
+    inventoryStatus.textContent = `Optimizando y subiendo la foto de ${product.product_name}...`;
+    try {
+        await uploadProductImage(productId, file);
+        await loadAdminInventory();
+        inventoryStatus.textContent = `Foto actualizada para ${product.product_name}.`;
+    } catch (error) {
+        console.error('Error subiendo la imagen del producto:', error);
+        inventoryStatus.textContent = error.message || 'No se pudo guardar la foto. Verifica la migracion y tus permisos.';
+    }
+}
+
+function legacyImagePath(product) {
+    if (product.image_url && product.image_url.includes('/product-images/')) return null;
+    const path = productCatalogImageOverrides[product.product_id] || product.image_url || '';
+    return typeof path === 'string' && /^(\.\/)?img\//i.test(path) ? path : null;
+}
+
+async function migrateLegacyProductImages() {
+    const candidates = inventoryProducts.filter(product => legacyImagePath(product));
+    if (!candidates.length) {
+        inventoryStatus.textContent = 'No hay fotos locales pendientes de pasar a Supabase.';
+        return;
+    }
+    if (!window.confirm(`Se optimizaran y copiaran ${candidates.length} fotos locales al almacenamiento de Supabase. Las fotos originales seguiran en el repositorio como respaldo. Continuar?`)) return;
+    const button = document.getElementById('migrate-product-images');
+    button.disabled = true;
+    let migrated = 0;
+    const failures = [];
+    try {
+        for (const [index, product] of candidates.entries()) {
+            inventoryStatus.textContent = `Pasando foto ${index + 1} de ${candidates.length}: ${product.product_name}...`;
+            const sourceUrl = new URL(legacyImagePath(product).replace(/^\.\//, ''), document.baseURI);
+            try {
+                await uploadProductImage(product.product_id, null, sourceUrl.href);
+                migrated++;
+            } catch (error) {
+                failures.push(`${product.product_name}: ${error.message}`);
+            }
+        }
+        await loadAdminInventory();
+        inventoryStatus.textContent = failures.length
+            ? `Se migraron ${migrated} de ${candidates.length} fotos. Pendientes: ${failures.join('; ')}`
+            : `Listo: ${migrated} fotos estan ahora en Supabase Storage.`;
+    } finally {
+        button.disabled = false;
+    }
+}
+
 async function addInventoryProduct(event) {
     event.preventDefault();
     const formData = new FormData(addProductForm);
@@ -1188,13 +1305,27 @@ async function addInventoryProduct(event) {
             p_image_url: null
         });
         if (error) throw error;
+        const imageFile = formData.get('image');
+        let imageUploadError = null;
+        if (imageFile instanceof File && imageFile.size > 0) {
+            addProductFormStatus.textContent = 'Producto guardado. Optimizando y subiendo la foto...';
+            try {
+                await uploadProductImage(data.product_id, imageFile);
+            } catch (uploadError) {
+                imageUploadError = uploadError;
+                console.error('El producto se guardo, pero fallo la subida de su foto:', uploadError);
+            }
+        }
         addProductForm.reset();
         newProductCategory.value = '';
         newProductCategoryCustomWrap.classList.add('hidden');
         newProductCategoryCustom.required = false;
-        addProductFormStatus.textContent = price === null
-            ? `${data.product_name} se guardó como Próximamente. Puedes agregar el precio desde su tarjeta en el inventario.`
-            : `${data.product_name} se guardó correctamente y ya está disponible para el catálogo.`;
+        const savedMessage = price === null
+            ? `${data.product_name} se guardo como Proximamente. Puedes agregar el precio desde su tarjeta en el inventario.`
+            : `${data.product_name} se guardo correctamente y ya esta disponible para el catalogo.`;
+        addProductFormStatus.textContent = imageUploadError
+            ? `${savedMessage} No se pudo subir la foto: ${imageUploadError.message} Puedes intentarlo desde la tarjeta del producto.`
+            : savedMessage;
         await Promise.all([loadAdminInventory(), loadAdminProductCategories()]);
     } catch (error) {
         console.error('Error registrando el producto:', error);
@@ -1229,7 +1360,7 @@ async function saveInventoryCatalogDetails(event) {
         const { error } = await supabaseClient.rpc('admin_update_inventory_catalog_details', {
             p_product_id: productId,
             p_price_usd: price,
-            p_image_url: productCatalogImageOverrides[productId] || product.image_url || null
+            p_image_url: product.image_url && product.image_url.includes('/product-images/') ? product.image_url : (productCatalogImageOverrides[productId] || product.image_url || null)
         });
         if (error) throw error;
         await loadAdminInventory();
@@ -1791,6 +1922,7 @@ logoutButton.addEventListener('click', async () => {
 
 document.getElementById('refresh-orders').addEventListener('click', loadOrders);
 document.getElementById('refresh-inventory').addEventListener('click', loadAdminInventory);
+document.getElementById('migrate-product-images').addEventListener('click', migrateLegacyProductImages);
 document.getElementById('toggle-add-product').addEventListener('click', event => {
     const isHidden = addProductForm.classList.toggle('hidden');
     event.currentTarget.setAttribute('aria-expanded', String(!isHidden));
@@ -1828,6 +1960,10 @@ ordersView.addEventListener('click', event => {
     showAdminPage(button.dataset.dashboardPage);
 });
 inventorySearch.addEventListener('input', renderAdminInventory);
+inventoryList.addEventListener('change', event => {
+    const input = event.target.closest('.inventory-product-image-input');
+    if (input) changeInventoryProductImage(input.dataset.productId, input);
+});
 document.getElementById('close-stock-history').addEventListener('click', closeStockHistory);
 stockHistoryDialog.addEventListener('click', event => {
     if (event.target === stockHistoryDialog) closeStockHistory();
@@ -1854,6 +1990,11 @@ inventoryList.addEventListener('submit', event => {
     }
 });
 inventoryList.addEventListener('click', event => {
+    const uploadButton = event.target.closest('.upload-product-image-button');
+    if (uploadButton) {
+        inventoryList.querySelector(`.inventory-product-image-input[data-product-id="${CSS.escape(uploadButton.dataset.productId)}"]`)?.click();
+        return;
+    }
     const renameButton = event.target.closest('.edit-product-name-button');
     if (renameButton) {
         renameInventoryProduct(renameButton);
