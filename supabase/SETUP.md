@@ -332,3 +332,11 @@ conversación. Nunca habilitar el bucket como público.
 3. En Inventario, usar **Eliminar del inventario y catálogo** en la ficha del producto y
    confirmar. El producto se oculta del panel y del catálogo público; su historial de
    pedidos y existencias se conserva.
+
+## Cambiar nombres de productos
+
+1. Ejecutar supabase/product-name-edit-migration.sql en Supabase después de
+   product-archive-migration.sql.
+2. Publicar admin.html y assets/js/admin.js.
+3. En Inventario, pulsar Cambiar nombre en la tarjeta del producto y guardar el
+   nombre nuevo. Los pedidos históricos conservan el nombre registrado al comprarlos.

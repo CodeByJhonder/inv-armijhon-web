@@ -1057,6 +1057,7 @@ function renderAdminInventory() {
                 <div class="min-w-0">
                     <div class="flex flex-wrap items-start justify-between gap-2">
                         <h3 class="min-w-0 break-words text-sm font-bold leading-snug text-slate-100">${escapeHtml(product.product_name)}</h3>
+                        <button class="edit-product-name-button mt-1 rounded-md px-2 py-1 text-[10px] font-bold text-indigo-300 transition hover:bg-indigo-500/10" type="button" data-product-id="${escapeHtml(product.product_id)}" data-product-name="${escapeHtml(product.product_name)}"><i class="fa-solid fa-pen mr-1" aria-hidden="true"></i>Cambiar nombre</button>
                         ${product.coming_soon ? '<span class="shrink-0 rounded-full bg-violet-500/15 px-2 py-1 text-[9px] font-black uppercase text-violet-200">Próximamente</span>' : lowStock ? '<span class="shrink-0 rounded-full bg-amber-500/15 px-2 py-1 text-[9px] font-black uppercase text-amber-200">Reponer</span>' : ''}
                     </div>
                     <p class="mt-1 text-[11px] leading-snug text-slate-400">Código ${escapeHtml(product.product_id)} · <span class="${product.coming_soon ? 'text-violet-300' : lowStock ? 'text-amber-300' : 'text-emerald-300'}">${product.coming_soon ? 'Sin precio · no disponible para compra' : stockLabel}</span></p>
@@ -1238,6 +1239,40 @@ async function saveInventoryCatalogDetails(event) {
     } catch (error) {
         console.error(`Error guardando los datos de catálogo de ${product.product_name}:`, error);
         inventoryStatus.textContent = error.message || `No se pudieron guardar los datos de ${product.product_name}.`;
+    } finally {
+        button.disabled = false;
+    }
+}
+
+async function renameInventoryProduct(button) {
+    const productId = button.dataset.productId;
+    const currentName = button.dataset.productName || '';
+    const requestedName = window.prompt('Escribe el nuevo nombre del producto (máximo 120 caracteres):', currentName);
+    if (requestedName === null) return;
+
+    const productName = requestedName.trim();
+    if (!productName || productName.length > 120) {
+        inventoryStatus.textContent = 'El nombre es obligatorio y debe tener máximo 120 caracteres.';
+        return;
+    }
+    if (productName === currentName) return;
+
+    button.disabled = true;
+    inventoryStatus.textContent = 'Actualizando el nombre del producto...';
+    try {
+        const { data, error } = await supabaseClient.rpc('admin_rename_inventory_product', {
+            p_product_id: productId,
+            p_product_name: productName
+        });
+        if (error) throw error;
+
+        const product = inventoryProducts.find(item => item.product_id === productId);
+        if (product) product.product_name = data.product_name;
+        renderAdminInventory();
+        inventoryStatus.textContent = 'Nombre actualizado: ' + data.product_name + '.';
+    } catch (error) {
+        console.error('Error cambiando el nombre del producto:', error);
+        inventoryStatus.textContent = error.message || 'No se pudo cambiar el nombre del producto.';
     } finally {
         button.disabled = false;
     }
@@ -1819,6 +1854,11 @@ inventoryList.addEventListener('submit', event => {
     }
 });
 inventoryList.addEventListener('click', event => {
+    const renameButton = event.target.closest('.edit-product-name-button');
+    if (renameButton) {
+        renameInventoryProduct(renameButton);
+        return;
+    }
     const archiveButton = event.target.closest('.archive-product-button');
     if (archiveButton) {
         archiveInventoryProduct(archiveButton.dataset.productId, archiveButton.dataset.productName);
