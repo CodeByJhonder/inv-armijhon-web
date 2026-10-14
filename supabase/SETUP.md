@@ -351,6 +351,20 @@ administradores autenticados pueden subir, reemplazar o borrar objetos. Storage 
 recibe mucho trafico. Conserva `img/` hasta comprobar las imagenes en produccion y retirar
 las rutas de respaldo del catalogo.
 
+## Registrar ventas locales
+
+1. Ejecuta `supabase/local-sales-migration.sql` en SQL Editor despues de
+   `inventory-migration.sql`, `product-catalog-migration.sql`,
+   `product-archive-migration.sql` y `stock-history-migration.sql`.
+2. Publica `admin.html` y `assets/js/admin.js`.
+3. En el panel, abre **Ventas locales**, elige el producto, fecha, cantidad y precio por
+   unidad en USD. Al guardar, el sistema registra la venta y descuenta el stock dentro de
+   una sola transaccion. Si no hay unidades suficientes, no registra la venta.
+4. Las ventas locales se listan en su propia seccion y quedan separadas de los pedidos web.
+
+El historial muestra las 200 ventas mas recientes. Cada registro conserva el nombre, la
+unidad y el precio usados al vender, aunque el producto se renombre o cambie de precio.
+
 ## Cambiar nombres de productos
 
 1. Ejecutar supabase/product-name-edit-migration.sql en Supabase después de

@@ -32,6 +32,14 @@ const newProductCategoryCustomWrap = document.getElementById('new-product-catego
 const newProductCategoryCustom = document.getElementById('new-product-category-custom');
 const inventorySearch = document.getElementById('inventory-search');
 const filterLowStockButton = document.getElementById('filter-low-stock');
+const localSaleForm = document.getElementById('local-sale-form');
+const localSaleProduct = document.getElementById('local-sale-product');
+const localSaleDate = document.getElementById('local-sale-date');
+const localSaleQuantity = document.getElementById('local-sale-quantity');
+const localSalePrice = document.getElementById('local-sale-price');
+const localSaleFormStatus = document.getElementById('local-sale-form-status');
+const localSalesStatus = document.getElementById('local-sales-status');
+const localSalesList = document.getElementById('local-sales-list');
 const stockHistoryDialog = document.getElementById('stock-history-dialog');
 const stockHistoryProduct = document.getElementById('stock-history-product');
 const stockHistoryStatus = document.getElementById('stock-history-status');
@@ -60,6 +68,7 @@ const productCatalogImageOverrides = {
     p47: 'img/hoja-examen-tamano-oficio.webp'
 };
 let inventoryProducts = [];
+let localSales = [];
 let ordersLoaded = false;
 let inventoryLoaded = false;
 let usdCopRate = null;
@@ -1139,6 +1148,7 @@ async function loadAdminInventory() {
             price_usd: product.price_usd === null ? null : Number(product.price_usd)
         }));
         inventoryLoaded = true;
+        renderLocalSaleProductOptions();
         renderAdminInventory();
         renderAdminDashboard();
         inventoryStatus.textContent = `${inventoryProducts.length} productos · los cambios se guardan individualmente.`;
@@ -1148,6 +1158,136 @@ async function loadAdminInventory() {
         renderAdminDashboard();
         console.error('Error cargando el inventario:', error);
         return;
+    }
+}
+
+function localDateInputValue(date = new Date()) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function renderLocalSaleProductOptions() {
+    if (!localSaleProduct) return;
+    const selectedId = localSaleProduct.value;
+    const options = inventoryProducts.map(product => {
+        const unit = product.unit === 'metro' ? 'm' : 'unidades';
+        const soon = product.coming_soon ? ' - Proximamente' : '';
+        return `<option value="${escapeHtml(product.product_id)}">${escapeHtml(product.product_name)} - ${product.stock} ${unit}${soon}</option>`;
+    });
+    localSaleProduct.innerHTML = '<option value="">Selecciona un producto</option>' + options.join('');
+    if (selectedId && inventoryProducts.some(product => product.product_id === selectedId)) {
+        localSaleProduct.value = selectedId;
+    }
+    updateLocalSalePriceFromProduct();
+}
+
+function updateLocalSalePriceFromProduct() {
+    const product = inventoryProducts.find(item => item.product_id === localSaleProduct.value);
+    if (product?.price_usd !== null && product?.price_usd !== undefined) {
+        localSalePrice.value = Number(product.price_usd).toFixed(2);
+    } else if (!product) {
+        localSalePrice.value = '';
+    }
+    updateLocalSaleTotalPreview();
+}
+
+function updateLocalSaleTotalPreview() {
+    const quantity = Number(localSaleQuantity.value);
+    const price = Number(localSalePrice.value);
+    const total = Number.isFinite(quantity) && quantity > 0 && Number.isFinite(price) && price > 0
+        ? quantity * price
+        : 0;
+    document.getElementById('local-sale-total').textContent = new Intl.NumberFormat('en-US', {
+        style: 'currency', currency: 'USD'
+    }).format(total);
+}
+
+function renderLocalSales() {
+    if (!localSalesList) return;
+    if (!localSales.length) {
+        localSalesList.innerHTML = '<p class="rounded-2xl border border-slate-800 p-6 text-center text-sm text-slate-400 md:col-span-2 2xl:col-span-3">Todavia no hay ventas locales registradas.</p>';
+        return;
+    }
+    localSalesList.innerHTML = localSales.map(sale => {
+        const date = new Date(`${sale.sold_on}T12:00:00`);
+        const dateLabel = new Intl.DateTimeFormat('es-VE', { dateStyle: 'medium' }).format(date);
+        const unit = sale.unit === 'metro' ? 'm' : 'unidades';
+        const price = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(sale.unit_price_usd));
+        const total = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(sale.total_usd));
+        return `<article class="rounded-2xl border border-slate-800 bg-slate-900 p-4">
+            <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0"><p class="break-words text-sm font-bold text-white">${escapeHtml(sale.product_name)}</p><p class="mt-1 text-[11px] text-slate-400">${dateLabel} - ${sale.quantity} ${unit}</p></div>
+                <span class="shrink-0 rounded-full bg-emerald-500/10 px-2 py-1 text-[9px] font-black uppercase text-emerald-300">Producto</span>
+            </div>
+            <div class="mt-3 flex items-center justify-between border-t border-slate-800 pt-3 text-xs"><span class="text-slate-400">${price} por ${sale.unit === 'metro' ? 'metro' : 'unidad'}</span><strong class="text-emerald-200">${total}</strong></div>
+        </article>`;
+    }).join('');
+}
+
+async function loadLocalSales() {
+    localSalesStatus.textContent = 'Cargando ventas locales...';
+    try {
+        const { data, error } = await supabaseClient.rpc('admin_list_local_sales', { p_limit: 200 });
+        if (error) throw error;
+        localSales = data || [];
+        renderLocalSales();
+        localSalesStatus.textContent = `${localSales.length} ventas recientes`;
+    } catch (error) {
+        console.error('Error cargando ventas locales:', error);
+        localSalesStatus.textContent = error.message || 'No se pudieron cargar las ventas locales. Verifica la migracion SQL.';
+    }
+}
+
+async function registerLocalProductSale(event) {
+    event.preventDefault();
+    const productId = localSaleProduct.value;
+    const quantity = Number(localSaleQuantity.value);
+    const price = Number(localSalePrice.value);
+    const soldOn = localSaleDate.value;
+    const saveButton = document.getElementById('save-local-sale');
+    if (!productId) {
+        localSaleFormStatus.textContent = 'Selecciona un producto del inventario.';
+        return;
+    }
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > 99999) {
+        localSaleFormStatus.textContent = 'La cantidad debe ser un numero entero entre 1 y 99999.';
+        return;
+    }
+    if (!Number.isFinite(price) || price <= 0 || price > 999999.99) {
+        localSaleFormStatus.textContent = 'El precio por unidad debe ser mayor que cero y no superar 999999.99 USD.';
+        return;
+    }
+    if (!soldOn || soldOn > localDateInputValue()) {
+        localSaleFormStatus.textContent = 'Selecciona una fecha valida que no sea futura.';
+        return;
+    }
+
+    saveButton.disabled = true;
+    localSaleFormStatus.textContent = 'Guardando venta y descontando existencias...';
+    try {
+        const { data, error } = await supabaseClient.rpc('admin_record_local_product_sale', {
+            p_product_id: productId,
+            p_quantity: quantity,
+            p_unit_price_usd: price,
+            p_sold_on: soldOn
+        });
+        if (error) throw error;
+
+        localSaleForm.reset();
+        localSaleDate.value = localDateInputValue();
+        localSaleQuantity.value = '1';
+        await loadAdminInventory();
+        localSaleProduct.value = data.product_id;
+        updateLocalSalePriceFromProduct();
+        await loadLocalSales();
+        localSaleFormStatus.textContent = `Venta guardada: ${data.quantity} ${data.unit === 'metro' ? 'm' : 'unidades'} de ${data.product_name}. Stock restante: ${data.remaining_stock}.`;
+    } catch (error) {
+        console.error('Error registrando la venta local:', error);
+        localSaleFormStatus.textContent = error.message || 'No se pudo registrar la venta local.';
+    } finally {
+        saveButton.disabled = false;
     }
 }
 
@@ -1920,6 +2060,12 @@ logoutButton.addEventListener('click', async () => {
 
 document.getElementById('refresh-orders').addEventListener('click', loadOrders);
 document.getElementById('refresh-inventory').addEventListener('click', loadAdminInventory);
+document.getElementById('refresh-local-sales').addEventListener('click', loadLocalSales);
+localSaleForm.addEventListener('submit', registerLocalProductSale);
+localSaleProduct.addEventListener('change', updateLocalSalePriceFromProduct);
+localSaleQuantity.addEventListener('input', updateLocalSaleTotalPreview);
+localSalePrice.addEventListener('input', updateLocalSaleTotalPreview);
+localSaleDate.value = localDateInputValue();
 document.getElementById('migrate-product-images').addEventListener('click', migrateLegacyProductImages);
 document.getElementById('toggle-add-product').addEventListener('click', event => {
     const isHidden = addProductForm.classList.toggle('hidden');
@@ -1942,6 +2088,10 @@ adminNavigation.addEventListener('click', event => {
     const button = event.target.closest('[data-admin-page]');
     if (!button) return;
     showAdminPage(button.dataset.adminPage);
+    if (button.dataset.adminPage === 'local-sales') {
+        renderLocalSaleProductOptions();
+        loadLocalSales();
+    }
 });
 ordersView.addEventListener('click', event => {
     const button = event.target.closest('[data-dashboard-page]');
