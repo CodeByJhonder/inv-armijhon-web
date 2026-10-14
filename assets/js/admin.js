@@ -1335,9 +1335,7 @@ async function addInventoryProduct(event) {
     }
 }
 
-async function saveInventoryCatalogDetails(event) {
-    event.preventDefault();
-    const form = event.currentTarget;
+async function saveInventoryCatalogDetails(form) {
     const productId = form.dataset.productId;
     const product = inventoryProducts.find(item => item.product_id === productId);
     if (!product) {
@@ -1982,7 +1980,7 @@ inventoryList.addEventListener('submit', event => {
     if (!form) return;
     event.preventDefault();
     if (form.matches('.inventory-catalog-form')) {
-        saveInventoryCatalogDetails(event);
+        saveInventoryCatalogDetails(form);
     } else if (form.matches('.inventory-min-stock-form')) {
         saveProductMinStock(form);
     } else {
