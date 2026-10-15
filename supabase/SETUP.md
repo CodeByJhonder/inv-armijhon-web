@@ -149,6 +149,12 @@ abre el panel publicado y recárgalo completamente. Si aparece un error de sincr
 revisa la pestaña **Network** del navegador para la respuesta de `telegram-webhook` y los
 logs de esa función en Supabase.
 
+Si al aprobar o rechazar desde Telegram aparece `No tienes permiso para cambiar el estado
+de pedidos`, ejecuta `supabase/telegram-bot-service-role-fix.sql` en SQL Editor. La función
+de base de datos debe reconocer el rol JWT `service_role` que usa el webhook; la migración
+mantiene la validación de administradores para las demás sesiones. Despliega nuevamente
+`telegram-webhook` si su código local difiere del publicado y revisa sus logs después.
+
 ## 7. Controlar el inventario
 
 1. Ejecutar `supabase/inventory-migration.sql` en SQL Editor despues de `schema.sql` y
