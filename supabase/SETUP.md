@@ -375,10 +375,12 @@ las rutas de respaldo del catalogo.
    quedan agrupadas en el historial y separadas de los pedidos web.
 9. En el historial puedes seleccionar lineas individuales o borrar todas las ventas de un
    dia, semana (lunes a domingo) o mes. Borrar historial no modifica el inventario.
-10. Para exportar, elige una fecha de referencia y el período **día, semana, quincena,
-    mes o año**. Descarga el informe como Excel o PDF. Incluye logo, rango, fecha de
-    generación, cantidad de ventas y productos, totales separados por moneda y detalle
-    tabulado de cada línea. Las quincenas van del 1 al 15 y del 16 al fin de mes.
+10. En **Reportes de ventas**, antes de Inventario, elige una fecha de referencia y el
+    período **día, semana, quincena, mes o año**. Puedes filtrar por moneda y producto,
+    consultar totales y los cinco productos más vendidos, y descargar el informe como
+    Excel o PDF. Incluye logo, rango, fecha de generación, cantidades separadas entre
+    unidades y metros, totales separados por moneda y detalle tabulado de cada línea.
+    Las quincenas van del 1 al 15 y del 16 al fin de mes.
 
 El historial muestra las 200 ventas mas recientes y conserva el nombre, la unidad, la
 moneda, el total cobrado y la tasa VES aplicada al vender.
