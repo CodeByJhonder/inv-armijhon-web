@@ -356,14 +356,19 @@ las rutas de respaldo del catalogo.
 1. Ejecuta `supabase/local-sales-migration.sql` en SQL Editor despues de
    `inventory-migration.sql`, `product-catalog-migration.sql`,
    `product-archive-migration.sql` y `stock-history-migration.sql`.
-2. Publica `admin.html` y `assets/js/admin.js`.
-3. En el panel, abre **Ventas locales**, elige el producto, fecha, cantidad y precio por
-   unidad en USD. Al guardar, el sistema registra la venta y descuenta el stock dentro de
-   una sola transaccion. Si no hay unidades suficientes, no registra la venta.
-4. Las ventas locales se listan en su propia seccion y quedan separadas de los pedidos web.
+2. Para habilitar cobros en varias monedas, ejecuta despues
+   `supabase/local-sales-currency-migration.sql`. Esta migracion conserva las ventas
+   anteriores como USD.
+3. Publica `admin.html` y `assets/js/admin.js`.
+4. En **Ventas locales**, elige producto, fecha, cantidad y moneda. USD usa precio por
+   unidad; VES convierte ese precio con la misma tasa USD/VES automatica mas el ajuste
+   comercial de la pagina y guarda la tasa aplicada. COP pide el total final en pesos para
+   todas las unidades y lo guarda sin conversion.
+5. Cada venta descuenta el inventario dentro de la misma transaccion; si no hay stock
+   suficiente, no se registra. Las ventas se mantienen separadas de los pedidos web.
 
-El historial muestra las 200 ventas mas recientes. Cada registro conserva el nombre, la
-unidad y el precio usados al vender, aunque el producto se renombre o cambie de precio.
+El historial muestra las 200 ventas mas recientes y conserva el nombre, la unidad, la
+moneda, el total cobrado y la tasa VES aplicada al vender.
 
 ## Cambiar nombres de productos
 

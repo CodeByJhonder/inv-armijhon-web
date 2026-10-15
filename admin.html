@@ -318,18 +318,26 @@
                                     <option value="">Cargando productos...</option>
                                 </select>
                             </label>
+                            <label class="text-xs font-bold text-slate-300">Moneda de cobro
+                                <select id="local-sale-currency" name="currency" required class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-400">
+                                    <option value="USD">Dólares (USD)</option>
+                                    <option value="VES">Bolívares (VES)</option>
+                                    <option value="COP">Pesos colombianos (COP)</option>
+                                </select>
+                            </label>
                             <label class="text-xs font-bold text-slate-300">Fecha de venta
                                 <input id="local-sale-date" name="soldOn" type="date" required class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-400">
                             </label>
                             <label class="text-xs font-bold text-slate-300">Cantidad vendida
                                 <input id="local-sale-quantity" name="quantity" type="number" min="1" max="99999" step="1" value="1" required class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-400">
                             </label>
-                            <label class="text-xs font-bold text-slate-300">Precio por unidad (USD)
-                                <input id="local-sale-price" name="unitPrice" type="number" min="0.01" max="999999.99" step="0.01" required class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-400" placeholder="Ej. 1.30">
+                            <label class="text-xs font-bold text-slate-300"><span id="local-sale-price-label">Precio por unidad (USD)</span>
+                                <input id="local-sale-price" name="amount" type="number" min="0.01" max="999999.99" step="0.01" required class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-400" placeholder="Ej. 1.30">
                             </label>
                             <div class="rounded-xl border border-slate-800 bg-slate-950/60 p-3 sm:col-span-2">
-                                <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Total de la venta</p>
+                                <p id="local-sale-total-label" class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Total de la venta</p>
                                 <p id="local-sale-total" class="mt-1 text-lg font-black text-emerald-200">$0.00</p>
+                                <p id="local-sale-rate" class="mt-1 hidden text-[10px] text-slate-400" aria-live="polite"></p>
                             </div>
                         </div>
                         <p id="local-sale-form-status" class="min-h-4 text-xs text-slate-400" role="status" aria-live="polite"></p>
@@ -508,9 +516,10 @@
             </div>
         </section>
     </main>
+    <script src="assets/js/payment-config.js"></script>
     <script src="assets/js/chat-push.js"></script>
     <script src="assets/js/chat-attachments.js"></script>
-    <script src="assets/js/admin.js?v=20261014-5"></script>
+    <script src="assets/js/admin.js?v=20261015-1"></script>
     <script>
         if (!window.supabaseClient && !window.supabase) {
             document.getElementById('login-status').textContent = 'No se pudo cargar Supabase. Revisa tu conexión a internet y recarga la página.';

@@ -34,6 +34,7 @@ const inventorySearch = document.getElementById('inventory-search');
 const filterLowStockButton = document.getElementById('filter-low-stock');
 const localSaleForm = document.getElementById('local-sale-form');
 const localSaleProduct = document.getElementById('local-sale-product');
+const localSaleCurrency = document.getElementById('local-sale-currency');
 const localSaleDate = document.getElementById('local-sale-date');
 const localSaleQuantity = document.getElementById('local-sale-quantity');
 const localSalePrice = document.getElementById('local-sale-price');
@@ -76,6 +77,13 @@ let usdCopRateDate = null;
 let usdCopRateStatus = 'Consultando tasa USD/COP…';
 let usdCopRateRequest = null;
 let usdCopRateRefreshTimer = null;
+let localSaleVesBaseRate = Number(window.PAYMENT_CONFIG?.exchangeRates?.VES || window.PAYMENT_CONFIG?.exchangeRate) || 849.564;
+const localSaleVesAdjustment = Number.isFinite(Number(window.PAYMENT_CONFIG?.vesRateAdjustment)) && Number(window.PAYMENT_CONFIG?.vesRateAdjustment) >= 0
+    ? Number(window.PAYMENT_CONFIG.vesRateAdjustment)
+    : 30;
+let localSaleVesRateUpdatedAt = '';
+let localSaleVesRateStatus = 'Usando tasa de respaldo configurada';
+let localSaleVesRateRefreshTimer = null;
 const inventoryUnitPricesUsd = {
     p1: 11.28, p2: 9.66, p3: 11.28, p4: 1.18, p5: 10, p6: 9.99, p7: 0.97, p8: 4.51,
     p9: 1.18, p10: 0.48, p11: 0.97, p12: 0.97, p13: 0.81, p14: 1.18, p15: 11.28,
@@ -158,6 +166,28 @@ async function loadUsdCopRate() {
     return usdCopRateRequest;
 }
 
+async function loadLocalSaleVesRate() {
+    const ratesApiUrl = window.PAYMENT_CONFIG?.ratesApiUrl;
+    if (!ratesApiUrl) return;
+    try {
+        const response = await fetch(`${ratesApiUrl}?v=${Date.now()}`, { cache: 'no-store' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        const rate = Number(data?.rates?.VES);
+        if (!Number.isFinite(rate) || rate <= 0) throw new Error('Tasa USD/VES no valida');
+        localSaleVesBaseRate = rate;
+        localSaleVesRateUpdatedAt = new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
+        localSaleVesRateStatus = '';
+    } catch (error) {
+        console.warn('No se pudo actualizar la tasa USD/VES de ventas locales:', error);
+        localSaleVesRateStatus = localSaleVesRateUpdatedAt
+            ? 'No se pudo actualizar; se conserva la ultima tasa disponible'
+            : 'No se pudo actualizar; se usa la tasa de respaldo configurada';
+    }
+    updateLocalSaleCurrencyUi();
+    updateLocalSaleTotalPreview();
+}
+
 const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, char => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
 }[char]));
@@ -220,7 +250,9 @@ function showOrders() {
     loadAdminProductCategories();
     loadAdminPromotionSummary();
     loadUsdCopRate();
+    loadLocalSaleVesRate();
     if (!usdCopRateRefreshTimer) usdCopRateRefreshTimer = setInterval(loadUsdCopRate, 30 * 60 * 1000);
+    if (!localSaleVesRateRefreshTimer) localSaleVesRateRefreshTimer = setInterval(loadLocalSaleVesRate, window.PAYMENT_CONFIG?.ratesRefreshMs || 5 * 60 * 1000);
     subscribeToOrders();
     loadAdminChats();
     subscribeToAdminChats();
@@ -1183,7 +1215,46 @@ function renderLocalSaleProductOptions() {
     updateLocalSalePriceFromProduct();
 }
 
+function updateLocalSaleCurrencyUi() {
+    const currency = localSaleCurrency.value;
+    const priceLabel = document.getElementById('local-sale-price-label');
+    const totalLabel = document.getElementById('local-sale-total-label');
+    const rateStatus = document.getElementById('local-sale-rate');
+    if (currency === 'COP') {
+        priceLabel.textContent = 'Total cobrado por toda la venta (COP)';
+        totalLabel.textContent = 'Total cobrado';
+        localSalePrice.max = '999999999999';
+        localSalePrice.step = '1';
+        localSalePrice.placeholder = 'Ej. 26000';
+        rateStatus.classList.add('hidden');
+    } else if (currency === 'VES') {
+        priceLabel.textContent = 'Precio por unidad (USD)';
+        totalLabel.textContent = 'Total cobrado en bolívares';
+        localSalePrice.max = '999999.99';
+        localSalePrice.step = '0.01';
+        localSalePrice.placeholder = 'Ej. 1.30';
+        const appliedRate = localSaleVesBaseRate + localSaleVesAdjustment;
+        const rateText = `Tasa aplicada: Bs. ${formatVes(appliedRate)} por USD (automática + ajuste comercial)`;
+        rateStatus.textContent = localSaleVesRateStatus
+            ? `${rateText}; ${localSaleVesRateStatus}`
+            : `${rateText}${localSaleVesRateUpdatedAt ? `; actualizada ${localSaleVesRateUpdatedAt}` : ''}`;
+        rateStatus.classList.remove('hidden');
+    } else {
+        priceLabel.textContent = 'Precio por unidad (USD)';
+        totalLabel.textContent = 'Total cobrado';
+        localSalePrice.max = '999999.99';
+        localSalePrice.step = '0.01';
+        localSalePrice.placeholder = 'Ej. 1.30';
+        rateStatus.classList.add('hidden');
+    }
+    localSalePrice.min = '0.01';
+}
+
 function updateLocalSalePriceFromProduct() {
+    if (localSaleCurrency.value === 'COP') {
+        updateLocalSaleTotalPreview();
+        return;
+    }
     const product = inventoryProducts.find(item => item.product_id === localSaleProduct.value);
     if (product?.price_usd !== null && product?.price_usd !== undefined) {
         localSalePrice.value = Number(product.price_usd).toFixed(2);
@@ -1193,15 +1264,38 @@ function updateLocalSalePriceFromProduct() {
     updateLocalSaleTotalPreview();
 }
 
+function handleLocalSaleCurrencyChange() {
+    localSalePrice.value = '';
+    updateLocalSaleCurrencyUi();
+    updateLocalSalePriceFromProduct();
+}
+
+function formatLocalSaleAmount(amount, currency) {
+    if (currency === 'VES') {
+        return `Bs. ${formatVes(amount)}`;
+    }
+    return new Intl.NumberFormat(currency === 'COP' ? 'es-CO' : 'en-US', {
+        style: 'currency',
+        currency,
+        minimumFractionDigits: currency === 'COP' ? 0 : 2,
+        maximumFractionDigits: currency === 'COP' ? 0 : 2
+    }).format(Number(amount || 0));
+}
+
 function updateLocalSaleTotalPreview() {
+    const currency = localSaleCurrency.value;
     const quantity = Number(localSaleQuantity.value);
-    const price = Number(localSalePrice.value);
-    const total = Number.isFinite(quantity) && quantity > 0 && Number.isFinite(price) && price > 0
-        ? quantity * price
-        : 0;
-    document.getElementById('local-sale-total').textContent = new Intl.NumberFormat('en-US', {
-        style: 'currency', currency: 'USD'
-    }).format(total);
+    const amount = Number(localSalePrice.value);
+    let total = 0;
+    if (Number.isFinite(amount) && amount > 0) {
+        if (currency === 'COP') {
+            total = amount;
+        } else if (Number.isFinite(quantity) && quantity > 0) {
+            total = amount * quantity;
+            if (currency === 'VES') total *= localSaleVesBaseRate + localSaleVesAdjustment;
+        }
+    }
+    document.getElementById('local-sale-total').textContent = formatLocalSaleAmount(total, currency);
 }
 
 function renderLocalSales() {
@@ -1214,14 +1308,21 @@ function renderLocalSales() {
         const date = new Date(`${sale.sold_on}T12:00:00`);
         const dateLabel = new Intl.DateTimeFormat('es-VE', { dateStyle: 'medium' }).format(date);
         const unit = sale.unit === 'metro' ? 'm' : 'unidades';
-        const price = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(sale.unit_price_usd));
-        const total = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(sale.total_usd));
+        const currency = sale.currency || 'USD';
+        const amount = formatLocalSaleAmount(sale.total_amount ?? sale.total_usd, currency);
+        const unitPrice = sale.unit_price_usd === null || sale.unit_price_usd === undefined
+            ? ''
+            : `<span class="text-slate-400">$${Number(sale.unit_price_usd).toFixed(2)} por ${sale.unit === 'metro' ? 'metro' : 'unidad'}</span>`;
+        const rate = currency === 'VES' && sale.exchange_rate
+            ? `<p class="mt-1 text-[10px] text-slate-500">Tasa registrada: Bs. ${formatVes(sale.exchange_rate)} / USD</p>`
+            : '';
+        const totalCaption = currency === 'COP' ? 'Total en pesos colombianos' : `Total en ${currency}`;
         return `<article class="rounded-2xl border border-slate-800 bg-slate-900 p-4">
             <div class="flex items-start justify-between gap-3">
-                <div class="min-w-0"><p class="break-words text-sm font-bold text-white">${escapeHtml(sale.product_name)}</p><p class="mt-1 text-[11px] text-slate-400">${dateLabel} - ${sale.quantity} ${unit}</p></div>
-                <span class="shrink-0 rounded-full bg-emerald-500/10 px-2 py-1 text-[9px] font-black uppercase text-emerald-300">Producto</span>
+                <div class="min-w-0"><p class="break-words text-sm font-bold text-white">${escapeHtml(sale.product_name)}</p><p class="mt-1 text-[11px] text-slate-400">${dateLabel} - ${sale.quantity} ${unit}</p>${rate}</div>
+                <span class="shrink-0 rounded-full bg-emerald-500/10 px-2 py-1 text-[9px] font-black uppercase text-emerald-300">${currency}</span>
             </div>
-            <div class="mt-3 flex items-center justify-between border-t border-slate-800 pt-3 text-xs"><span class="text-slate-400">${price} por ${sale.unit === 'metro' ? 'metro' : 'unidad'}</span><strong class="text-emerald-200">${total}</strong></div>
+            <div class="mt-3 flex items-center justify-between border-t border-slate-800 pt-3 text-xs">${unitPrice}<span class="ml-auto text-right"><span class="block text-[9px] text-slate-500">${totalCaption}</span><strong class="text-emerald-200">${amount}</strong></span></div>
         </article>`;
     }).join('');
 }
@@ -1244,7 +1345,8 @@ async function registerLocalProductSale(event) {
     event.preventDefault();
     const productId = localSaleProduct.value;
     const quantity = Number(localSaleQuantity.value);
-    const price = Number(localSalePrice.value);
+    const currency = localSaleCurrency.value;
+    const amount = Number(localSalePrice.value);
     const soldOn = localSaleDate.value;
     const saveButton = document.getElementById('save-local-sale');
     if (!productId) {
@@ -1255,8 +1357,20 @@ async function registerLocalProductSale(event) {
         localSaleFormStatus.textContent = 'La cantidad debe ser un numero entero entre 1 y 99999.';
         return;
     }
-    if (!Number.isFinite(price) || price <= 0 || price > 999999.99) {
-        localSaleFormStatus.textContent = 'El precio por unidad debe ser mayor que cero y no superar 999999.99 USD.';
+    if (!Number.isFinite(amount) || amount <= 0) {
+        localSaleFormStatus.textContent = 'Indica un monto mayor que cero.';
+        return;
+    }
+    if (currency === 'COP' && (!Number.isInteger(amount) || amount > 999999999999)) {
+        localSaleFormStatus.textContent = 'El total en pesos colombianos debe ser un numero entero valido.';
+        return;
+    }
+    if (currency !== 'COP' && amount > 999999.99) {
+        localSaleFormStatus.textContent = 'El precio por unidad no puede superar 999999.99 USD.';
+        return;
+    }
+    if (currency === 'VES' && (!(localSaleVesBaseRate + localSaleVesAdjustment > 0))) {
+        localSaleFormStatus.textContent = 'No hay una tasa USD/VES valida para convertir esta venta.';
         return;
     }
     if (!soldOn || soldOn > localDateInputValue()) {
@@ -1267,10 +1381,15 @@ async function registerLocalProductSale(event) {
     saveButton.disabled = true;
     localSaleFormStatus.textContent = 'Guardando venta y descontando existencias...';
     try {
+        const exchangeRate = currency === 'VES'
+            ? Number((localSaleVesBaseRate + localSaleVesAdjustment).toFixed(6))
+            : null;
         const { data, error } = await supabaseClient.rpc('admin_record_local_product_sale', {
             p_product_id: productId,
             p_quantity: quantity,
-            p_unit_price_usd: price,
+            p_currency: currency,
+            p_amount: amount,
+            p_exchange_rate: exchangeRate,
             p_sold_on: soldOn
         });
         if (error) throw error;
@@ -1278,11 +1397,12 @@ async function registerLocalProductSale(event) {
         localSaleForm.reset();
         localSaleDate.value = localDateInputValue();
         localSaleQuantity.value = '1';
+        updateLocalSaleCurrencyUi();
         await loadAdminInventory();
         localSaleProduct.value = data.product_id;
         updateLocalSalePriceFromProduct();
         await loadLocalSales();
-        localSaleFormStatus.textContent = `Venta guardada: ${data.quantity} ${data.unit === 'metro' ? 'm' : 'unidades'} de ${data.product_name}. Stock restante: ${data.remaining_stock}.`;
+        localSaleFormStatus.textContent = `Venta guardada: ${data.quantity} ${data.unit === 'metro' ? 'm' : 'unidades'} de ${data.product_name}. Cobro: ${formatLocalSaleAmount(data.total_amount, data.currency)}. Stock restante: ${data.remaining_stock}.`;
     } catch (error) {
         console.error('Error registrando la venta local:', error);
         localSaleFormStatus.textContent = error.message || 'No se pudo registrar la venta local.';
@@ -2063,9 +2183,11 @@ document.getElementById('refresh-inventory').addEventListener('click', loadAdmin
 document.getElementById('refresh-local-sales').addEventListener('click', loadLocalSales);
 localSaleForm.addEventListener('submit', registerLocalProductSale);
 localSaleProduct.addEventListener('change', updateLocalSalePriceFromProduct);
+localSaleCurrency.addEventListener('change', handleLocalSaleCurrencyChange);
 localSaleQuantity.addEventListener('input', updateLocalSaleTotalPreview);
 localSalePrice.addEventListener('input', updateLocalSaleTotalPreview);
 localSaleDate.value = localDateInputValue();
+updateLocalSaleCurrencyUi();
 document.getElementById('migrate-product-images').addEventListener('click', migrateLegacyProductImages);
 document.getElementById('toggle-add-product').addEventListener('click', event => {
     const isHidden = addProductForm.classList.toggle('hidden');
