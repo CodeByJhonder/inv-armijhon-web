@@ -1433,6 +1433,252 @@ async function deleteLocalSalesPeriod(period) {
     await deleteLocalSales({ ...range, label: labels[period] });
 }
 
+function localSalesExportRange() {
+    const value = document.getElementById('local-sales-export-date').value;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || value > localDateInputValue()) return null;
+    const [year, month, day] = value.split('-').map(Number);
+    const anchor = new Date(Date.UTC(year, month - 1, day, 12));
+    const period = document.getElementById('local-sales-export-period').value;
+    let from = value;
+    let through = value;
+    if (period === 'week') {
+        const monday = new Date(anchor);
+        monday.setUTCDate(anchor.getUTCDate() - ((anchor.getUTCDay() + 6) % 7));
+        const sunday = new Date(monday);
+        sunday.setUTCDate(monday.getUTCDate() + 6);
+        from = localDateInputValue(monday);
+        through = localDateInputValue(sunday);
+    } else if (period === 'fortnight') {
+        from = `${value.slice(0, 7)}-${day <= 15 ? '01' : '16'}`;
+        through = day <= 15
+            ? `${value.slice(0, 7)}-15`
+            : localDateInputValue(new Date(Date.UTC(year, month, 0, 12)));
+    } else if (period === 'month') {
+        from = `${value.slice(0, 7)}-01`;
+        through = localDateInputValue(new Date(Date.UTC(year, month, 0, 12)));
+    } else if (period === 'year') {
+        from = `${year}-01-01`;
+        through = `${year}-12-31`;
+    }
+    const today = localDateInputValue();
+    if (through > today) through = today;
+    const labels = {
+        day: 'Día', week: 'Semana (lunes a domingo)',
+        fortnight: day <= 15 ? 'Quincena (1 al 15)' : 'Quincena (16 al fin de mes)',
+        month: 'Mes', year: 'Año'
+    };
+    return { from, through, label: labels[period] };
+}
+
+function updateLocalSalesExportRange() {
+    const range = localSalesExportRange();
+    document.getElementById('local-sales-export-range').textContent = range
+        ? `${range.label}: ${range.from} al ${range.through}`
+        : 'Selecciona una fecha válida que no sea futura.';
+}
+
+function localSalesReportSummary(sales) {
+    const totals = {};
+    const tickets = new Set();
+    let units = 0;
+    sales.forEach(sale => {
+        const currency = sale.currency || 'USD';
+        totals[currency] = (totals[currency] || 0) + Number(sale.total_amount ?? sale.total_usd ?? 0);
+        tickets.add(sale.batch_id || sale.id);
+        units += Number(sale.quantity || 0);
+    });
+    return { totals, tickets: tickets.size, units };
+}
+
+function localSalesTotalsLabel(totals) {
+    const currencies = ['USD', 'VES', 'COP'].filter(currency => totals[currency] !== undefined);
+    return currencies.length
+        ? currencies.map(currency => formatLocalSaleAmount(totals[currency], currency)).join('   |   ')
+        : 'Sin ventas registradas';
+}
+
+function localSalesFileTimestamp(date = new Date()) {
+    return new Intl.DateTimeFormat('es-VE', { dateStyle: 'short', timeStyle: 'short' }).format(date);
+}
+
+async function loadLocalSalesReport(range) {
+    const { data, error } = await supabaseClient.rpc('admin_export_local_sales', {
+        p_from: range.from,
+        p_through: range.through
+    });
+    if (error) throw error;
+    return data || [];
+}
+
+async function getBrandLogoDataUrl() {
+    const response = await fetch('assets/images/logo.png');
+    if (!response.ok) throw new Error('No se pudo cargar el logo para el informe.');
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    let binary = '';
+    for (let index = 0; index < bytes.length; index += 0x8000) {
+        binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
+    }
+    return `data:image/png;base64,${btoa(binary)}`;
+}
+
+function downloadLocalSalesFile(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function localSalesReportRows(sales) {
+    return sales.map((sale, index) => [
+        index + 1,
+        sale.sold_on,
+        sale.product_name,
+        Number(sale.quantity),
+        sale.unit === 'metro' ? 'm' : 'unidades',
+        sale.currency || 'USD',
+        sale.currency === 'COP' ? '' : Number(sale.unit_price_usd ?? 0),
+        sale.currency === 'VES' ? Number(sale.exchange_rate ?? 0) : '',
+        Number(sale.total_amount ?? sale.total_usd ?? 0)
+    ]);
+}
+
+async function exportLocalSalesExcel() {
+    const range = localSalesExportRange();
+    const status = document.getElementById('local-sales-export-status');
+    const button = document.getElementById('export-local-sales-excel');
+    if (!range) { status.textContent = 'Selecciona una fecha válida que no sea futura.'; return; }
+    if (!window.ExcelJS) { status.textContent = 'No se pudo cargar la herramienta de Excel. Recarga la página e inténtalo de nuevo.'; return; }
+    button.disabled = true;
+    status.textContent = 'Preparando el archivo Excel...';
+    try {
+        const sales = await loadLocalSalesReport(range);
+        const summary = localSalesReportSummary(sales);
+        const workbook = new ExcelJS.Workbook();
+        workbook.creator = 'INV. Armijhon';
+        workbook.created = new Date();
+        const sheet = workbook.addWorksheet('Ventas', { views: [{ state: 'frozen', ySplit: 9 }] });
+        sheet.columns = [
+            { width: 7 }, { width: 14 }, { width: 38 }, { width: 12 },
+            { width: 14 }, { width: 12 }, { width: 20 }, { width: 18 }, { width: 20 }
+        ];
+        sheet.mergeCells('C1:I2');
+        sheet.getCell('C1').value = 'INV. ARMIJHON';
+        sheet.getCell('C1').font = { name: 'Aptos Display', size: 24, bold: true, color: { argb: 'FFF7F3EA' } };
+        sheet.getCell('C1').alignment = { vertical: 'middle' };
+        sheet.getCell('C1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF201D18' } };
+        sheet.mergeCells('C3:I3');
+        sheet.getCell('C3').value = 'REGISTRO DE VENTAS LOCALES';
+        sheet.getCell('C3').font = { size: 13, bold: true, color: { argb: 'FFC69A54' } };
+        sheet.getCell('C4').value = 'Período';
+        sheet.getCell('D4').value = `${range.label}: ${range.from} al ${range.through}`;
+        sheet.mergeCells('D4:I4');
+        sheet.getCell('C5').value = 'Generado';
+        sheet.getCell('D5').value = localSalesFileTimestamp();
+        sheet.mergeCells('D5:I5');
+        sheet.getCell('C6').value = 'Ventas';
+        sheet.getCell('D6').value = summary.tickets;
+        sheet.getCell('E6').value = 'Líneas';
+        sheet.getCell('F6').value = sales.length;
+        sheet.getCell('G6').value = 'Unidades';
+        sheet.getCell('H6').value = summary.units;
+        sheet.getCell('C7').value = 'Totales por moneda';
+        sheet.getCell('D7').value = localSalesTotalsLabel(summary.totals);
+        sheet.mergeCells('D7:I7');
+        ['C4', 'C5', 'C6', 'E6', 'G6', 'C7'].forEach(address => {
+            sheet.getCell(address).font = { bold: true, color: { argb: 'FF6B5B45' } };
+        });
+        const logoId = workbook.addImage({ base64: await getBrandLogoDataUrl(), extension: 'png' });
+        sheet.addImage(logoId, { tl: { col: 0, row: 0 }, ext: { width: 130, height: 50 } });
+        const table = sheet.addTable({
+            name: 'DetalleVentas', ref: 'A9', headerRow: true, totalsRow: false,
+            style: { theme: 'TableStyleMedium4', showRowStripes: true },
+            columns: ['N.º', 'Fecha', 'Producto', 'Cantidad', 'Unidad', 'Moneda', 'Precio unitario USD', 'Tasa USD/VES', 'Total cobrado'].map(name => ({ name })),
+            rows: localSalesReportRows(sales)
+        });
+        const amountColumn = 9;
+        for (let row = 10; row < 10 + sales.length; row++) {
+            sheet.getCell(row, 7).numFmt = '0.00';
+            sheet.getCell(row, 8).numFmt = '0.000000';
+            const currency = sales[row - 10].currency || 'USD';
+            sheet.getCell(row, amountColumn).numFmt = currency === 'COP' ? '#,##0' : currency === 'VES' ? '"Bs. "#,##0.00' : '"$"#,##0.00';
+        }
+        sheet.getRow(9).height = 30;
+        sheet.pageSetup = { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, paperSize: 9 };
+        sheet.headerFooter.oddFooter = '&CINV. Armijhon  •  Página &P de &N';
+        const bytes = await workbook.xlsx.writeBuffer();
+        const filename = `ventas-inv-armijhon-${range.from}-a-${range.through}.xlsx`;
+        downloadLocalSalesFile(new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), filename);
+        status.textContent = `${sales.length} líneas exportadas a Excel.`;
+    } catch (error) {
+        console.error('Error exportando ventas a Excel:', error);
+        status.textContent = error.message || 'No se pudo crear el archivo Excel.';
+    } finally { button.disabled = false; }
+}
+
+async function exportLocalSalesPdf() {
+    const range = localSalesExportRange();
+    const status = document.getElementById('local-sales-export-status');
+    const button = document.getElementById('export-local-sales-pdf');
+    if (!range) { status.textContent = 'Selecciona una fecha válida que no sea futura.'; return; }
+    if (!window.jspdf?.jsPDF) { status.textContent = 'No se pudo cargar la herramienta de PDF. Recarga la página e inténtalo de nuevo.'; return; }
+    button.disabled = true;
+    status.textContent = 'Preparando el archivo PDF...';
+    try {
+        const sales = await loadLocalSalesReport(range);
+        const summary = localSalesReportSummary(sales);
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+        const logo = await getBrandLogoDataUrl();
+        doc.addImage(logo, 'PNG', 14, 11, 39, 15);
+        doc.setTextColor(32, 29, 24);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(21);
+        doc.text('INV. ARMIJHON', 56, 19);
+        doc.setTextColor(153, 111, 48);
+        doc.setFontSize(11);
+        doc.text('REGISTRO DE VENTAS LOCALES', 56, 27);
+        doc.setTextColor(80, 76, 68);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.text(`${range.label}: ${range.from} al ${range.through}`, 56, 34);
+        doc.text(`Generado: ${localSalesFileTimestamp()}     Ventas: ${summary.tickets}     Líneas: ${sales.length}     Unidades: ${summary.units}`, 14, 43);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Totales por moneda: ${localSalesTotalsLabel(summary.totals)}`, 14, 50);
+        const rows = sales.map((sale, index) => [
+            String(index + 1), sale.sold_on, sale.product_name,
+            `${sale.quantity} ${sale.unit === 'metro' ? 'm' : 'unidades'}`,
+            sale.currency === 'COP' ? 'COP' : `${sale.currency || 'USD'}${sale.currency === 'VES' ? ` / tasa ${Number(sale.exchange_rate || 0).toFixed(2)}` : ''}`,
+            sale.currency === 'COP' ? '—' : Number(sale.unit_price_usd ?? 0).toFixed(2),
+            formatLocalSaleAmount(sale.total_amount ?? sale.total_usd, sale.currency || 'USD')
+        ]);
+        doc.autoTable({
+            startY: 56,
+            head: [['N.º', 'Fecha', 'Producto', 'Cantidad', 'Moneda / tasa', 'Precio unitario USD', 'Total cobrado']],
+            body: rows.length ? rows : [['—', '—', 'Sin ventas en este período', '—', '—', '—', '—']],
+            theme: 'striped',
+            headStyles: { fillColor: [44, 39, 31], textColor: [247, 243, 234], fontStyle: 'bold' },
+            alternateRowStyles: { fillColor: [248, 245, 238] },
+            styles: { font: 'helvetica', fontSize: 8, cellPadding: 2.5, textColor: [45, 43, 39] },
+            columnStyles: { 0: { cellWidth: 12 }, 1: { cellWidth: 23 }, 2: { cellWidth: 72 }, 3: { cellWidth: 27 }, 4: { cellWidth: 37 }, 5: { cellWidth: 34 }, 6: { cellWidth: 38 } },
+            didDrawPage: data => {
+                const pageHeight = doc.internal.pageSize.getHeight();
+                doc.setFontSize(8);
+                doc.setTextColor(125, 119, 108);
+                doc.text('Registro de ventas de INV. Armijhon', 14, pageHeight - 7);
+                doc.text(`Página ${data.pageNumber}`, doc.internal.pageSize.getWidth() - 28, pageHeight - 7);
+            }
+        });
+        const filename = `ventas-inv-armijhon-${range.from}-a-${range.through}.pdf`;
+        doc.save(filename);
+        status.textContent = `${sales.length} líneas exportadas a PDF.`;
+    } catch (error) {
+        console.error('Error exportando ventas a PDF:', error);
+        status.textContent = error.message || 'No se pudo crear el archivo PDF.';
+    } finally { button.disabled = false; }
+}
+
 async function loadLocalSales() {
     localSalesStatus.textContent = 'Cargando ventas locales...';
     try {
@@ -2292,6 +2538,13 @@ document.getElementById('local-sales-delete-date').value = localDateInputValue()
 document.getElementById('local-sales-delete-date').max = localDateInputValue();
 document.getElementById('local-sales-delete-month').value = localDateInputValue().slice(0, 7);
 document.getElementById('local-sales-delete-month').max = localDateInputValue().slice(0, 7);
+document.getElementById('local-sales-export-date').value = localDateInputValue();
+document.getElementById('local-sales-export-date').max = localDateInputValue();
+updateLocalSalesExportRange();
+document.getElementById('local-sales-export-period').addEventListener('change', updateLocalSalesExportRange);
+document.getElementById('local-sales-export-date').addEventListener('change', updateLocalSalesExportRange);
+document.getElementById('export-local-sales-excel').addEventListener('click', exportLocalSalesExcel);
+document.getElementById('export-local-sales-pdf').addEventListener('click', exportLocalSalesPdf);
 document.querySelectorAll('[data-delete-sales-period]').forEach(button => {
     button.addEventListener('click', () => deleteLocalSalesPeriod(button.dataset.deleteSalesPeriod));
 });

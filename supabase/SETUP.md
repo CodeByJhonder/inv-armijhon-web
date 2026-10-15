@@ -363,16 +363,22 @@ las rutas de respaldo del catalogo.
    `supabase/local-sales-batch-migration.sql`.
 4. Para habilitar el borrado de registros, ejecuta despues
    `supabase/local-sales-delete-migration.sql`.
-5. Publica `admin.html` y `assets/js/admin.js`.
-6. En **Ventas locales**, agrega una linea por producto, indica cantidad, fecha y moneda.
+5. Para habilitar exportaciones por período, ejecuta despues
+   `supabase/local-sales-export-migration.sql`.
+6. Publica `admin.html` y `assets/js/admin.js`.
+7. En **Ventas locales**, agrega una linea por producto, indica cantidad, fecha y moneda.
    USD usa precio por unidad; VES convierte esos precios con la misma tasa USD/VES automatica
    mas el ajuste comercial de la pagina y guarda la tasa aplicada. COP pide el total final
    en pesos para cada producto y lo guarda sin conversion.
-7. Al guardar, todas las lineas se registran dentro de una transaccion: si falta stock para
+8. Al guardar, todas las lineas se registran dentro de una transaccion: si falta stock para
    cualquier producto, no se guarda ninguna linea ni se descuenta inventario. Las ventas
    quedan agrupadas en el historial y separadas de los pedidos web.
-8. En el historial puedes seleccionar lineas individuales o borrar todas las ventas de un
+9. En el historial puedes seleccionar lineas individuales o borrar todas las ventas de un
    dia, semana (lunes a domingo) o mes. Borrar historial no modifica el inventario.
+10. Para exportar, elige una fecha de referencia y el período **día, semana, quincena,
+    mes o año**. Descarga el informe como Excel o PDF. Incluye logo, rango, fecha de
+    generación, cantidad de ventas y productos, totales separados por moneda y detalle
+    tabulado de cada línea. Las quincenas van del 1 al 15 y del 16 al fin de mes.
 
 El historial muestra las 200 ventas mas recientes y conserva el nombre, la unidad, la
 moneda, el total cobrado y la tasa VES aplicada al vender.

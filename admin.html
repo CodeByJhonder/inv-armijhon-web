@@ -35,6 +35,9 @@
     <script src="assets/js/supabase-config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.4/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body class="min-h-screen bg-slate-950 text-slate-100 font-sans">
     <main class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
@@ -339,6 +342,32 @@
                         </div>
                     </form>
                 </section>
+                <section class="mb-5 rounded-2xl border border-violet-400/20 bg-violet-500/5 p-4 sm:p-5" aria-labelledby="local-sales-export-heading">
+                    <div class="mb-4">
+                        <h3 id="local-sales-export-heading" class="text-sm font-black"><i class="fa-solid fa-file-export mr-2 text-violet-300" aria-hidden="true"></i>Exportar historial de ventas</h3>
+                        <p class="mt-1 text-xs text-slate-400">Descarga un informe tabulado en Excel o PDF con totales separados por moneda.</p>
+                    </div>
+                    <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                        <label class="text-xs font-bold text-slate-300">Período
+                            <select id="local-sales-export-period" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white">
+                                <option value="day">Día</option>
+                                <option value="week">Semana</option>
+                                <option value="fortnight">Quincena</option>
+                                <option value="month">Mes</option>
+                                <option value="year">Año</option>
+                            </select>
+                        </label>
+                        <label class="text-xs font-bold text-slate-300">Fecha de referencia
+                            <input id="local-sales-export-date" type="date" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white">
+                        </label>
+                        <p id="local-sales-export-range" class="self-end pb-2 text-xs text-slate-400 sm:col-span-2" aria-live="polite"></p>
+                    </div>
+                    <div class="mt-4 flex flex-wrap items-center gap-3">
+                        <button id="export-local-sales-excel" type="button" class="rounded-xl bg-emerald-700 px-4 py-2.5 text-xs font-black text-white transition hover:bg-emerald-600 disabled:opacity-50"><i class="fa-solid fa-file-excel mr-2" aria-hidden="true"></i>Exportar Excel</button>
+                        <button id="export-local-sales-pdf" type="button" class="rounded-xl bg-rose-800 px-4 py-2.5 text-xs font-black text-white transition hover:bg-rose-700 disabled:opacity-50"><i class="fa-solid fa-file-pdf mr-2" aria-hidden="true"></i>Exportar PDF</button>
+                        <p id="local-sales-export-status" class="text-xs text-slate-400" role="status" aria-live="polite"></p>
+                    </div>
+                </section>
                 <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
                     <h3 class="text-sm font-black">Historial de ventas</h3>
                     <p id="local-sales-status" class="text-xs text-slate-400" role="status" aria-live="polite"></p>
@@ -530,7 +559,7 @@
     <script src="assets/js/payment-config.js"></script>
     <script src="assets/js/chat-push.js"></script>
     <script src="assets/js/chat-attachments.js"></script>
-    <script src="assets/js/admin.js?v=20261015-4"></script>
+    <script src="assets/js/admin.js?v=20261015-5"></script>
     <script>
         if (!window.supabaseClient && !window.supabase) {
             document.getElementById('login-status').textContent = 'No se pudo cargar Supabase. Revisa tu conexión a internet y recarga la página.';
