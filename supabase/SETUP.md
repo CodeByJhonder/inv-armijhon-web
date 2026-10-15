@@ -359,13 +359,16 @@ las rutas de respaldo del catalogo.
 2. Para habilitar cobros en varias monedas, ejecuta despues
    `supabase/local-sales-currency-migration.sql`. Esta migracion conserva las ventas
    anteriores como USD.
-3. Publica `admin.html` y `assets/js/admin.js`.
-4. En **Ventas locales**, elige producto, fecha, cantidad y moneda. USD usa precio por
-   unidad; VES convierte ese precio con la misma tasa USD/VES automatica mas el ajuste
-   comercial de la pagina y guarda la tasa aplicada. COP pide el total final en pesos para
-   todas las unidades y lo guarda sin conversion.
-5. Cada venta descuenta el inventario dentro de la misma transaccion; si no hay stock
-   suficiente, no se registra. Las ventas se mantienen separadas de los pedidos web.
+3. Para registrar varios productos en una sola venta, ejecuta despues
+   `supabase/local-sales-batch-migration.sql`.
+4. Publica `admin.html` y `assets/js/admin.js`.
+5. En **Ventas locales**, agrega una linea por producto, indica cantidad, fecha y moneda.
+   USD usa precio por unidad; VES convierte esos precios con la misma tasa USD/VES automatica
+   mas el ajuste comercial de la pagina y guarda la tasa aplicada. COP pide el total final
+   en pesos para cada producto y lo guarda sin conversion.
+6. Al guardar, todas las lineas se registran dentro de una transaccion: si falta stock para
+   cualquier producto, no se guarda ninguna linea ni se descuenta inventario. Las ventas
+   quedan agrupadas en el historial y separadas de los pedidos web.
 
 El historial muestra las 200 ventas mas recientes y conserva el nombre, la unidad, la
 moneda, el total cobrado y la tasa VES aplicada al vender.

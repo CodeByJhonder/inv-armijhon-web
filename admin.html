@@ -305,39 +305,32 @@
                 <div class="mb-5 flex flex-wrap items-end justify-between gap-3">
                     <div>
                         <h2 id="local-sales-heading" class="text-xl font-black"><i class="fa-solid fa-store mr-2 text-emerald-300" aria-hidden="true"></i>Ventas locales</h2>
-                        <p class="mt-1 text-xs text-slate-400">Registra ventas de productos hechas en tu tienda. Cada registro descuenta existencias del inventario.</p>
+                        <p class="mt-1 text-xs text-slate-400">Registra uno o varios productos por venta. Todas las existencias se descuentan al guardar.</p>
                     </div>
                     <button id="refresh-local-sales" type="button" class="rounded-xl border border-slate-700 px-4 py-2 text-xs font-bold hover:bg-slate-800"><i class="fa-solid fa-rotate mr-2" aria-hidden="true"></i>Actualizar ventas</button>
                 </div>
                 <section class="mb-5 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4 sm:p-5" aria-labelledby="local-sale-form-heading">
-                    <h3 id="local-sale-form-heading" class="text-sm font-black">Registrar venta de producto</h3>
+                    <h3 id="local-sale-form-heading" class="text-sm font-black">Registrar venta de uno o varios productos</h3>
                     <form id="local-sale-form" class="mt-4 space-y-4">
                         <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                            <label class="text-xs font-bold text-slate-300 sm:col-span-2">Producto del inventario
-                                <select id="local-sale-product" name="productId" required class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-400">
-                                    <option value="">Cargando productos...</option>
-                                </select>
-                            </label>
                             <label class="text-xs font-bold text-slate-300">Moneda de cobro
                                 <select id="local-sale-currency" name="currency" required class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-400">
-                                    <option value="USD">Dólares (USD)</option>
-                                    <option value="VES">Bolívares (VES)</option>
+                                    <option value="USD">D&oacute;lares (USD)</option>
+                                    <option value="VES">Bol&iacute;vares (VES)</option>
                                     <option value="COP">Pesos colombianos (COP)</option>
                                 </select>
                             </label>
                             <label class="text-xs font-bold text-slate-300">Fecha de venta
                                 <input id="local-sale-date" name="soldOn" type="date" required class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-400">
                             </label>
-                            <label class="text-xs font-bold text-slate-300">Cantidad vendida
-                                <input id="local-sale-quantity" name="quantity" type="number" min="1" max="99999" step="1" value="1" required class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-400">
-                            </label>
-                            <label class="text-xs font-bold text-slate-300"><span id="local-sale-price-label">Precio por unidad (USD)</span>
-                                <input id="local-sale-price" name="amount" type="number" min="0.01" max="999999.99" step="0.01" required class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-400" placeholder="Ej. 1.30">
-                            </label>
-                            <div class="rounded-xl border border-slate-800 bg-slate-950/60 p-3 sm:col-span-2">
+                            <p id="local-sale-rate" class="hidden sm:col-span-2 text-[10px] text-slate-400" aria-live="polite"></p>
+                        </div>
+                        <div id="local-sale-lines" class="space-y-3"></div>
+                        <div class="flex flex-wrap items-center justify-between gap-3">
+                            <button id="add-local-sale-line" type="button" class="rounded-xl border border-emerald-500/40 px-4 py-2.5 text-xs font-bold text-emerald-200 transition hover:bg-emerald-500/10"><i class="fa-solid fa-plus mr-2" aria-hidden="true"></i>Agregar otro producto</button>
+                            <div class="min-w-48 rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-right">
                                 <p id="local-sale-total-label" class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Total de la venta</p>
                                 <p id="local-sale-total" class="mt-1 text-lg font-black text-emerald-200">$0.00</p>
-                                <p id="local-sale-rate" class="mt-1 hidden text-[10px] text-slate-400" aria-live="polite"></p>
                             </div>
                         </div>
                         <p id="local-sale-form-status" class="min-h-4 text-xs text-slate-400" role="status" aria-live="polite"></p>
@@ -519,7 +512,7 @@
     <script src="assets/js/payment-config.js"></script>
     <script src="assets/js/chat-push.js"></script>
     <script src="assets/js/chat-attachments.js"></script>
-    <script src="assets/js/admin.js?v=20261015-1"></script>
+    <script src="assets/js/admin.js?v=20261015-3"></script>
     <script>
         if (!window.supabaseClient && !window.supabase) {
             document.getElementById('login-status').textContent = 'No se pudo cargar Supabase. Revisa tu conexión a internet y recarga la página.';
