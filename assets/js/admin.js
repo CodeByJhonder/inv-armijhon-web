@@ -68,6 +68,7 @@ const productCatalogImageOverrides = {
 };
 let inventoryProducts = [];
 let localSales = [];
+const selectedLocalSaleIds = new Set();
 let ordersLoaded = false;
 let inventoryLoaded = false;
 let usdCopRate = null;
@@ -1325,6 +1326,7 @@ function renderLocalSales() {
     if (!localSalesList) return;
     if (!localSales.length) {
         localSalesList.innerHTML = '<p class="rounded-2xl border border-slate-800 p-6 text-center text-sm text-slate-400 md:col-span-2 2xl:col-span-3">Todavia no hay ventas locales registradas.</p>';
+        updateLocalSaleSelectionUi();
         return;
     }
     const groups = new Map();
@@ -1354,13 +1356,81 @@ function renderLocalSales() {
             const rate = currency === 'VES' && sale.exchange_rate
                 ? `<span class="text-slate-500"> - tasa ${formatVes(sale.exchange_rate)}</span>`
                 : '';
-            return `<li class="flex flex-wrap items-center justify-between gap-2 border-t border-slate-800 py-2 text-xs"><span class="min-w-0 break-words text-slate-200">${escapeHtml(sale.product_name)} <span class="text-slate-400">x ${sale.quantity} ${unit}</span>${unitPrice}${rate}</span><strong class="shrink-0 text-emerald-200">${amount}</strong></li>`;
+            return `<li class="flex flex-wrap items-center justify-between gap-2 border-t border-slate-800 py-2 text-xs"><label class="flex min-w-0 items-start gap-2 text-slate-200"><input type="checkbox" data-local-sale-select="${escapeHtml(sale.id)}" class="mt-0.5 accent-rose-500" ${selectedLocalSaleIds.has(sale.id) ? 'checked' : ''} aria-label="Seleccionar venta de ${escapeHtml(sale.product_name)}"><span class="min-w-0 break-words">${escapeHtml(sale.product_name)} <span class="text-slate-400">x ${sale.quantity} ${unit}</span>${unitPrice}${rate}</span></label><strong class="shrink-0 text-emerald-200">${amount}</strong></li>`;
         }).join('');
         return `<article class="rounded-2xl border border-slate-800 bg-slate-900 p-4">
             <div class="flex items-start justify-between gap-3"><div><p class="text-sm font-bold text-white">Venta local - ${dateLabel}</p><p class="mt-1 text-[10px] text-slate-400">${lines.length} producto${lines.length === 1 ? '' : 's'}</p></div><div class="flex flex-wrap justify-end gap-1">${totalsMarkup}</div></div>
             <ul class="mt-3">${lineMarkup}</ul>
         </article>`;
     }).join('');
+    updateLocalSaleSelectionUi();
+}
+
+function updateLocalSaleSelectionUi() {
+    const knownIds = new Set(localSales.map(sale => sale.id));
+    selectedLocalSaleIds.forEach(id => { if (!knownIds.has(id)) selectedLocalSaleIds.delete(id); });
+    const panel = document.getElementById('local-sales-delete-selection');
+    const count = selectedLocalSaleIds.size;
+    panel.classList.toggle('hidden', count === 0);
+    panel.classList.toggle('flex', count > 0);
+    document.getElementById('local-sales-selected-count').textContent = `${count} venta${count === 1 ? '' : 's'} seleccionada${count === 1 ? '' : 's'} (líneas de producto).`;
+}
+
+async function deleteLocalSales({ ids = null, from = null, through = null, label }) {
+    const prompt = ids
+        ? `¿Eliminar ${ids.length} línea${ids.length === 1 ? '' : 's'} de venta seleccionada${ids.length === 1 ? '' : 's'}? El inventario no cambiará.`
+        : `¿Eliminar todas las ventas registradas ${label}? El inventario no cambiará.`;
+    if (!window.confirm(prompt)) return;
+
+    localSalesStatus.textContent = 'Eliminando registros del historial...';
+    try {
+        const { data, error } = await supabaseClient.rpc('admin_delete_local_sales', {
+            p_sale_ids: ids,
+            p_from: from,
+            p_through: through
+        });
+        if (error) throw error;
+        if (ids) selectedLocalSaleIds.clear();
+        await loadLocalSales();
+        localSalesStatus.textContent = `Se eliminaron ${data} registro${Number(data) === 1 ? '' : 's'} del historial. El inventario no fue modificado.`;
+    } catch (error) {
+        console.error('Error eliminando ventas locales:', error);
+        localSalesStatus.textContent = error.message || 'No se pudieron eliminar las ventas.';
+    }
+}
+
+function localSalesPeriodRange(period) {
+    if (period === 'month') {
+        const value = document.getElementById('local-sales-delete-month').value;
+        if (!/^\d{4}-\d{2}$/.test(value)) return null;
+        const [year, month] = value.split('-').map(Number);
+        const monthEnd = localDateInputValue(new Date(Date.UTC(year, month, 0, 12)));
+        const today = localDateInputValue();
+        return { from: `${value}-01`, through: monthEnd > today ? today : monthEnd };
+    }
+    const value = document.getElementById('local-sales-delete-date').value;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+    if (period === 'day') return { from: value, through: value };
+    const [year, month, day] = value.split('-').map(Number);
+    const anchor = new Date(Date.UTC(year, month - 1, day, 12));
+    const weekday = (anchor.getUTCDay() + 6) % 7;
+    const monday = new Date(anchor);
+    monday.setUTCDate(anchor.getUTCDate() - weekday);
+    const sunday = new Date(monday);
+    sunday.setUTCDate(monday.getUTCDate() + 6);
+    const today = localDateInputValue();
+    const weekEnd = localDateInputValue(sunday);
+    return { from: localDateInputValue(monday), through: weekEnd > today ? today : weekEnd };
+}
+
+async function deleteLocalSalesPeriod(period) {
+    const range = localSalesPeriodRange(period);
+    if (!range) {
+        localSalesStatus.textContent = period === 'month' ? 'Selecciona un mes válido.' : 'Selecciona una fecha válida.';
+        return;
+    }
+    const labels = { day: `el ${range.from}`, week: `desde el ${range.from} hasta el ${range.through}`, month: `durante ${range.from.slice(0, 7)}` };
+    await deleteLocalSales({ ...range, label: labels[period] });
 }
 
 async function loadLocalSales() {
@@ -2218,6 +2288,23 @@ logoutButton.addEventListener('click', async () => {
 document.getElementById('refresh-orders').addEventListener('click', loadOrders);
 document.getElementById('refresh-inventory').addEventListener('click', loadAdminInventory);
 document.getElementById('refresh-local-sales').addEventListener('click', loadLocalSales);
+document.getElementById('local-sales-delete-date').value = localDateInputValue();
+document.getElementById('local-sales-delete-date').max = localDateInputValue();
+document.getElementById('local-sales-delete-month').value = localDateInputValue().slice(0, 7);
+document.getElementById('local-sales-delete-month').max = localDateInputValue().slice(0, 7);
+document.querySelectorAll('[data-delete-sales-period]').forEach(button => {
+    button.addEventListener('click', () => deleteLocalSalesPeriod(button.dataset.deleteSalesPeriod));
+});
+document.getElementById('delete-selected-local-sales').addEventListener('click', () => {
+    deleteLocalSales({ ids: [...selectedLocalSaleIds], label: '' });
+});
+localSalesList.addEventListener('change', event => {
+    const checkbox = event.target.closest('[data-local-sale-select]');
+    if (!checkbox) return;
+    if (checkbox.checked) selectedLocalSaleIds.add(checkbox.dataset.localSaleSelect);
+    else selectedLocalSaleIds.delete(checkbox.dataset.localSaleSelect);
+    updateLocalSaleSelectionUi();
+});
 localSaleForm.addEventListener('submit', registerLocalProductSale);
 localSaleLines.addEventListener('change', event => {
     const line = event.target.closest('[data-local-sale-line]');

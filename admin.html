@@ -343,6 +343,24 @@
                     <h3 class="text-sm font-black">Historial de ventas</h3>
                     <p id="local-sales-status" class="text-xs text-slate-400" role="status" aria-live="polite"></p>
                 </div>
+                <section class="mb-4 rounded-2xl border border-rose-500/20 bg-rose-500/5 p-4" aria-label="Eliminar ventas del historial">
+                    <p class="text-xs text-slate-300">Eliminar historial no modifica el inventario. Los productos vendidos ya fueron descontados.</p>
+                    <div class="mt-3 flex flex-wrap items-end gap-3">
+                        <label class="text-xs font-bold text-slate-300">Día o fecha de referencia
+                            <input id="local-sales-delete-date" type="date" class="mt-1 block rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white">
+                        </label>
+                        <button type="button" data-delete-sales-period="day" class="rounded-xl border border-rose-500/30 px-3 py-2 text-xs font-bold text-rose-200 hover:bg-rose-500/10">Eliminar ese día</button>
+                        <button type="button" data-delete-sales-period="week" class="rounded-xl border border-rose-500/30 px-3 py-2 text-xs font-bold text-rose-200 hover:bg-rose-500/10">Eliminar esa semana</button>
+                        <label class="text-xs font-bold text-slate-300">Mes
+                            <input id="local-sales-delete-month" type="month" class="mt-1 block rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white">
+                        </label>
+                        <button type="button" data-delete-sales-period="month" class="rounded-xl border border-rose-500/30 px-3 py-2 text-xs font-bold text-rose-200 hover:bg-rose-500/10">Eliminar ese mes</button>
+                    </div>
+                    <div id="local-sales-delete-selection" class="mt-3 hidden items-center justify-between gap-3 rounded-xl border border-rose-500/20 bg-slate-950/60 p-3">
+                        <p id="local-sales-selected-count" class="text-xs text-slate-300"></p>
+                        <button id="delete-selected-local-sales" type="button" class="rounded-xl bg-rose-700 px-4 py-2 text-xs font-black text-white hover:bg-rose-600">Eliminar seleccionadas</button>
+                    </div>
+                </section>
                 <div id="local-sales-list" class="grid gap-3 md:grid-cols-2 2xl:grid-cols-3"></div>
             </section>
 
@@ -512,7 +530,7 @@
     <script src="assets/js/payment-config.js"></script>
     <script src="assets/js/chat-push.js"></script>
     <script src="assets/js/chat-attachments.js"></script>
-    <script src="assets/js/admin.js?v=20261015-3"></script>
+    <script src="assets/js/admin.js?v=20261015-4"></script>
     <script>
         if (!window.supabaseClient && !window.supabase) {
             document.getElementById('login-status').textContent = 'No se pudo cargar Supabase. Revisa tu conexión a internet y recarga la página.';

@@ -361,14 +361,18 @@ las rutas de respaldo del catalogo.
    anteriores como USD.
 3. Para registrar varios productos en una sola venta, ejecuta despues
    `supabase/local-sales-batch-migration.sql`.
-4. Publica `admin.html` y `assets/js/admin.js`.
-5. En **Ventas locales**, agrega una linea por producto, indica cantidad, fecha y moneda.
+4. Para habilitar el borrado de registros, ejecuta despues
+   `supabase/local-sales-delete-migration.sql`.
+5. Publica `admin.html` y `assets/js/admin.js`.
+6. En **Ventas locales**, agrega una linea por producto, indica cantidad, fecha y moneda.
    USD usa precio por unidad; VES convierte esos precios con la misma tasa USD/VES automatica
    mas el ajuste comercial de la pagina y guarda la tasa aplicada. COP pide el total final
    en pesos para cada producto y lo guarda sin conversion.
-6. Al guardar, todas las lineas se registran dentro de una transaccion: si falta stock para
+7. Al guardar, todas las lineas se registran dentro de una transaccion: si falta stock para
    cualquier producto, no se guarda ninguna linea ni se descuenta inventario. Las ventas
    quedan agrupadas en el historial y separadas de los pedidos web.
+8. En el historial puedes seleccionar lineas individuales o borrar todas las ventas de un
+   dia, semana (lunes a domingo) o mes. Borrar historial no modifica el inventario.
 
 El historial muestra las 200 ventas mas recientes y conserva el nombre, la unidad, la
 moneda, el total cobrado y la tasa VES aplicada al vender.
