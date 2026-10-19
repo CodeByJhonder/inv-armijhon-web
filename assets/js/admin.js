@@ -1266,6 +1266,7 @@ function updateLocalSaleCurrencyUi() {
             : `Precio por ${type === 'service' ? 'unidad de servicio' : 'unidad de producto'} (USD)`;
     });
     localSaleLines.querySelectorAll('.local-sale-line-amount').forEach(input => {
+        input.min = currency === 'COP' ? '1' : '0.01';
         input.max = currency === 'COP' ? '999999999999' : '999999.99';
         input.step = currency === 'COP' ? '1' : '0.01';
         input.placeholder = currency === 'COP' ? 'Ej. 26000' : 'Ej. 1.30';
@@ -2737,7 +2738,10 @@ localSaleLines.addEventListener('change', event => {
         updateLocalSaleTotalPreview();
     }
 });
-localSaleLines.addEventListener('input', updateLocalSaleTotalPreview);
+localSaleLines.addEventListener('input', () => {
+    updateLocalSaleTotalPreview();
+    localSaleFormStatus.textContent = '';
+});
 localSaleLines.addEventListener('click', event => {
     const removeButton = event.target.closest('[data-remove-local-sale-line]');
     if (!removeButton) return;
