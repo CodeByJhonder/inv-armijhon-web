@@ -80,6 +80,9 @@
                         <button type="button" data-admin-page="local-sales" aria-current="false" class="admin-nav-button flex shrink-0 items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-bold text-slate-400 transition hover:bg-slate-800 hover:text-white lg:w-full">
                             <i class="fa-solid fa-store w-5 text-center" aria-hidden="true"></i><span>Ventas locales</span>
                         </button>
+                        <button type="button" data-admin-page="sales-history" aria-current="false" class="admin-nav-button flex shrink-0 items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-bold text-slate-400 transition hover:bg-slate-800 hover:text-white lg:w-full">
+                            <i class="fa-solid fa-clock-rotate-left w-5 text-center" aria-hidden="true"></i><span>Historial de ventas</span>
+                        </button>
                         <button type="button" data-admin-page="sales-reports" aria-current="false" class="admin-nav-button flex shrink-0 items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-bold text-slate-400 transition hover:bg-slate-800 hover:text-white lg:w-full">
                             <i class="fa-solid fa-chart-column w-5 text-center" aria-hidden="true"></i><span>Reportes de ventas</span>
                         </button>
@@ -313,7 +316,6 @@
                         <h2 id="local-sales-heading" class="text-xl font-black"><i class="fa-solid fa-store mr-2 text-emerald-300" aria-hidden="true"></i>Ventas locales</h2>
                         <p class="mt-1 text-xs text-slate-400">Registra productos del inventario y servicios. Solo los productos descuentan existencias.</p>
                     </div>
-                    <button id="refresh-local-sales" type="button" class="rounded-xl border border-slate-700 px-4 py-2 text-xs font-bold hover:bg-slate-800"><i class="fa-solid fa-rotate mr-2" aria-hidden="true"></i>Actualizar ventas</button>
                 </div>
                 <section class="mb-5 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4 sm:p-5" aria-labelledby="local-sale-form-heading">
                     <h3 id="local-sale-form-heading" class="text-sm font-black">Registrar venta de productos o servicios</h3>
@@ -357,9 +359,15 @@
                         </div>
                     </form>
                 </section>
-                <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-                    <h3 class="text-sm font-black">Historial de ventas</h3>
-                    <p id="local-sales-status" class="text-xs text-slate-400" role="status" aria-live="polite"></p>
+            </section>
+
+            <section id="admin-page-sales-history" data-admin-page-view class="hidden" aria-labelledby="sales-history-heading">
+                <div class="mb-3 flex flex-wrap items-end justify-between gap-3">
+                    <div>
+                        <h2 id="sales-history-heading" class="text-xl font-black"><i class="fa-solid fa-clock-rotate-left mr-2 text-emerald-300" aria-hidden="true"></i>Historial de ventas</h2>
+                        <p id="local-sales-status" class="mt-1 text-xs text-slate-400" role="status" aria-live="polite"></p>
+                    </div>
+                    <button id="refresh-local-sales" type="button" class="rounded-xl border border-slate-700 px-4 py-2 text-xs font-bold hover:bg-slate-800"><i class="fa-solid fa-rotate mr-2" aria-hidden="true"></i>Actualizar historial</button>
                 </div>
                 <section class="mb-4 rounded-2xl border border-rose-500/20 bg-rose-500/5 p-4" aria-label="Eliminar ventas del historial">
                     <p class="text-xs text-slate-300">Eliminar historial no modifica el inventario. Los productos descontados mantienen su stock actual; los servicios nunca descuentan existencias.</p>

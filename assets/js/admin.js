@@ -2783,11 +2783,12 @@ adminNavigation.addEventListener('click', event => {
     if (!button) return;
     showAdminPage(button.dataset.adminPage);
     if (button.dataset.adminPage === 'local-sales') {
-        Promise.all([loadLocalSaleServices(), loadLocalSales()]).catch(error => {
+        loadLocalSaleServices().catch(error => {
             console.error('Error cargando el catálogo de servicios locales:', error);
             document.getElementById('local-service-status').textContent = error.message || 'No se pudo cargar el catálogo de servicios.';
         });
     }
+    if (button.dataset.adminPage === 'sales-history') loadLocalSales();
     if (button.dataset.adminPage === 'sales-reports') updateLocalSalesExportRange();
 });
 ordersView.addEventListener('click', event => {
