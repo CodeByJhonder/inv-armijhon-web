@@ -344,6 +344,15 @@
                                 <p id="local-sale-total" class="mt-1 text-lg font-black text-emerald-200">$0.00</p>
                             </div>
                         </div>
+                        <div class="grid gap-3 rounded-xl border border-slate-800 bg-slate-950/50 p-3 sm:grid-cols-2">
+                            <label for="local-sale-received" class="text-xs font-bold text-slate-300">Monto recibido (<span id="local-sale-received-currency-label">USD</span>)
+                                <input id="local-sale-received" type="number" min="0" step="0.01" inputmode="decimal" autocomplete="off" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-400" placeholder="Ej. 10.00">
+                            </label>
+                            <div aria-live="polite" class="self-end rounded-lg border border-slate-800 px-3 py-2.5">
+                                <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Vuelto para el cliente</p>
+                                <strong id="local-sale-change" class="mt-1 block text-sm font-black text-slate-400">Ingresa el monto recibido</strong>
+                            </div>
+                        </div>
                         <div id="add-local-service-panel" class="hidden rounded-xl border border-sky-500/20 bg-slate-950/50 p-3">
                             <p class="mb-2 text-xs font-bold text-sky-200">Nuevo servicio</p>
                             <div class="grid gap-2 sm:grid-cols-[1fr_auto_auto]">

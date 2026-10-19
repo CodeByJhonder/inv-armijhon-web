@@ -1173,7 +1173,8 @@ function getLocalSaleDraftLines() {
         productId: line.querySelector('.local-sale-line-product').value,
         serviceId: line.querySelector('.local-sale-line-service').value,
         quantity: line.querySelector('.local-sale-line-quantity').value,
-        amount: line.querySelector('.local-sale-line-amount').value
+        amount: line.querySelector('.local-sale-line-amount').value,
+        autoAmount: line.querySelector('.local-sale-line-amount').dataset.autoFilledValue || ''
     }));
 }
 
@@ -1205,7 +1206,7 @@ function renderLocalSaleProductOptions(draftLines = getLocalSaleDraftLines()) {
                     <input class="local-sale-line-quantity mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-400" type="number" min="1" max="99999" step="1" value="${escapeHtml(line.quantity || '1')}" required>
                 </label>
                 <label class="text-xs font-bold text-slate-300 sm:col-span-2"><span class="local-sale-line-amount-label"></span>
-                    <input class="local-sale-line-amount mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-400" type="number" min="0.01" max="999999.99" step="0.01" value="${escapeHtml(line.amount)}" placeholder="Ej. 1.30" required>
+                    <input class="local-sale-line-amount mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-400" type="number" min="0.01" max="999999.99" step="0.01" value="${escapeHtml(line.amount)}" data-auto-filled-value="${escapeHtml(line.autoAmount || '')}" placeholder="Ej. 1.30" required>
                 </label>
             </div>
         </div>`).join('');
@@ -1214,6 +1215,8 @@ function renderLocalSaleProductOptions(draftLines = getLocalSaleDraftLines()) {
         row.querySelector('.local-sale-line-type').value = line.saleType || 'product';
         row.querySelector('.local-sale-line-product').value = line.productId || '';
         row.querySelector('.local-sale-line-service').value = line.serviceId || '';
+        const amountInput = row.querySelector('.local-sale-line-amount');
+        if (line.autoAmount) amountInput.dataset.autoFilledValue = line.autoAmount;
         updateLocalSaleLineTypeUi(row);
     });
     document.getElementById('add-local-sale-line').disabled = draftLines.length >= 30;
@@ -1238,6 +1241,12 @@ function updateLocalSaleCurrencyUi() {
         input.step = currency === 'COP' ? '1' : '0.01';
         input.placeholder = currency === 'COP' ? 'Ej. 26000' : 'Ej. 1.30';
     });
+    document.getElementById('local-sale-received-currency-label').textContent = currency;
+    const receivedInput = document.getElementById('local-sale-received');
+    receivedInput.step = currency === 'COP' ? '1' : '0.01';
+    receivedInput.min = '0';
+    receivedInput.max = currency === 'COP' ? '999999999999' : '999999999999.99';
+    receivedInput.placeholder = currency === 'COP' ? 'Ej. 10000' : currency === 'VES' ? 'Ej. 1000,00' : 'Ej. 10.00';
     if (currency === 'COP') {
         totalLabel.textContent = 'Total cobrado en pesos';
         rateStatus.classList.add('hidden');
@@ -1306,23 +1315,42 @@ async function createLocalSaleService() {
     } finally { button.disabled = false; }
 }
 
-function updateLocalSaleLinePriceFromProduct(line) {
+function updateLocalSaleLinePriceFromProduct(line, force = false) {
     if (line.querySelector('.local-sale-line-type').value !== 'product') return;
-    if (localSaleCurrency.value === 'COP') return;
     const productId = line.querySelector('.local-sale-line-product').value;
     const product = inventoryProducts.find(item => item.product_id === productId);
     const amountInput = line.querySelector('.local-sale-line-amount');
+    if (localSaleCurrency.value === 'COP') {
+        const previousAutoAmount = amountInput.dataset.autoFilledValue;
+        const isStillAutoFilled = previousAutoAmount !== undefined && amountInput.value === previousAutoAmount;
+        if (!force && amountInput.value && !isStillAutoFilled) return;
+        const quantity = Number(line.querySelector('.local-sale-line-quantity').value);
+        const totalCop = product && Number.isSafeInteger(Number(product.price_cop)) && Number.isInteger(quantity) && quantity > 0
+            ? Number(product.price_cop) * quantity
+            : null;
+        if (Number.isSafeInteger(totalCop) && totalCop > 0 && totalCop <= 999999999999) {
+            amountInput.value = String(totalCop);
+            amountInput.dataset.autoFilledValue = String(totalCop);
+        } else {
+            amountInput.value = '';
+            delete amountInput.dataset.autoFilledValue;
+        }
+        return;
+    }
     amountInput.value = product && product.price_usd !== null
         ? Number(product.price_usd).toFixed(2)
         : '';
+    delete amountInput.dataset.autoFilledValue;
 }
 
 function handleLocalSaleCurrencyChange() {
     localSaleLines.querySelectorAll('[data-local-sale-line]').forEach(line => {
         const amountInput = line.querySelector('.local-sale-line-amount');
         amountInput.value = '';
-        updateLocalSaleLinePriceFromProduct(line);
+        delete amountInput.dataset.autoFilledValue;
+        updateLocalSaleLinePriceFromProduct(line, true);
     });
+    document.getElementById('local-sale-received').value = '';
     updateLocalSaleCurrencyUi();
     updateLocalSaleTotalPreview();
 }
@@ -1354,6 +1382,36 @@ function updateLocalSaleTotalPreview() {
         }
     });
     document.getElementById('local-sale-total').textContent = formatLocalSaleAmount(total, currency);
+    updateLocalSaleChangePreview(total, currency);
+}
+
+function updateLocalSaleChangePreview(total, currency = localSaleCurrency.value) {
+    const receivedInput = document.getElementById('local-sale-received');
+    const changeOutput = document.getElementById('local-sale-change');
+    const received = Number(receivedInput.value);
+    if (total <= 0) {
+        changeOutput.textContent = 'Completa las líneas de la venta';
+        changeOutput.className = 'mt-1 block text-sm font-black text-slate-400';
+        return;
+    }
+    if (!receivedInput.value.trim()) {
+        changeOutput.textContent = 'Ingresa el monto recibido';
+        changeOutput.className = 'mt-1 block text-sm font-black text-slate-400';
+        return;
+    }
+    if (!Number.isFinite(received) || received < 0 || (currency === 'COP' && !Number.isInteger(received))) {
+        changeOutput.textContent = currency === 'COP' ? 'El monto debe ser un entero' : 'Ingresa un monto válido';
+        changeOutput.className = 'mt-1 block text-sm font-black text-rose-300';
+        return;
+    }
+    const difference = Math.round((received - total) * 100) / 100;
+    if (difference < 0) {
+        changeOutput.textContent = `Faltan ${formatLocalSaleAmount(Math.abs(difference), currency)}`;
+        changeOutput.className = 'mt-1 block text-sm font-black text-amber-300';
+        return;
+    }
+    changeOutput.textContent = `Vuelto: ${formatLocalSaleAmount(difference, currency)}`;
+    changeOutput.className = 'mt-1 block text-sm font-black text-emerald-200';
 }
 
 function renderLocalSales() {
@@ -2709,19 +2767,26 @@ localSaleLines.addEventListener('change', event => {
     if (line && event.target.matches('.local-sale-line-type')) {
         line.querySelector('.local-sale-line-product').value = '';
         line.querySelector('.local-sale-line-service').value = '';
-        line.querySelector('.local-sale-line-amount').value = '';
+        const amountInput = line.querySelector('.local-sale-line-amount');
+        amountInput.value = '';
+        delete amountInput.dataset.autoFilledValue;
         updateLocalSaleLineTypeUi(line);
         updateLocalSaleCurrencyUi();
         updateLocalSaleTotalPreview();
     } else if (line && event.target.matches('.local-sale-line-product')) {
-        updateLocalSaleLinePriceFromProduct(line);
+        updateLocalSaleLinePriceFromProduct(line, true);
         updateLocalSaleTotalPreview();
     }
 });
-localSaleLines.addEventListener('input', () => {
+localSaleLines.addEventListener('input', event => {
+    const line = event.target.closest('[data-local-sale-line]');
+    if (line && event.target.matches('.local-sale-line-quantity') && localSaleCurrency.value === 'COP') {
+        updateLocalSaleLinePriceFromProduct(line);
+    }
     updateLocalSaleTotalPreview();
     localSaleFormStatus.textContent = '';
 });
+document.getElementById('local-sale-received').addEventListener('input', updateLocalSaleTotalPreview);
 localSaleLines.addEventListener('click', event => {
     const removeButton = event.target.closest('[data-remove-local-sale-line]');
     if (!removeButton) return;
