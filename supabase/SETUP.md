@@ -164,6 +164,17 @@ mantiene la validación de administradores para las demás sesiones. Despliega n
 2. Confirmar que el usuario que administra la tienda está agregado a `public.chat_admins`
    (ver el paso anterior). Solo esos usuarios pueden cambiar existencias o aprobar pedidos.
 3. Publicar los archivos actualizados `index.html`, `admin.html` y `assets/js/admin.js`.
+
+### Precios fijos en pesos colombianos para el inventario
+
+Despues de ejecutar `catalog-product-details-migration.sql`, ejecutar
+`supabase/product-cop-fixed-price-migration.sql` en SQL Editor. La migracion agrega
+un precio COP entero e independiente a cada producto y actualiza la funcion RPC que
+usa el panel. Luego publicar `index.html`, `admin.html` y `assets/js/admin.js`.
+El campo USD sigue controlando si el producto se puede comprar en el catalogo; dejar
+el precio COP vacio significa que ese producto no tiene precio fijo en pesos. La
+valoracion COP del inventario suma existencias por el precio fijo configurado y no
+consulta una tasa USD/COP.
    En el panel, abrir **Inventario de productos**, registrar las cantidades reales y
    guardar cada producto. El catálogo mostrará las unidades o **Agotado**; con cero
    unidades no permitirá añadirlo al carrito ni iniciar un pedido por WhatsApp.

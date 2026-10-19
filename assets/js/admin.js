@@ -72,11 +72,6 @@ let localSaleServices = [];
 const selectedLocalSaleIds = new Set();
 let ordersLoaded = false;
 let inventoryLoaded = false;
-let usdCopRate = null;
-let usdCopRateDate = null;
-let usdCopRateStatus = 'Consultando tasa USD/COP…';
-let usdCopRateRequest = null;
-let usdCopRateRefreshTimer = null;
 let localSaleVesBaseRate = Number(window.PAYMENT_CONFIG?.exchangeRates?.VES || window.PAYMENT_CONFIG?.exchangeRate) || 849.564;
 const localSaleVesAdjustment = Number.isFinite(Number(window.PAYMENT_CONFIG?.vesRateAdjustment)) && Number(window.PAYMENT_CONFIG?.vesRateAdjustment) >= 0
     ? Number(window.PAYMENT_CONFIG.vesRateAdjustment)
@@ -121,49 +116,19 @@ function renderInventoryValuation() {
     const totalUsd = inventoryLoaded
         ? inventoryProducts.reduce((total, product) => total + product.stock * (Number.isFinite(product.price_usd) ? product.price_usd : inventoryUnitPricesUsd[product.product_id] || 0), 0)
         : null;
+    const totalCop = inventoryLoaded
+        ? inventoryProducts.reduce((total, product) => total + product.stock * (Number.isFinite(product.price_cop) ? product.price_cop : 0), 0)
+        : null;
     document.querySelectorAll('[data-inventory-total-usd]').forEach(element => {
         element.textContent = totalUsd === null
             ? 'Cargando…'
             : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(totalUsd);
     });
     document.querySelectorAll('[data-inventory-total-cop]').forEach(element => {
-        element.textContent = totalUsd === null
+        element.textContent = totalCop === null
             ? 'Cargando…'
-            : usdCopRate
-                ? new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(totalUsd * usdCopRate)
-                : 'Tasa no disponible';
+            : new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(totalCop);
     });
-    document.querySelectorAll('[data-inventory-rate]').forEach(element => {
-        element.textContent = usdCopRate
-            ? `1 USD = ${new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 2 }).format(usdCopRate)} · referencia ${usdCopRateDate || ''}`
-            : usdCopRateStatus;
-    });
-}
-
-async function loadUsdCopRate() {
-    if (usdCopRateRequest) return usdCopRateRequest;
-    usdCopRateStatus = 'Consultando tasa USD/COP…';
-    renderInventoryValuation();
-    usdCopRateRequest = (async () => {
-        try {
-            const response = await fetch('https://api.frankfurter.dev/v2/rate/usd/cop', { cache: 'no-store' });
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const result = await response.json();
-            const rate = Number(result?.rate);
-            if (!Number.isFinite(rate) || rate <= 0) throw new Error('Tasa inválida');
-            usdCopRate = rate;
-            usdCopRateDate = result.date || '';
-            usdCopRateStatus = '';
-        } catch (error) {
-            usdCopRateStatus = 'No se pudo consultar la tasa gratuita USD/COP.';
-            console.warn('No se pudo cargar la tasa USD/COP:', error);
-        } finally {
-            usdCopRateRequest = null;
-            renderInventoryValuation();
-            if (inventoryLoaded) renderAdminInventory();
-        }
-    })();
-    return usdCopRateRequest;
 }
 
 async function loadLocalSaleVesRate() {
@@ -249,9 +214,7 @@ function showOrders() {
     loadAdminInventory();
     loadAdminProductCategories();
     loadAdminPromotionSummary();
-    loadUsdCopRate();
     loadLocalSaleVesRate();
-    if (!usdCopRateRefreshTimer) usdCopRateRefreshTimer = setInterval(loadUsdCopRate, 30 * 60 * 1000);
     if (!localSaleVesRateRefreshTimer) localSaleVesRateRefreshTimer = setInterval(loadLocalSaleVesRate, window.PAYMENT_CONFIG?.ratesRefreshMs || 5 * 60 * 1000);
     subscribeToOrders();
     loadAdminChats();
@@ -1092,9 +1055,9 @@ function renderAdminInventory() {
         const stockLabel = product.stock === 0 ? 'Agotado' : lowStock ? 'Stock bajo · reponer pronto' : `${product.stock} ${stockUnit} disponibles`;
         const unitPriceUsd = Number.isFinite(product.price_usd) ? product.price_usd : inventoryUnitPricesUsd[product.product_id];
         const productTotalUsd = Number.isFinite(unitPriceUsd) ? product.stock * unitPriceUsd : null;
-        const productTotalCop = productTotalUsd !== null && usdCopRate
-            ? new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(productTotalUsd * usdCopRate)
-            : usdCopRateStatus.startsWith('Consultando') ? 'Calculando…' : 'Tasa no disponible';
+        const productTotalCop = Number.isFinite(product.price_cop)
+            ? new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(product.stock * product.price_cop)
+            : 'Precio COP sin configurar';
         return `
             <article class="inventory-product min-w-0 rounded-2xl border ${lowStock ? 'border-amber-500/40 bg-amber-500/5' : 'border-slate-800 bg-slate-900'} p-4" data-product-id="${escapeHtml(product.product_id)}">
                 <div class="min-w-0">
@@ -1111,8 +1074,8 @@ function renderAdminInventory() {
                         <p class="mt-1 text-sm font-black text-emerald-200">${productTotalUsd === null ? 'Precio no disponible' : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(productTotalUsd)}</p>
                     </div>
                     <div>
-                        <p class="text-[9px] font-bold uppercase tracking-wide text-slate-500">Total en COP</p>
-                        <p class="mt-1 text-sm font-black text-sky-200">${productTotalUsd === null ? 'Precio no disponible' : productTotalCop}</p>
+                        <p class="text-[9px] font-bold uppercase tracking-wide text-slate-500">Total en COP · precio fijo</p>
+                        <p class="mt-1 text-sm font-black text-sky-200">${productTotalCop}</p>
                     </div>
                 </div>
                 <div class="mt-3 flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-950/50 p-2">
@@ -1128,8 +1091,11 @@ function renderAdminInventory() {
                     <label class="block text-[10px] font-bold text-slate-400" for="catalog-price-${escapeHtml(product.product_id)}">Precio de venta en USD
                         <input id="catalog-price-${escapeHtml(product.product_id)}" name="price" type="number" min="0.01" max="999999.99" step="0.01" value="${product.price_usd ?? ''}" placeholder="Sin precio · Próximamente" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white outline-none focus:border-violet-400">
                     </label>
+                    <label class="block text-[10px] font-bold text-slate-400" for="catalog-price-cop-${escapeHtml(product.product_id)}">Precio fijo de venta en pesos colombianos (COP)
+                        <input id="catalog-price-cop-${escapeHtml(product.product_id)}" name="priceCop" type="number" min="1" max="999999999999" step="1" value="${product.price_cop ?? ''}" placeholder="Sin precio COP fijo" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white outline-none focus:border-sky-400">
+                    </label>
                     <p class="text-[10px] leading-relaxed text-slate-500">Sin precio queda como Próximamente; al guardar un precio válido se publica para compra. La imagen está asignada en el catálogo.</p>
-                    <button class="w-full rounded-lg border border-violet-400/30 px-3 py-2 text-xs font-bold text-violet-200 transition hover:bg-violet-500/10 disabled:cursor-wait disabled:opacity-50" type="submit">Guardar precio</button>
+                    <button class="w-full rounded-lg border border-violet-400/30 px-3 py-2 text-xs font-bold text-violet-200 transition hover:bg-violet-500/10 disabled:cursor-wait disabled:opacity-50" type="submit">Guardar precios</button>
                 </form>
                 <form class="inventory-stock-form mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-800/70 pt-3" data-product-id="${escapeHtml(product.product_id)}">
                     <label class="text-[11px] font-bold text-slate-400" for="stock-${escapeHtml(product.product_id)}">${product.unit === 'metro' ? 'Existencias (metros)' : 'Existencias (unidades)'}</label>
@@ -1168,7 +1134,7 @@ async function loadAdminInventory() {
     try {
         const { data, error } = await supabaseClient
             .from('product_inventory')
-            .select('product_id, product_name, stock, min_stock, category_slug, price_usd, description, unit, image_url, coming_soon, is_active')
+            .select('product_id, product_name, stock, min_stock, category_slug, price_usd, price_cop, description, unit, image_url, coming_soon, is_active')
             .eq('is_active', true)
             .order('product_name');
         if (error) throw error;
@@ -1177,7 +1143,8 @@ async function loadAdminInventory() {
             ...product,
             stock: Number(product.stock),
             min_stock: Number(product.min_stock),
-            price_usd: product.price_usd === null ? null : Number(product.price_usd)
+            price_usd: product.price_usd === null ? null : Number(product.price_usd),
+            price_cop: product.price_cop === null ? null : Number(product.price_cop)
         }));
         inventoryLoaded = true;
         renderLocalSaleProductOptions();
@@ -2120,18 +2087,25 @@ async function saveInventoryCatalogDetails(form) {
     const formData = new FormData(form);
     const priceValue = String(formData.get('price') || '').trim();
     const price = priceValue ? Number(priceValue) : null;
+    const priceCopValue = String(formData.get('priceCop') || '').trim();
+    const priceCop = priceCopValue ? Number(priceCopValue) : null;
     if (priceValue && (!Number.isFinite(price) || price <= 0 || price > 999999.99)) {
         inventoryStatus.textContent = 'El precio debe ser mayor que cero y no superar 999999.99 USD.';
+        return;
+    }
+    if (priceCopValue && (!Number.isSafeInteger(priceCop) || priceCop < 1 || priceCop > 999999999999)) {
+        inventoryStatus.textContent = 'El precio COP debe ser un número entero entre 1 y 999999999999.';
         return;
     }
 
     const button = form.querySelector('button[type="submit"]');
     button.disabled = true;
-    inventoryStatus.textContent = `Guardando precio de ${product.product_name}…`;
+    inventoryStatus.textContent = `Guardando precios de ${product.product_name}…`;
     try {
         const { error } = await supabaseClient.rpc('admin_update_inventory_catalog_details', {
             p_product_id: productId,
             p_price_usd: price,
+            p_price_cop: priceCop,
             p_image_url: product.image_url && product.image_url.includes('/product-images/') ? product.image_url : (productCatalogImageOverrides[productId] || product.image_url || null)
         });
         if (error) throw error;

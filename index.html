@@ -1870,7 +1870,7 @@
                 const [{ data, error }, { data: categories, error: categoriesError }] = await Promise.all([
                     window.supabaseClient
                     .from('product_inventory')
-                    .select('product_id, product_name, stock, category_slug, price_usd, description, unit, image_url, coming_soon, is_active')
+                    .select('product_id, product_name, stock, category_slug, price_usd, price_cop, description, unit, image_url, coming_soon, is_active')
                     .eq('is_active', true),
                     window.supabaseClient
                     .from('product_categories')
@@ -1890,6 +1890,7 @@
                         name: item.product_name,
                         category: item.category_slug,
                         price: item.price_usd === null ? null : Number(item.price_usd),
+                        priceCop: item.price_cop === null ? null : Number(item.price_cop),
                         stock: 'Disponible',
                         img: catalogProductImageOverrides[item.product_id] || item.image_url || existing?.img || catImg[item.category_slug] || catImg.escolares,
                         desc: item.description || existing?.desc || '',
@@ -1976,6 +1977,7 @@
                             <span class="text-xl font-black ${p.comingSoon ? 'text-violet-600 dark:text-violet-300' : 'text-slate-900 dark:text-white'}">${p.comingSoon ? 'Precio por confirmar' : showLaunchDiscount ? `<span class="mr-1 text-xs font-bold text-slate-400 line-through">$${p.price.toFixed(2)}</span><span class="text-emerald-600 dark:text-emerald-400">$${LAUNCH_PROMO_PRICE.toFixed(2)}</span>` : `$${p.price.toFixed(2)}${p.unit === 'metro' ? ' / m' : ''}`}</span>
                             <button onclick="openQuickView('${p.id}')" class="catalog-quick-view text-xs text-indigo-600 dark:text-indigo-400 font-bold">Vista Rápida</button>
                         </div>
+                        ${Number.isFinite(p.priceCop) ? `<p class="-mt-2 mb-4 text-xs font-bold text-sky-700 dark:text-sky-300">Precio fijo: ${new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(p.priceCop)}${p.unit === 'metro' ? ' / m' : ''}</p>` : ''}
                         ${p.comingSoon
                             ? '<span class="w-full rounded-2xl border border-violet-500/20 bg-violet-500/10 py-3 text-center text-xs font-bold text-violet-700 dark:text-violet-300"><i class="fa-regular fa-clock mr-2"></i>Próximamente</span>'
                             : `<button onclick="addToCart('${p.id}', event)" ${canOrder ? '' : 'disabled'} class="catalog-product-action w-full bg-slate-100 dark:bg-slate-800 hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 text-slate-800 dark:text-white font-bold py-3 rounded-2xl transition border border-slate-200 dark:border-slate-700 flex items-center justify-center gap-2 text-xs disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-slate-100 disabled:hover:text-slate-800 dark:disabled:hover:bg-slate-800 dark:disabled:hover:text-white">
@@ -2440,6 +2442,9 @@
                 <button onclick="orderProductWhatsApp('${p.id}')" class="mt-2 w-full rounded-2xl border border-emerald-500/40 bg-emerald-500/10 py-3.5 text-xs font-bold text-emerald-700 transition hover:bg-emerald-500 hover:text-white dark:text-emerald-400">
                     <i class="fa-brands fa-whatsapp mr-2"></i> Pedir por WhatsApp
                 </button>`;
+            const fixedCopPrice = Number.isFinite(p.priceCop)
+                ? `<p class="mb-4 text-sm font-bold text-sky-700 dark:text-sky-300">Precio fijo en pesos: ${new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(p.priceCop)}${p.unit === 'metro' ? ' / m' : ''}</p>`
+                : '';
 
             document.getElementById('quickview-content').innerHTML = `
                 <div class="h-56 rounded-2xl bg-slate-100 dark:bg-slate-950 overflow-hidden mb-4">
@@ -2449,6 +2454,7 @@
                 <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed my-2">${escapeHtml(p.desc)}</p>
                 ${p.comingSoon ? '' : `<p class="text-xs font-bold ${productCanBeOrdered(p.id) ? 'text-emerald-600 dark:text-emerald-300' : 'text-red-600 dark:text-red-300'}">${productStockLabel(p.id)}</p>`}
                 ${comingSoonContent}
+                ${fixedCopPrice}
             `;
             document.getElementById('quickview-modal').classList.remove('hidden');
         }
