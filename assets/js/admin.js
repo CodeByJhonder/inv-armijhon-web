@@ -1405,6 +1405,12 @@ function renderLocalSales() {
     localSalesList.innerHTML = [...groups.values()].map(lines => {
         const date = new Date(`${lines[0].sold_on}T12:00:00`);
         const dateLabel = new Intl.DateTimeFormat('es-VE', { dateStyle: 'medium' }).format(date);
+        const createdAt = new Date(lines[0].created_at);
+        const timeLabel = Number.isNaN(createdAt.getTime())
+            ? ''
+            : new Intl.DateTimeFormat('es-VE', {
+                hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'America/Caracas'
+            }).format(createdAt);
         const totals = {};
         lines.forEach(sale => {
             const currency = sale.currency || 'USD';
@@ -1427,7 +1433,7 @@ function renderLocalSales() {
             return `<li class="flex flex-wrap items-center justify-between gap-2 border-t border-slate-800 py-2 text-xs"><label class="flex min-w-0 items-start gap-2 text-slate-200"><input type="checkbox" data-local-sale-select="${escapeHtml(sale.id)}" class="mt-0.5 accent-rose-500" ${selectedLocalSaleIds.has(sale.id) ? 'checked' : ''} aria-label="Seleccionar venta de ${escapeHtml(sale.product_name)}"><span class="min-w-0 break-words"><span class="mr-1 rounded bg-slate-800 px-1.5 py-0.5 text-[9px] font-bold uppercase text-sky-200">${isService ? 'Servicio' : 'Producto'}</span>${escapeHtml(sale.product_name)} <span class="text-slate-400">x ${sale.quantity} ${unit}</span>${unitPrice}${rate}</span></label><strong class="shrink-0 text-emerald-200">${amount}</strong></li>`;
         }).join('');
         return `<article class="rounded-2xl border border-slate-800 bg-slate-900 p-4">
-            <div class="flex items-start justify-between gap-3"><div><p class="text-sm font-bold text-white">Venta local - ${dateLabel}</p><p class="mt-1 text-[10px] text-slate-400">${lines.length} línea${lines.length === 1 ? '' : 's'}</p></div><div class="flex flex-wrap justify-end gap-1">${totalsMarkup}</div></div>
+            <div class="flex items-start justify-between gap-3"><div><p class="text-sm font-bold text-white">Venta local - ${dateLabel}</p><p class="mt-1 text-[10px] text-slate-400">${timeLabel ? `Registrada a las ${timeLabel} · ` : ''}${lines.length} línea${lines.length === 1 ? '' : 's'}</p></div><div class="flex flex-wrap justify-end gap-1">${totalsMarkup}</div></div>
             <ul class="mt-3">${lineMarkup}</ul>
         </article>`;
     }).join('');
