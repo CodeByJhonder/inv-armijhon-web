@@ -68,6 +68,7 @@ const productCatalogImageOverrides = {
 };
 let inventoryProducts = [];
 let localSales = [];
+let localSaleServices = [];
 const selectedLocalSaleIds = new Set();
 let ordersLoaded = false;
 let inventoryLoaded = false;
@@ -1201,40 +1202,52 @@ function localDateInputValue(date = new Date()) {
 
 function getLocalSaleDraftLines() {
     return [...localSaleLines.querySelectorAll('[data-local-sale-line]')].map(line => ({
+        saleType: line.querySelector('.local-sale-line-type').value,
         productId: line.querySelector('.local-sale-line-product').value,
+        serviceId: line.querySelector('.local-sale-line-service').value,
         quantity: line.querySelector('.local-sale-line-quantity').value,
         amount: line.querySelector('.local-sale-line-amount').value
     }));
 }
 
 function renderLocalSaleProductOptions(draftLines = getLocalSaleDraftLines()) {
-    if (!draftLines.length) draftLines = [{ productId: '', quantity: '1', amount: '' }];
-    const options = inventoryProducts.map(product => {
+    if (!draftLines.length) draftLines = [{ saleType: 'product', productId: '', serviceId: '', quantity: '1', amount: '' }];
+    const productOptions = inventoryProducts.filter(product => product.is_active !== false).map(product => {
         const unit = product.unit === 'metro' ? 'm' : 'unidades';
         const soon = product.coming_soon ? ' - Proximamente' : '';
         return `<option value="${escapeHtml(product.product_id)}">${escapeHtml(product.product_name)} - ${product.stock} ${unit}${soon}</option>`;
     }).join('');
+    const serviceOptions = localSaleServices.map(service => `<option value="${escapeHtml(service.id)}">${escapeHtml(service.name)} (${escapeHtml(service.unit === 'pagina' ? 'por página' : service.unit === 'unidad' ? 'por unidad' : 'por servicio')})</option>`).join('');
     localSaleLines.innerHTML = draftLines.map((line, index) => `
         <div data-local-sale-line class="rounded-xl border border-slate-800 bg-slate-950/50 p-3">
             <div class="mb-2 flex items-center justify-between">
-                <p class="text-[10px] font-black uppercase tracking-wide text-slate-500">Producto ${index + 1}</p>
-                <button type="button" data-remove-local-sale-line class="rounded-lg px-2 py-1 text-[10px] font-bold text-rose-300 hover:bg-rose-500/10" ${draftLines.length === 1 ? 'disabled' : ''} aria-label="Quitar producto ${index + 1}"><i class="fa-solid fa-trash" aria-hidden="true"></i> Quitar</button>
+                <p class="local-sale-line-title text-[10px] font-black uppercase tracking-wide text-slate-500">${line.saleType === 'service' ? 'Servicio' : 'Producto'} ${index + 1}</p>
+                <button type="button" data-remove-local-sale-line class="rounded-lg px-2 py-1 text-[10px] font-bold text-rose-300 hover:bg-rose-500/10" ${draftLines.length === 1 ? 'disabled' : ''} aria-label="Quitar línea ${index + 1}"><i class="fa-solid fa-trash" aria-hidden="true"></i> Quitar</button>
             </div>
-            <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                <label class="text-xs font-bold text-slate-300 sm:col-span-2">Producto del inventario
-                    <select required class="local-sale-line-product mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-400"><option value="">Selecciona un producto</option>${options}</select>
+            <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                <label class="text-xs font-bold text-slate-300">Tipo
+                    <select class="local-sale-line-type mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white"><option value="product">Producto</option><option value="service">Servicio</option></select>
+                </label>
+                <label class="local-sale-line-product-wrap text-xs font-bold text-slate-300 sm:col-span-2">Producto del inventario
+                    <select class="local-sale-line-product mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-400"><option value="">Selecciona un producto</option>${productOptions}</select>
+                </label>
+                <label class="local-sale-line-service-wrap hidden text-xs font-bold text-slate-300 sm:col-span-2">Servicio
+                    <select class="local-sale-line-service mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-400"><option value="">Selecciona un servicio</option>${serviceOptions}</select>
                 </label>
                 <label class="text-xs font-bold text-slate-300">Cantidad vendida
                     <input class="local-sale-line-quantity mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-400" type="number" min="1" max="99999" step="1" value="${escapeHtml(line.quantity || '1')}" required>
                 </label>
-                <label class="text-xs font-bold text-slate-300"><span class="local-sale-line-amount-label"></span>
+                <label class="text-xs font-bold text-slate-300 sm:col-span-2"><span class="local-sale-line-amount-label"></span>
                     <input class="local-sale-line-amount mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-400" type="number" min="0.01" max="999999.99" step="0.01" value="${escapeHtml(line.amount)}" placeholder="Ej. 1.30" required>
                 </label>
             </div>
         </div>`).join('');
     draftLines.forEach((line, index) => {
-        const productSelect = localSaleLines.querySelectorAll('.local-sale-line-product')[index];
-        productSelect.value = line.productId || '';
+        const row = localSaleLines.querySelectorAll('[data-local-sale-line]')[index];
+        row.querySelector('.local-sale-line-type').value = line.saleType || 'product';
+        row.querySelector('.local-sale-line-product').value = line.productId || '';
+        row.querySelector('.local-sale-line-service').value = line.serviceId || '';
+        updateLocalSaleLineTypeUi(row);
     });
     document.getElementById('add-local-sale-line').disabled = draftLines.length >= 30;
     updateLocalSaleCurrencyUi();
@@ -1245,11 +1258,12 @@ function updateLocalSaleCurrencyUi() {
     const currency = localSaleCurrency.value;
     const totalLabel = document.getElementById('local-sale-total-label');
     const rateStatus = document.getElementById('local-sale-rate');
-    const amountLabel = currency === 'COP'
-        ? 'Total cobrado por este producto (COP)'
-        : 'Precio por unidad (USD)';
     localSaleLines.querySelectorAll('.local-sale-line-amount-label').forEach(label => {
-        label.textContent = amountLabel;
+        const row = label.closest('[data-local-sale-line]');
+        const type = row.querySelector('.local-sale-line-type').value;
+        label.textContent = currency === 'COP'
+            ? `Total cobrado por esta ${type === 'service' ? 'línea de servicio' : 'línea de producto'} (COP)`
+            : `Precio por ${type === 'service' ? 'unidad de servicio' : 'unidad de producto'} (USD)`;
     });
     localSaleLines.querySelectorAll('.local-sale-line-amount').forEach(input => {
         input.max = currency === 'COP' ? '999999999999' : '999999.99';
@@ -1273,7 +1287,59 @@ function updateLocalSaleCurrencyUi() {
     }
 }
 
+function updateLocalSaleLineTypeUi(row) {
+    const isService = row.querySelector('.local-sale-line-type').value === 'service';
+    row.querySelector('.local-sale-line-product-wrap').classList.toggle('hidden', isService);
+    row.querySelector('.local-sale-line-service-wrap').classList.toggle('hidden', !isService);
+    row.querySelector('.local-sale-line-product').required = !isService;
+    row.querySelector('.local-sale-line-service').required = isService;
+    row.querySelector('.local-sale-line-title').textContent = `${isService ? 'Servicio' : 'Producto'} ${[...localSaleLines.querySelectorAll('[data-local-sale-line]')].indexOf(row) + 1}`;
+}
+
+async function loadLocalSaleServices() {
+    const { data, error } = await supabaseClient.rpc('admin_list_local_sale_services');
+    if (error) throw error;
+    localSaleServices = data || [];
+    renderLocalSaleProductOptions();
+}
+
+async function createLocalSaleService() {
+    const nameInput = document.getElementById('new-local-service-name');
+    const status = document.getElementById('local-service-status');
+    const button = document.getElementById('save-local-service');
+    const name = nameInput.value.trim();
+    if (!name) { status.textContent = 'Escribe el nombre del servicio.'; return; }
+    const draftLines = getLocalSaleDraftLines();
+    if (draftLines.length >= 30 && !draftLines.some(line => line.saleType === 'service' && !line.serviceId)) {
+        status.textContent = 'La venta ya tiene el máximo de 30 líneas. Guarda la venta antes de crear otra línea.';
+        return;
+    }
+    button.disabled = true;
+    status.textContent = 'Guardando servicio...';
+    try {
+        const { data, error } = await supabaseClient.rpc('admin_create_local_sale_service', {
+            p_name: name,
+            p_unit: document.getElementById('new-local-service-unit').value
+        });
+        if (error) throw error;
+        await loadLocalSaleServices();
+        const drafts = getLocalSaleDraftLines();
+        const emptyService = drafts.find(line => line.saleType === 'service' && !line.serviceId);
+        if (emptyService) emptyService.serviceId = data.id;
+        else drafts.push({ saleType: 'service', productId: '', serviceId: data.id, quantity: '1', amount: '' });
+        renderLocalSaleProductOptions(drafts);
+        nameInput.value = '';
+        status.textContent = `Servicio “${data.name}” guardado y listo para usar.`;
+        document.getElementById('add-local-service-panel').classList.add('hidden');
+        document.getElementById('toggle-add-local-service').setAttribute('aria-expanded', 'false');
+    } catch (error) {
+        console.error('Error creando servicio local:', error);
+        status.textContent = error.message || 'No se pudo crear el servicio.';
+    } finally { button.disabled = false; }
+}
+
 function updateLocalSaleLinePriceFromProduct(line) {
+    if (line.querySelector('.local-sale-line-type').value !== 'product') return;
     if (localSaleCurrency.value === 'COP') return;
     const productId = line.querySelector('.local-sale-line-product').value;
     const product = inventoryProducts.find(item => item.product_id === productId);
@@ -1349,17 +1415,18 @@ function renderLocalSales() {
         const lineMarkup = lines.map(sale => {
             const currency = sale.currency || 'USD';
             const amount = formatLocalSaleAmount(sale.total_amount ?? sale.total_usd, currency);
-            const unit = sale.unit === 'metro' ? 'm' : 'unidades';
+            const isService = sale.sale_type === 'service';
+            const unit = sale.unit === 'metro' ? 'm' : sale.unit === 'pagina' ? 'páginas' : sale.unit === 'servicio' ? 'servicios' : 'unidades';
             const unitPrice = sale.unit_price_usd === null || sale.unit_price_usd === undefined
                 ? ''
                 : `<span class="text-slate-500"> - $${Number(sale.unit_price_usd).toFixed(2)} c/u</span>`;
             const rate = currency === 'VES' && sale.exchange_rate
                 ? `<span class="text-slate-500"> - tasa ${formatVes(sale.exchange_rate)}</span>`
                 : '';
-            return `<li class="flex flex-wrap items-center justify-between gap-2 border-t border-slate-800 py-2 text-xs"><label class="flex min-w-0 items-start gap-2 text-slate-200"><input type="checkbox" data-local-sale-select="${escapeHtml(sale.id)}" class="mt-0.5 accent-rose-500" ${selectedLocalSaleIds.has(sale.id) ? 'checked' : ''} aria-label="Seleccionar venta de ${escapeHtml(sale.product_name)}"><span class="min-w-0 break-words">${escapeHtml(sale.product_name)} <span class="text-slate-400">x ${sale.quantity} ${unit}</span>${unitPrice}${rate}</span></label><strong class="shrink-0 text-emerald-200">${amount}</strong></li>`;
+            return `<li class="flex flex-wrap items-center justify-between gap-2 border-t border-slate-800 py-2 text-xs"><label class="flex min-w-0 items-start gap-2 text-slate-200"><input type="checkbox" data-local-sale-select="${escapeHtml(sale.id)}" class="mt-0.5 accent-rose-500" ${selectedLocalSaleIds.has(sale.id) ? 'checked' : ''} aria-label="Seleccionar venta de ${escapeHtml(sale.product_name)}"><span class="min-w-0 break-words"><span class="mr-1 rounded bg-slate-800 px-1.5 py-0.5 text-[9px] font-bold uppercase text-sky-200">${isService ? 'Servicio' : 'Producto'}</span>${escapeHtml(sale.product_name)} <span class="text-slate-400">x ${sale.quantity} ${unit}</span>${unitPrice}${rate}</span></label><strong class="shrink-0 text-emerald-200">${amount}</strong></li>`;
         }).join('');
         return `<article class="rounded-2xl border border-slate-800 bg-slate-900 p-4">
-            <div class="flex items-start justify-between gap-3"><div><p class="text-sm font-bold text-white">Venta local - ${dateLabel}</p><p class="mt-1 text-[10px] text-slate-400">${lines.length} producto${lines.length === 1 ? '' : 's'}</p></div><div class="flex flex-wrap justify-end gap-1">${totalsMarkup}</div></div>
+            <div class="flex items-start justify-between gap-3"><div><p class="text-sm font-bold text-white">Venta local - ${dateLabel}</p><p class="mt-1 text-[10px] text-slate-400">${lines.length} línea${lines.length === 1 ? '' : 's'}</p></div><div class="flex flex-wrap justify-end gap-1">${totalsMarkup}</div></div>
             <ul class="mt-3">${lineMarkup}</ul>
         </article>`;
     }).join('');
@@ -1486,14 +1553,16 @@ function localSalesReportSummary(sales) {
     const tickets = new Set();
     let units = 0;
     let meters = 0;
+    let services = 0;
     sales.forEach(sale => {
         const currency = sale.currency || 'USD';
         totals[currency] = (totals[currency] || 0) + Number(sale.total_amount ?? sale.total_usd ?? 0);
         tickets.add(sale.batch_id || sale.id);
-        if (sale.unit === 'metro') meters += Number(sale.quantity || 0);
+        if (sale.sale_type === 'service') services += Number(sale.quantity || 0);
+        else if (sale.unit === 'metro') meters += Number(sale.quantity || 0);
         else units += Number(sale.quantity || 0);
     });
-    return { totals, tickets: tickets.size, units, meters };
+    return { totals, tickets: tickets.size, units, meters, services };
 }
 
 function localSalesTotalsLabel(totals) {
@@ -1531,16 +1600,17 @@ function localSalesReportFilterLabel() {
     const currency = document.getElementById('local-sales-report-currency').value;
     const currencyLabel = currency === 'all' ? 'Todas' : currency;
     const product = document.getElementById('local-sales-report-product').value.trim() || 'Todos';
-    return `Moneda: ${currencyLabel}   |   Producto: ${product}`;
+    return `Moneda: ${currencyLabel}   |   Producto o servicio: ${product}`;
 }
 
 function renderLocalSalesReport(sales, range) {
     const summary = localSalesReportSummary(sales);
     const summaryCards = [
         ['Ventas', summary.tickets, 'fa-receipt'],
-        ['Líneas de producto', sales.length, 'fa-list'],
+        ['Líneas registradas', sales.length, 'fa-list'],
         ['Unidades vendidas', summary.units, 'fa-boxes-stacked'],
         ['Metros vendidos', summary.meters, 'fa-ruler-horizontal'],
+        ['Servicios vendidos', summary.services, 'fa-print'],
         ...Object.entries(summary.totals).map(([currency, amount]) => [
             `Total ${currency}`, formatLocalSaleAmount(amount, currency), currency === 'COP' ? 'fa-coins' : 'fa-money-bill-wave'
         ])
@@ -1559,7 +1629,7 @@ function renderLocalSalesReport(sales, range) {
     });
     const topProducts = [...products.entries()].sort((a, b) => b[1].quantity - a[1].quantity).slice(0, 5);
     document.getElementById('local-sales-report-top-products').innerHTML = topProducts.length
-        ? `<ol class="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">${topProducts.map(([name, item], index) => `<li class="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-950/50 p-3"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-amber-400/10 text-xs font-black text-amber-200">${index + 1}</span><span class="min-w-0 flex-1"><span class="block break-words font-bold text-slate-200">${escapeHtml(name)}</span><span class="text-[10px] text-slate-500">${item.quantity} ${item.unit === 'metro' ? 'm' : 'unidades'}</span></span></li>`).join('')}</ol>`
+        ? `<ol class="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">${topProducts.map(([name, item], index) => `<li class="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-950/50 p-3"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-amber-400/10 text-xs font-black text-amber-200">${index + 1}</span><span class="min-w-0 flex-1"><span class="block break-words font-bold text-slate-200">${escapeHtml(name)}</span><span class="text-[10px] text-slate-500">${item.quantity} ${item.unit === 'metro' ? 'm' : item.unit === 'pagina' ? 'páginas' : item.unit === 'servicio' ? 'servicios' : 'unidades'}</span></span></li>`).join('')}</ol>`
         : 'No hay productos vendidos con esos filtros.';
     document.getElementById('local-sales-export-status').textContent = `${range.label}: ${range.from} al ${range.through}. ${sales.length} líneas coinciden. ${localSalesReportFilterLabel()}.`;
 }
@@ -1604,9 +1674,9 @@ function localSalesReportRows(sales) {
     return sales.map((sale, index) => [
         index + 1,
         sale.sold_on,
-        sale.product_name,
+        `${sale.sale_type === 'service' ? 'Servicio: ' : 'Producto: '}${sale.product_name}`,
         Number(sale.quantity),
-        sale.unit === 'metro' ? 'm' : 'unidades',
+        sale.unit === 'metro' ? 'm' : sale.unit === 'pagina' ? 'páginas' : sale.unit === 'servicio' ? 'servicios' : 'unidades',
         sale.currency || 'USD',
         sale.currency === 'COP' ? '' : Number(sale.unit_price_usd ?? 0),
         sale.currency === 'VES' ? Number(sale.exchange_rate ?? 0) : '',
@@ -1669,7 +1739,7 @@ async function exportLocalSalesExcel() {
         const table = sheet.addTable({
             name: 'DetalleVentas', ref: 'A9', headerRow: true, totalsRow: false,
             style: { theme: 'TableStyleMedium4', showRowStripes: true },
-            columns: ['N.º', 'Fecha', 'Producto', 'Cantidad', 'Unidad', 'Moneda', 'Precio unitario USD', 'Tasa USD/VES', 'Total cobrado'].map(name => ({ name })),
+            columns: ['N.º', 'Fecha', 'Producto o servicio', 'Cantidad', 'Unidad', 'Moneda', 'Precio unitario USD', 'Tasa USD/VES', 'Total cobrado'].map(name => ({ name })),
             rows: localSalesReportRows(sales)
         });
         const amountColumn = 9;
@@ -1725,15 +1795,15 @@ async function exportLocalSalesPdf() {
         const filterLines = doc.splitTextToSize(`Filtros aplicados: ${localSalesReportFilterLabel()}`, doc.internal.pageSize.getWidth() - 28);
         doc.text(filterLines, 14, 56);
         const rows = sales.map((sale, index) => [
-            String(index + 1), sale.sold_on, sale.product_name,
-            `${sale.quantity} ${sale.unit === 'metro' ? 'm' : 'unidades'}`,
+            String(index + 1), sale.sold_on, `${sale.sale_type === 'service' ? 'Servicio: ' : 'Producto: '}${sale.product_name}`,
+            `${sale.quantity} ${sale.unit === 'metro' ? 'm' : sale.unit === 'pagina' ? 'páginas' : sale.unit === 'servicio' ? 'servicios' : 'unidades'}`,
             sale.currency === 'COP' ? 'COP' : `${sale.currency || 'USD'}${sale.currency === 'VES' ? ` / tasa ${Number(sale.exchange_rate || 0).toFixed(2)}` : ''}`,
             sale.currency === 'COP' ? '—' : Number(sale.unit_price_usd ?? 0).toFixed(2),
             formatLocalSaleAmount(sale.total_amount ?? sale.total_usd, sale.currency || 'USD')
         ]);
         doc.autoTable({
             startY: 58 + filterLines.length * 4,
-            head: [['N.º', 'Fecha', 'Producto', 'Cantidad', 'Moneda / tasa', 'Precio unitario USD', 'Total cobrado']],
+            head: [['N.º', 'Fecha', 'Producto o servicio', 'Cantidad', 'Moneda / tasa', 'Precio unitario USD', 'Total cobrado']],
             body: rows.length ? rows : [['—', '—', 'Sin ventas en este período', '—', '—', '—', '—']],
             theme: 'striped',
             headStyles: { fillColor: [44, 39, 31], textColor: [247, 243, 234], fontStyle: 'bold' },
@@ -1775,35 +1845,40 @@ async function registerLocalProductSale(event) {
     event.preventDefault();
     const currency = localSaleCurrency.value;
     const soldOn = localSaleDate.value;
-    const items = [...localSaleLines.querySelectorAll('[data-local-sale-line]')].map(line => ({
-        product_id: line.querySelector('.local-sale-line-product').value,
-        quantity: Number(line.querySelector('.local-sale-line-quantity').value),
-        amount: Number(line.querySelector('.local-sale-line-amount').value)
-    }));
+    const items = [...localSaleLines.querySelectorAll('[data-local-sale-line]')].map(line => {
+        const saleType = line.querySelector('.local-sale-line-type').value;
+        return {
+            sale_type: saleType,
+            product_id: saleType === 'product' ? line.querySelector('.local-sale-line-product').value : null,
+            service_id: saleType === 'service' ? line.querySelector('.local-sale-line-service').value : null,
+            quantity: Number(line.querySelector('.local-sale-line-quantity').value),
+            amount: Number(line.querySelector('.local-sale-line-amount').value)
+        };
+    });
     const saveButton = document.getElementById('save-local-sale');
     if (!items.length || items.length > 30) {
-        localSaleFormStatus.textContent = 'Agrega entre 1 y 30 productos a la venta.';
+        localSaleFormStatus.textContent = 'Agrega entre 1 y 30 líneas a la venta.';
         return;
     }
     for (const [index, item] of items.entries()) {
-        if (!item.product_id) {
-            localSaleFormStatus.textContent = `Selecciona el producto ${index + 1}.`;
+        if (item.sale_type === 'product' ? !item.product_id : !item.service_id) {
+            localSaleFormStatus.textContent = `Selecciona el ${item.sale_type === 'service' ? 'servicio' : 'producto'} de la línea ${index + 1}.`;
             return;
         }
         if (!Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 99999) {
-            localSaleFormStatus.textContent = `La cantidad del producto ${index + 1} debe estar entre 1 y 99999.`;
+            localSaleFormStatus.textContent = `La cantidad de la línea ${index + 1} debe estar entre 1 y 99999.`;
             return;
         }
         if (!Number.isFinite(item.amount) || item.amount <= 0) {
-            localSaleFormStatus.textContent = `Indica el monto del producto ${index + 1}.`;
+            localSaleFormStatus.textContent = `Indica el monto de la línea ${index + 1}.`;
             return;
         }
         if (currency === 'COP' && (!Number.isInteger(item.amount) || item.amount > 999999999999)) {
-            localSaleFormStatus.textContent = `El total COP del producto ${index + 1} debe ser un numero entero valido.`;
+            localSaleFormStatus.textContent = `El total COP de la línea ${index + 1} debe ser un numero entero valido.`;
             return;
         }
         if (currency !== 'COP' && item.amount > 999999.99) {
-            localSaleFormStatus.textContent = `El precio en USD del producto ${index + 1} no puede superar 999999.99.`;
+            localSaleFormStatus.textContent = `El precio en USD de la línea ${index + 1} no puede superar 999999.99.`;
             return;
         }
     }
@@ -1813,7 +1888,7 @@ async function registerLocalProductSale(event) {
     }
 
     saveButton.disabled = true;
-    localSaleFormStatus.textContent = 'Guardando todos los productos y descontando existencias...';
+    localSaleFormStatus.textContent = 'Guardando productos y servicios...';
     try {
         const exchangeRate = currency === 'VES'
             ? Number((localSaleVesBaseRate + localSaleVesAdjustment).toFixed(6))
@@ -1831,9 +1906,10 @@ async function registerLocalProductSale(event) {
         localSaleLines.innerHTML = '';
         updateLocalSaleCurrencyUi();
         renderLocalSaleProductOptions([]);
-        await loadAdminInventory();
+        if (items.some(item => item.sale_type === 'product')) await loadAdminInventory();
         await loadLocalSales();
-        localSaleFormStatus.textContent = `Venta guardada: ${data.line_count} productos. Total: ${formatLocalSaleAmount(data.total_amount, data.currency)}. Se descontaron las existencias.`;
+        const productLines = items.filter(item => item.sale_type === 'product').length;
+        localSaleFormStatus.textContent = `Venta guardada: ${data.line_count} líneas (${productLines} producto${productLines === 1 ? '' : 's'} con descuento de stock). Total: ${formatLocalSaleAmount(data.total_amount, data.currency)}.`;
     } catch (error) {
         console.error('Error registrando la venta local:', error);
         localSaleFormStatus.textContent = error.message || 'No se pudo registrar la venta local.';
@@ -2623,6 +2699,13 @@ document.getElementById('local-sales-export-period').addEventListener('change', 
 document.getElementById('local-sales-export-date').addEventListener('change', () => { updateLocalSalesExportRange(); markLocalSalesReportStale(); });
 document.getElementById('local-sales-report-currency').addEventListener('change', markLocalSalesReportStale);
 document.getElementById('local-sales-report-product').addEventListener('input', markLocalSalesReportStale);
+document.getElementById('toggle-add-local-service').addEventListener('click', event => {
+    const panel = document.getElementById('add-local-service-panel');
+    const isHidden = panel.classList.toggle('hidden');
+    event.currentTarget.setAttribute('aria-expanded', String(!isHidden));
+    if (!isHidden) document.getElementById('new-local-service-name').focus();
+});
+document.getElementById('save-local-service').addEventListener('click', createLocalSaleService);
 document.getElementById('preview-local-sales-report').addEventListener('click', previewLocalSalesReport);
 document.getElementById('export-local-sales-excel').addEventListener('click', exportLocalSalesExcel);
 document.getElementById('export-local-sales-pdf').addEventListener('click', exportLocalSalesPdf);
@@ -2642,7 +2725,14 @@ localSalesList.addEventListener('change', event => {
 localSaleForm.addEventListener('submit', registerLocalProductSale);
 localSaleLines.addEventListener('change', event => {
     const line = event.target.closest('[data-local-sale-line]');
-    if (line && event.target.matches('.local-sale-line-product')) {
+    if (line && event.target.matches('.local-sale-line-type')) {
+        line.querySelector('.local-sale-line-product').value = '';
+        line.querySelector('.local-sale-line-service').value = '';
+        line.querySelector('.local-sale-line-amount').value = '';
+        updateLocalSaleLineTypeUi(line);
+        updateLocalSaleCurrencyUi();
+        updateLocalSaleTotalPreview();
+    } else if (line && event.target.matches('.local-sale-line-product')) {
         updateLocalSaleLinePriceFromProduct(line);
         updateLocalSaleTotalPreview();
     }
@@ -2660,7 +2750,7 @@ localSaleLines.addEventListener('click', event => {
 document.getElementById('add-local-sale-line').addEventListener('click', () => {
     const drafts = getLocalSaleDraftLines();
     if (drafts.length >= 30) return;
-    drafts.push({ productId: '', quantity: '1', amount: '' });
+    drafts.push({ saleType: 'product', productId: '', serviceId: '', quantity: '1', amount: '' });
     renderLocalSaleProductOptions(drafts);
 });
 localSaleCurrency.addEventListener('change', handleLocalSaleCurrencyChange);
@@ -2689,8 +2779,10 @@ adminNavigation.addEventListener('click', event => {
     if (!button) return;
     showAdminPage(button.dataset.adminPage);
     if (button.dataset.adminPage === 'local-sales') {
-        renderLocalSaleProductOptions();
-        loadLocalSales();
+        Promise.all([loadLocalSaleServices(), loadLocalSales()]).catch(error => {
+            console.error('Error cargando el catálogo de servicios locales:', error);
+            document.getElementById('local-service-status').textContent = error.message || 'No se pudo cargar el catálogo de servicios.';
+        });
     }
     if (button.dataset.adminPage === 'sales-reports') updateLocalSalesExportRange();
 });

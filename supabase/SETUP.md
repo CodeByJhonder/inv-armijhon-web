@@ -387,6 +387,13 @@ las rutas de respaldo del catalogo.
     Excel o PDF. Incluye logo, rango, fecha de generación, cantidades separadas entre
     unidades y metros, totales separados por moneda y detalle tabulado de cada línea.
     Las quincenas van del 1 al 15 y del 16 al fin de mes.
+11. Para registrar servicios como fotocopias, impresiones y escaneos, ejecuta
+    `supabase/local-services-migration.sql` despues de todas las migraciones anteriores
+    de ventas locales. Esto agrega servicios iniciales y permite crear otros desde
+    el mismo formulario. Actualiza `admin.html` y `assets/js/admin.js`.
+12. En cada línea selecciona **Producto** o **Servicio**. Los productos descuentan stock
+    y los servicios solo guardan cantidad e importe. USD/VES usan precio por unidad;
+    COP guarda el total cobrado por línea, sin conversión. Los informes incluyen ambos.
 
 El historial muestra las 200 ventas mas recientes y conserva el nombre, la unidad, la
 moneda, el total cobrado y la tasa VES aplicada al vender.

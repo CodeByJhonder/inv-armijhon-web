@@ -311,12 +311,12 @@
                 <div class="mb-5 flex flex-wrap items-end justify-between gap-3">
                     <div>
                         <h2 id="local-sales-heading" class="text-xl font-black"><i class="fa-solid fa-store mr-2 text-emerald-300" aria-hidden="true"></i>Ventas locales</h2>
-                        <p class="mt-1 text-xs text-slate-400">Registra uno o varios productos por venta. Todas las existencias se descuentan al guardar.</p>
+                        <p class="mt-1 text-xs text-slate-400">Registra productos del inventario y servicios. Solo los productos descuentan existencias.</p>
                     </div>
                     <button id="refresh-local-sales" type="button" class="rounded-xl border border-slate-700 px-4 py-2 text-xs font-bold hover:bg-slate-800"><i class="fa-solid fa-rotate mr-2" aria-hidden="true"></i>Actualizar ventas</button>
                 </div>
                 <section class="mb-5 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4 sm:p-5" aria-labelledby="local-sale-form-heading">
-                    <h3 id="local-sale-form-heading" class="text-sm font-black">Registrar venta de uno o varios productos</h3>
+                    <h3 id="local-sale-form-heading" class="text-sm font-black">Registrar venta de productos o servicios</h3>
                     <form id="local-sale-form" class="mt-4 space-y-4">
                         <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                             <label class="text-xs font-bold text-slate-300">Moneda de cobro
@@ -333,15 +333,27 @@
                         </div>
                         <div id="local-sale-lines" class="space-y-3"></div>
                         <div class="flex flex-wrap items-center justify-between gap-3">
-                            <button id="add-local-sale-line" type="button" class="rounded-xl border border-emerald-500/40 px-4 py-2.5 text-xs font-bold text-emerald-200 transition hover:bg-emerald-500/10"><i class="fa-solid fa-plus mr-2" aria-hidden="true"></i>Agregar otro producto</button>
+                            <div class="flex flex-wrap gap-2">
+                                <button id="add-local-sale-line" type="button" class="rounded-xl border border-emerald-500/40 px-4 py-2.5 text-xs font-bold text-emerald-200 transition hover:bg-emerald-500/10"><i class="fa-solid fa-plus mr-2" aria-hidden="true"></i>Agregar línea</button>
+                                <button id="toggle-add-local-service" type="button" class="rounded-xl border border-sky-500/40 px-4 py-2.5 text-xs font-bold text-sky-200 transition hover:bg-sky-500/10" aria-expanded="false"><i class="fa-solid fa-plus mr-2" aria-hidden="true"></i>Crear servicio</button>
+                            </div>
                             <div class="min-w-48 rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-right">
                                 <p id="local-sale-total-label" class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Total de la venta</p>
                                 <p id="local-sale-total" class="mt-1 text-lg font-black text-emerald-200">$0.00</p>
                             </div>
                         </div>
+                        <div id="add-local-service-panel" class="hidden rounded-xl border border-sky-500/20 bg-slate-950/50 p-3">
+                            <p class="mb-2 text-xs font-bold text-sky-200">Nuevo servicio</p>
+                            <div class="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
+                                <input id="new-local-service-name" type="text" maxlength="120" placeholder="Ej. Fotocopia" class="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white placeholder:text-slate-500">
+                                <select id="new-local-service-unit" class="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white" aria-label="Unidad del servicio"><option value="pagina">Por página</option><option value="servicio">Por servicio</option><option value="unidad">Por unidad</option></select>
+                                <button id="save-local-service" type="button" class="rounded-xl bg-sky-700 px-4 py-2 text-xs font-black text-white hover:bg-sky-600">Guardar servicio</button>
+                            </div>
+                            <p id="local-service-status" class="mt-2 text-xs text-slate-400" role="status" aria-live="polite"></p>
+                        </div>
                         <p id="local-sale-form-status" class="min-h-4 text-xs text-slate-400" role="status" aria-live="polite"></p>
                         <div class="flex justify-end">
-                            <button id="save-local-sale" type="submit" class="rounded-xl bg-emerald-600 px-5 py-3 text-xs font-black text-white transition hover:bg-emerald-500 disabled:cursor-wait disabled:opacity-50"><i class="fa-solid fa-floppy-disk mr-2" aria-hidden="true"></i>Guardar venta y descontar stock</button>
+                            <button id="save-local-sale" type="submit" class="rounded-xl bg-emerald-600 px-5 py-3 text-xs font-black text-white transition hover:bg-emerald-500 disabled:cursor-wait disabled:opacity-50"><i class="fa-solid fa-floppy-disk mr-2" aria-hidden="true"></i>Guardar venta</button>
                         </div>
                     </form>
                 </section>
@@ -350,7 +362,7 @@
                     <p id="local-sales-status" class="text-xs text-slate-400" role="status" aria-live="polite"></p>
                 </div>
                 <section class="mb-4 rounded-2xl border border-rose-500/20 bg-rose-500/5 p-4" aria-label="Eliminar ventas del historial">
-                    <p class="text-xs text-slate-300">Eliminar historial no modifica el inventario. Los productos vendidos ya fueron descontados.</p>
+                    <p class="text-xs text-slate-300">Eliminar historial no modifica el inventario. Los productos descontados mantienen su stock actual; los servicios nunca descuentan existencias.</p>
                     <div class="mt-3 flex flex-wrap items-end gap-3">
                         <label class="text-xs font-bold text-slate-300">Día o fecha de referencia
                             <input id="local-sales-delete-date" type="date" class="mt-1 block rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white">
@@ -399,7 +411,7 @@
                             </select>
                         </label>
                         <label class="text-xs font-bold text-slate-300">Filtrar producto
-                            <input id="local-sales-report-product" type="search" maxlength="120" placeholder="Escribe el nombre del producto" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white placeholder:text-slate-500">
+                            <input id="local-sales-report-product" type="search" maxlength="120" placeholder="Escribe el nombre del producto o servicio" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white placeholder:text-slate-500">
                         </label>
                         <p id="local-sales-export-range" class="self-center text-xs text-slate-400 sm:col-span-2 xl:col-span-3" aria-live="polite"></p>
                     </div>
@@ -415,7 +427,7 @@
                 </div>
                 <section class="rounded-2xl border border-slate-800 bg-slate-900 p-4">
                     <div class="mb-3 flex items-center justify-between gap-3">
-                        <div><h3 class="text-sm font-black">Productos más vendidos</h3><p class="mt-1 text-[10px] text-slate-500">Ordenados por unidades; respeta los filtros del informe.</p></div>
+                        <div><h3 class="text-sm font-black">Productos y servicios más vendidos</h3><p class="mt-1 text-[10px] text-slate-500">Ordenados por cantidad; respeta los filtros del informe.</p></div>
                         <i class="fa-solid fa-ranking-star text-amber-300" aria-hidden="true"></i>
                     </div>
                     <div id="local-sales-report-top-products" class="text-xs text-slate-400">El resumen del período aparecerá aquí.</div>
