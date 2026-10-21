@@ -39,6 +39,21 @@ const localSaleDate = document.getElementById('local-sale-date');
 const localSaleFormStatus = document.getElementById('local-sale-form-status');
 const localSalesStatus = document.getElementById('local-sales-status');
 const localSalesList = document.getElementById('local-sales-list');
+const insuranceCasesList = document.getElementById('insurance-cases-list');
+const insuranceCasesStatus = document.getElementById('insurance-cases-status');
+const insuranceManualForm = document.getElementById('insurance-manual-form');
+let insuranceCases = [];
+const INSURANCE_DOCUMENT_BUCKET = 'insurance-documents';
+const insuranceStatuses = {
+    new: 'Nueva solicitud',
+    documents_pending: 'Documentos pendientes',
+    in_review: 'En revisión',
+    quoted: 'Cotizada',
+    sold: 'Póliza vendida',
+    renewal_due: 'Renovación próxima',
+    closed: 'Cerrada',
+    cancelled: 'Cancelada'
+};
 const stockHistoryDialog = document.getElementById('stock-history-dialog');
 const stockHistoryProduct = document.getElementById('stock-history-product');
 const stockHistoryStatus = document.getElementById('stock-history-status');
@@ -162,6 +177,238 @@ const normalizeSearchValue = value => String(value ?? '')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/[\s-]/g, '');
+
+async function uploadInsuranceDocument(file, caseId) {
+    if (!file || file.size <= 0 || file.size > 5 * 1024 * 1024) {
+        throw new Error('El documento debe pesar máximo 5 MB.');
+    }
+    const extensions = { 'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+    const extension = extensions[file.type];
+    if (!extension) throw new Error('Adjunta un PDF o una imagen JPG, PNG o WebP.');
+    const path = `${caseId}/${crypto.randomUUID()}.${extension}`;
+    const { error } = await supabaseClient.storage.from(INSURANCE_DOCUMENT_BUCKET).upload(path, file, {
+        contentType: file.type,
+        upsert: false
+    });
+    if (error) throw error;
+    return { path, name: file.name.replace(/[\\/\r\n]/g, '_').slice(0, 160) || `documento.${extension}` };
+}
+
+function renderInsuranceCases() {
+    if (!insuranceCasesList) return;
+    const query = normalizeSearchValue(document.getElementById('insurance-search').value);
+    const statusFilterValue = document.getElementById('insurance-status-filter').value;
+    const filtered = insuranceCases.filter(item => {
+        const searchable = normalizeSearchValue([
+            item.customer_name, item.customer_document, item.customer_phone, item.customer_email,
+            item.vehicle_make, item.vehicle_model, item.vehicle_plate, item.policy_number
+        ].join(' '));
+        return (!query || searchable.includes(query)) && (statusFilterValue === 'all' || item.status === statusFilterValue);
+    });
+
+    insuranceCasesList.innerHTML = filtered.length ? filtered.map(item => {
+        const statusOptions = Object.entries(insuranceStatuses).map(([value, label]) =>
+            `<option value="${value}" ${item.status === value ? 'selected' : ''}>${label}</option>`
+        ).join('');
+        const sourceLabel = item.source === 'web' ? 'Solicitud web' : 'Registro manual';
+        const createdAt = new Intl.DateTimeFormat('es-VE', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(item.created_at));
+        const documentLink = item.document_path
+            ? `<button type="button" data-insurance-document="${escapeHtml(item.id)}" class="rounded-lg border border-sky-400/30 px-3 py-2 text-[10px] font-bold text-sky-200 hover:bg-sky-500/10"><i class="fa-solid fa-file-arrow-down mr-1"></i>${escapeHtml(item.document_name || 'Abrir documento')}</button>`
+            : '<span class="text-[10px] text-slate-500">Sin documento adjunto</span>';
+        return `<article class="rounded-2xl border border-slate-800 bg-slate-900 p-4 sm:p-5">
+            <div class="mb-4 flex flex-wrap items-start justify-between gap-3 border-b border-slate-800 pb-3">
+                <div class="min-w-0">
+                    <p class="text-[9px] font-black uppercase tracking-widest text-emerald-300">${sourceLabel} · ${escapeHtml(createdAt)}</p>
+                    <h3 class="mt-1 break-words text-base font-black">${escapeHtml(item.customer_name)}</h3>
+                    <p class="mt-1 text-xs text-slate-400">${escapeHtml(item.vehicle_make)} ${escapeHtml(item.vehicle_model)}${item.vehicle_year ? ` · ${escapeHtml(item.vehicle_year)}` : ''} · <span class="font-bold text-sky-200">${escapeHtml(item.vehicle_plate)}</span></p>
+                </div>
+                ${documentLink}
+            </div>
+            ${item.request_notes ? `<p class="mb-3 rounded-lg bg-slate-950/60 p-3 text-xs leading-relaxed text-slate-300"><span class="mb-1 block text-[9px] font-black uppercase text-slate-500">Comentario inicial</span>${escapeHtml(item.request_notes)}</p>` : ''}
+            <form class="insurance-case-update space-y-3" data-case-id="${escapeHtml(item.id)}">
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <label class="text-[10px] font-bold text-slate-400">Nombre del cliente<input name="customer_name" required maxlength="120" value="${escapeHtml(item.customer_name)}" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white"></label>
+                    <label class="text-[10px] font-bold text-slate-400">Cédula / documento<input name="customer_document" maxlength="40" value="${escapeHtml(item.customer_document || '')}" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white"></label>
+                    <label class="text-[10px] font-bold text-slate-400">Teléfono<input name="customer_phone" required maxlength="40" value="${escapeHtml(item.customer_phone)}" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white"></label>
+                    <label class="text-[10px] font-bold text-slate-400">Correo<input name="customer_email" type="email" maxlength="160" value="${escapeHtml(item.customer_email || '')}" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white"></label>
+                    <label class="text-[10px] font-bold text-slate-400">Marca<input name="vehicle_make" required maxlength="80" value="${escapeHtml(item.vehicle_make)}" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white"></label>
+                    <label class="text-[10px] font-bold text-slate-400">Modelo<input name="vehicle_model" required maxlength="100" value="${escapeHtml(item.vehicle_model)}" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white"></label>
+                    <label class="text-[10px] font-bold text-slate-400">Año<input name="vehicle_year" type="number" min="1900" max="2100" step="1" value="${escapeHtml(item.vehicle_year || '')}" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white"></label>
+                    <label class="text-[10px] font-bold text-slate-400">Placa<input name="vehicle_plate" required maxlength="16" value="${escapeHtml(item.vehicle_plate)}" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs uppercase text-white"></label>
+                    <label class="text-[10px] font-bold text-slate-400 sm:col-span-2">Serial / VIN<input name="vehicle_serial" maxlength="80" value="${escapeHtml(item.vehicle_serial || '')}" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white"></label>
+                </div>
+                <div class="rounded-xl border border-emerald-500/15 bg-slate-950/40 p-3">
+                    <p class="mb-2 text-[9px] font-black uppercase tracking-widest text-emerald-200">Seguimiento de póliza</p>
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <label class="text-[10px] font-bold text-slate-400">Estado<select name="status" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white">${statusOptions}</select></label>
+                        <div class="grid grid-cols-[1fr_6rem] gap-2"><label class="text-[10px] font-bold text-slate-400">Cotización<input name="quote_amount" type="number" min="0.01" max="999999999999" step="0.01" value="${escapeHtml(item.quote_amount ?? '')}" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white"></label><label class="text-[10px] font-bold text-slate-400">Moneda<select name="quote_currency" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2 py-2 text-xs text-white">${['USD','VES','COP'].map(currency => `<option value="${currency}" ${(item.quote_currency || 'USD') === currency ? 'selected' : ''}>${currency}</option>`).join('')}</select></label></div>
+                        <label class="text-[10px] font-bold text-slate-400">Empresa aseguradora<input name="insurer" maxlength="120" value="${escapeHtml(item.insurer || '')}" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white"></label>
+                        <label class="text-[10px] font-bold text-slate-400">Número de póliza<input name="policy_number" maxlength="100" value="${escapeHtml(item.policy_number || '')}" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white"></label>
+                        <label class="text-[10px] font-bold text-slate-400">Vigencia desde<input name="policy_start" type="date" value="${escapeHtml(item.policy_start || '')}" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white"></label>
+                        <label class="text-[10px] font-bold text-slate-400">Vigencia hasta<input name="policy_end" type="date" value="${escapeHtml(item.policy_end || '')}" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white"></label>
+                        <label class="text-[10px] font-bold text-slate-400 sm:col-span-2">Notas internas<textarea name="admin_notes" maxlength="2000" rows="2" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white">${escapeHtml(item.admin_notes || '')}</textarea></label>
+                        <label class="text-[10px] font-bold text-slate-400 sm:col-span-2">Adjuntar documento nuevo (opcional)<input name="document" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp" class="mt-1 block w-full rounded-lg border border-slate-700 bg-slate-950 p-2 text-[10px] text-slate-300"></label>
+                    </div>
+                </div>
+                <button type="submit" class="w-full rounded-xl bg-emerald-700 px-4 py-2.5 text-xs font-black text-white hover:bg-emerald-600 disabled:cursor-wait disabled:opacity-50"><i class="fa-solid fa-floppy-disk mr-2"></i>Guardar ficha</button>
+            </form>
+        </article>`;
+    }).join('') : '<p class="rounded-2xl border border-slate-800 p-6 text-center text-sm text-slate-400 xl:col-span-2">No hay solicitudes que coincidan con este filtro.</p>';
+}
+
+async function loadInsuranceCases() {
+    insuranceCasesStatus.textContent = 'Cargando clientes y pólizas…';
+    try {
+        const { data, error } = await supabaseClient.from('insurance_cases').select('*').order('created_at', { ascending: false }).limit(500);
+        if (error) throw error;
+        insuranceCases = data || [];
+        renderInsuranceCases();
+        insuranceCasesStatus.textContent = `${insuranceCases.length} ficha${insuranceCases.length === 1 ? '' : 's'} de clientes y pólizas.`;
+    } catch (error) {
+        insuranceCasesStatus.textContent = error.message || 'No se pudieron cargar los registros. Ejecuta la migración de seguros y actualiza el panel.';
+        console.error('Error cargando clientes y pólizas:', error);
+    }
+}
+
+async function registerManualInsuranceCase(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const status = document.getElementById('insurance-manual-status');
+    const button = form.querySelector('button[type="submit"]');
+    const values = new FormData(form);
+    const name = String(values.get('customer_name') || '').trim();
+    const phone = String(values.get('customer_phone') || '').trim();
+    const plate = String(values.get('vehicle_plate') || '').trim().toUpperCase();
+    const make = String(values.get('vehicle_make') || '').trim();
+    const model = String(values.get('vehicle_model') || '').trim();
+    const yearValue = String(values.get('vehicle_year') || '').trim();
+    const file = values.get('document');
+    if (!name || !phone || !plate || !make || !model) {
+        status.textContent = 'Completa el nombre, teléfono, placa, marca y modelo.';
+        return;
+    }
+    button.disabled = true;
+    status.textContent = 'Guardando ficha…';
+    let uploadedPath = null;
+    try {
+        const caseId = crypto.randomUUID();
+        let documentInfo = null;
+        if (file instanceof File && file.size) {
+            documentInfo = await uploadInsuranceDocument(file, caseId);
+            uploadedPath = documentInfo.path;
+        }
+        const { data: authData, error: authError } = await supabaseClient.auth.getUser();
+        if (authError) throw authError;
+        if (!authData.user) throw new Error('Inicia sesión de nuevo para guardar la ficha.');
+        const { error } = await supabaseClient.from('insurance_cases').insert({
+            id: caseId, source: 'admin', status: documentInfo ? 'new' : 'documents_pending',
+            customer_name: name, customer_document: String(values.get('customer_document') || '').trim() || null,
+            customer_phone: phone, customer_email: String(values.get('customer_email') || '').trim().toLowerCase() || null,
+            vehicle_make: make, vehicle_model: model, vehicle_year: yearValue ? Number(yearValue) : null,
+            vehicle_plate: plate, vehicle_serial: String(values.get('vehicle_serial') || '').trim() || null,
+            request_notes: String(values.get('request_notes') || '').trim() || null,
+            document_path: documentInfo?.path || null, document_name: documentInfo?.name || null,
+            created_by: authData.user.id
+        });
+        if (error) throw error;
+        form.reset();
+        status.textContent = 'Cliente registrado. Ya aparece en el seguimiento.';
+        await loadInsuranceCases();
+    } catch (error) {
+        if (uploadedPath) await supabaseClient.storage.from(INSURANCE_DOCUMENT_BUCKET).remove([uploadedPath]);
+        status.textContent = error.message || 'No se pudo guardar la ficha.';
+        console.error('Error registrando cliente de seguros:', error);
+    } finally {
+        button.disabled = false;
+    }
+}
+
+async function saveInsuranceCase(form) {
+    const caseId = form.dataset.caseId;
+    const current = insuranceCases.find(item => item.id === caseId);
+    if (!current) return;
+    const data = new FormData(form);
+    const quoteText = String(data.get('quote_amount') || '').trim();
+    const quoteAmount = quoteText ? Number(quoteText) : null;
+    const policyStart = String(data.get('policy_start') || '') || null;
+    const policyEnd = String(data.get('policy_end') || '') || null;
+    if (quoteText && (!Number.isFinite(quoteAmount) || quoteAmount <= 0 || quoteAmount > 999999999999)) {
+        insuranceCasesStatus.textContent = 'La cotización debe ser mayor que cero y tener un monto válido.';
+        return;
+    }
+    if (policyStart && policyEnd && policyEnd < policyStart) {
+        insuranceCasesStatus.textContent = 'La fecha final de la póliza debe ser igual o posterior a la inicial.';
+        return;
+    }
+    const button = form.querySelector('button[type="submit"]');
+    button.disabled = true;
+    insuranceCasesStatus.textContent = `Guardando ficha de ${current.customer_name}…`;
+    let newDocumentPath = null;
+    try {
+        const file = data.get('document');
+        let documentInfo = null;
+        if (file instanceof File && file.size) {
+            documentInfo = await uploadInsuranceDocument(file, caseId);
+            newDocumentPath = documentInfo.path;
+        }
+        const payload = {
+            customer_name: String(data.get('customer_name') || '').trim(),
+            customer_document: String(data.get('customer_document') || '').trim() || null,
+            customer_phone: String(data.get('customer_phone') || '').trim(),
+            customer_email: String(data.get('customer_email') || '').trim().toLowerCase() || null,
+            vehicle_make: String(data.get('vehicle_make') || '').trim(),
+            vehicle_model: String(data.get('vehicle_model') || '').trim(),
+            vehicle_year: String(data.get('vehicle_year') || '').trim() ? Number(data.get('vehicle_year')) : null,
+            vehicle_plate: String(data.get('vehicle_plate') || '').trim().toUpperCase(),
+            vehicle_serial: String(data.get('vehicle_serial') || '').trim() || null,
+            status: String(data.get('status') || ''),
+            quote_amount: quoteAmount,
+            quote_currency: quoteAmount === null ? null : String(data.get('quote_currency') || 'USD'),
+            insurer: String(data.get('insurer') || '').trim() || null,
+            policy_number: String(data.get('policy_number') || '').trim() || null,
+            policy_start: policyStart,
+            policy_end: policyEnd,
+            admin_notes: String(data.get('admin_notes') || '').trim() || null,
+            updated_at: new Date().toISOString()
+        };
+        if (documentInfo) {
+            payload.document_path = documentInfo.path;
+            payload.document_name = documentInfo.name;
+        }
+        const { error } = await supabaseClient.from('insurance_cases').update(payload).eq('id', caseId);
+        if (error) throw error;
+        if (newDocumentPath && current.document_path) {
+            await supabaseClient.storage.from(INSURANCE_DOCUMENT_BUCKET).remove([current.document_path]);
+        }
+        await loadInsuranceCases();
+        insuranceCasesStatus.textContent = `Ficha actualizada: ${payload.customer_name}.`;
+    } catch (error) {
+        if (newDocumentPath) await supabaseClient.storage.from(INSURANCE_DOCUMENT_BUCKET).remove([newDocumentPath]);
+        insuranceCasesStatus.textContent = error.message || 'No se pudo actualizar la ficha.';
+        console.error('Error actualizando ficha de seguros:', error);
+    } finally {
+        button.disabled = false;
+    }
+}
+
+async function openInsuranceDocument(caseId, button) {
+    const insuranceCase = insuranceCases.find(item => item.id === caseId);
+    if (!insuranceCase?.document_path) return;
+    const tab = window.open('about:blank', '_blank');
+    button.disabled = true;
+    try {
+        const { data, error } = await supabaseClient.storage.from(INSURANCE_DOCUMENT_BUCKET)
+            .createSignedUrl(insuranceCase.document_path, 300);
+        if (error) throw error;
+        if (tab) tab.location.replace(data.signedUrl);
+        else window.location.assign(data.signedUrl);
+    } catch (error) {
+        if (tab) tab.close();
+        insuranceCasesStatus.textContent = error.message || 'No se pudo abrir el documento privado.';
+    } finally {
+        button.disabled = false;
+    }
+}
 
 const visibleOrders = () => {
     const status = statusFilter.value;
@@ -2835,6 +3082,26 @@ adminNavigation.addEventListener('click', event => {
     }
     if (button.dataset.adminPage === 'sales-history') loadLocalSales();
     if (button.dataset.adminPage === 'sales-reports') updateLocalSalesExportRange();
+    if (button.dataset.adminPage === 'insurance') loadInsuranceCases();
+});
+document.getElementById('refresh-insurance-cases').addEventListener('click', loadInsuranceCases);
+document.getElementById('insurance-search').addEventListener('input', renderInsuranceCases);
+document.getElementById('insurance-status-filter').addEventListener('change', renderInsuranceCases);
+document.getElementById('toggle-insurance-manual-form').addEventListener('click', event => {
+    const isHidden = insuranceManualForm.classList.toggle('hidden');
+    event.currentTarget.setAttribute('aria-expanded', String(!isHidden));
+    if (!isHidden) insuranceManualForm.querySelector('[name="customer_name"]').focus();
+});
+insuranceManualForm.addEventListener('submit', registerManualInsuranceCase);
+insuranceCasesList.addEventListener('submit', event => {
+    const form = event.target.closest('.insurance-case-update');
+    if (!form) return;
+    event.preventDefault();
+    saveInsuranceCase(form);
+});
+insuranceCasesList.addEventListener('click', event => {
+    const button = event.target.closest('[data-insurance-document]');
+    if (button) openInsuranceDocument(button.dataset.insuranceDocument, button);
 });
 ordersView.addEventListener('click', event => {
     const button = event.target.closest('[data-dashboard-page]');

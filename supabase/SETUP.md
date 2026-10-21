@@ -416,3 +416,28 @@ moneda, el total cobrado y la tasa VES aplicada al vender.
 2. Publicar admin.html y assets/js/admin.js.
 3. En Inventario, pulsar Cambiar nombre en la tarjeta del producto y guardar el
    nombre nuevo. Los pedidos históricos conservan el nombre registrado al comprarlos.
+
+## Clientes y pólizas de seguro vehicular
+
+1. Ejecutar `supabase/vehicle-insurance-migration.sql` en Supabase SQL Editor. Crea
+   el registro privado de solicitudes y pólizas, junto con el bucket privado
+   `insurance-documents`. Solo los administradores pueden consultar estos registros
+   y archivos.
+2. Desde la raíz del proyecto, desplegar la recepción pública del formulario:
+
+   ```bash
+   supabase functions deploy insurance-request
+   ```
+
+   La función utiliza `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` del entorno seguro
+   de Supabase. La clave `service_role` nunca se publica en el sitio.
+3. Publicar `seguros.html`, `index.html`, `admin.html`, `assets/js/admin.js`,
+   `supabase/config.toml` y `supabase/functions/insurance-request/index.ts`.
+4. En el sitio, **Seguro vehicular** abre el formulario público. En el panel, la
+   sección **Clientes y pólizas** reúne solicitudes web y registros manuales, permite
+   actualizar cotización, aseguradora, número y vigencia de la póliza, notas internas
+   y documentos privados.
+
+La plantilla oficial aún puede incorporarse cuando esté disponible: esta primera
+versión solicita datos básicos del cliente y del vehículo, y acepta un PDF o imagen
+opcional de hasta 5 MB.

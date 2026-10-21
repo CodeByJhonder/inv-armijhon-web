@@ -3,3 +3,6 @@ verify_jwt = false
 
 [functions.launch-promotion]
 verify_jwt = false
+
+[functions.insurance-request]
+verify_jwt = false

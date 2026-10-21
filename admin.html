@@ -77,6 +77,9 @@
                         <button type="button" data-admin-page="orders" aria-current="false" class="admin-nav-button flex shrink-0 items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-bold text-slate-400 transition hover:bg-slate-800 hover:text-white lg:w-full">
                             <i class="fa-solid fa-receipt w-5 text-center" aria-hidden="true"></i><span>Pedidos recibidos</span>
                         </button>
+                        <button type="button" data-admin-page="insurance" aria-current="false" class="admin-nav-button flex shrink-0 items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-bold text-slate-400 transition hover:bg-slate-800 hover:text-white lg:w-full">
+                            <i class="fa-solid fa-car-side w-5 text-center" aria-hidden="true"></i><span>Clientes y pólizas</span>
+                        </button>
                         <button type="button" data-admin-page="local-sales" aria-current="false" class="admin-nav-button flex shrink-0 items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-bold text-slate-400 transition hover:bg-slate-800 hover:text-white lg:w-full">
                             <i class="fa-solid fa-store w-5 text-center" aria-hidden="true"></i><span>Ventas locales</span>
                         </button>
@@ -309,6 +312,52 @@
                 </section>
             </div>
                     </section>
+
+            <section id="admin-page-insurance" data-admin-page-view class="hidden" aria-labelledby="insurance-heading">
+                <div class="mb-5 flex flex-wrap items-end justify-between gap-3">
+                    <div>
+                        <h2 id="insurance-heading" class="text-xl font-black"><i class="fa-solid fa-car-side mr-2 text-emerald-300" aria-hidden="true"></i>Clientes y pólizas</h2>
+                        <p class="mt-1 text-xs text-slate-400">Solicitudes de la web y clientes registrados por ti, en un solo seguimiento privado.</p>
+                    </div>
+                    <button id="refresh-insurance-cases" type="button" class="rounded-xl border border-slate-700 px-4 py-2 text-xs font-bold hover:bg-slate-800"><i class="fa-solid fa-rotate mr-2" aria-hidden="true"></i>Actualizar</button>
+                </div>
+                <section class="mb-5 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4 sm:p-5">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <h3 class="text-sm font-black">Registrar cliente desde el panel</h3>
+                            <p class="mt-1 text-[11px] text-slate-400">Úsalo cuando la persona te contacte directamente.</p>
+                        </div>
+                        <button id="toggle-insurance-manual-form" type="button" aria-expanded="false" class="rounded-xl border border-emerald-400/40 px-4 py-2 text-xs font-bold text-emerald-200 hover:bg-emerald-500/10"><i class="fa-solid fa-plus mr-2"></i>Nuevo registro</button>
+                    </div>
+                    <form id="insurance-manual-form" class="mt-4 hidden space-y-4">
+                        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                            <label class="text-xs font-bold text-slate-300">Nombre y apellido *<input name="customer_name" required maxlength="120" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white"></label>
+                            <label class="text-xs font-bold text-slate-300">Cédula / documento<input name="customer_document" maxlength="40" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white"></label>
+                            <label class="text-xs font-bold text-slate-300">Teléfono / WhatsApp *<input name="customer_phone" required maxlength="40" type="tel" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white"></label>
+                            <label class="text-xs font-bold text-slate-300">Correo electrónico<input name="customer_email" maxlength="160" type="email" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white"></label>
+                            <label class="text-xs font-bold text-slate-300">Marca del vehículo *<input name="vehicle_make" required maxlength="80" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white"></label>
+                            <label class="text-xs font-bold text-slate-300">Modelo *<input name="vehicle_model" required maxlength="100" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white"></label>
+                            <label class="text-xs font-bold text-slate-300">Año<input name="vehicle_year" type="number" min="1900" max="2100" step="1" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white"></label>
+                            <label class="text-xs font-bold text-slate-300">Placa *<input name="vehicle_plate" required maxlength="16" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm uppercase text-white"></label>
+                            <label class="text-xs font-bold text-slate-300">Serial / VIN<input name="vehicle_serial" maxlength="80" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white"></label>
+                            <label class="text-xs font-bold text-slate-300 sm:col-span-2 xl:col-span-3">Comentario inicial<textarea name="request_notes" maxlength="1000" rows="2" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white"></textarea></label>
+                            <label class="text-xs font-bold text-slate-300 sm:col-span-2 xl:col-span-3">Plantilla o documento (opcional)<input name="document" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp" class="mt-1 block w-full rounded-xl border border-slate-700 bg-slate-950 p-2 text-xs text-slate-300"></label>
+                        </div>
+                        <p id="insurance-manual-status" class="min-h-4 text-xs text-slate-400" role="status" aria-live="polite"></p>
+                        <button type="submit" class="rounded-xl bg-emerald-600 px-5 py-3 text-xs font-black text-white hover:bg-emerald-500 disabled:opacity-50"><i class="fa-solid fa-floppy-disk mr-2"></i>Guardar cliente</button>
+                    </form>
+                </section>
+                <div class="mb-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_14rem]">
+                    <label class="sr-only" for="insurance-search">Buscar cliente o vehículo</label>
+                    <input id="insurance-search" type="search" placeholder="Buscar nombre, teléfono o placa" class="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white placeholder:text-slate-500">
+                    <label class="sr-only" for="insurance-status-filter">Filtrar por estado</label>
+                    <select id="insurance-status-filter" class="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-white">
+                        <option value="all">Todos los estados</option><option value="new">Nuevas solicitudes</option><option value="documents_pending">Documentos pendientes</option><option value="in_review">En revisión</option><option value="quoted">Cotizadas</option><option value="sold">Pólizas vendidas</option><option value="renewal_due">Renovación próxima</option><option value="closed">Cerradas</option><option value="cancelled">Canceladas</option>
+                    </select>
+                </div>
+                <p id="insurance-cases-status" class="mb-3 min-h-4 text-xs text-slate-400" role="status" aria-live="polite"></p>
+                <div id="insurance-cases-list" class="grid gap-4 xl:grid-cols-2"></div>
+            </section>
 
             <section id="admin-page-local-sales" data-admin-page-view class="hidden" aria-labelledby="local-sales-heading">
                 <div class="mb-5 flex flex-wrap items-end justify-between gap-3">
@@ -617,7 +666,7 @@
     <script src="assets/js/payment-config.js"></script>
     <script src="assets/js/chat-push.js"></script>
     <script src="assets/js/chat-attachments.js"></script>
-    <script src="assets/js/admin.js?v=20261015-6"></script>
+    <script src="assets/js/admin.js?v=20261020-1"></script>
     <script>
         if (!window.supabaseClient && !window.supabase) {
             document.getElementById('login-status').textContent = 'No se pudo cargar Supabase. Revisa tu conexión a internet y recarga la página.';
