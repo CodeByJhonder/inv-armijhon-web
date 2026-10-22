@@ -209,7 +209,7 @@ function renderInsuranceCases() {
         const searchable = normalizeSearchValue([
             item.ally, item.customer_phone, item.customer_email, item.customer_address,
             item.customer_postal_code, item.license_grade, item.economic_activity,
-            item.vehicle_cylinders, item.payment_method, item.policy_number,
+            item.vehicle_cylinders, item.policy_number,
             item.customer_name, item.vehicle_make, item.vehicle_model, item.vehicle_plate
         ].join(' '));
         return (!query || searchable.includes(query)) && (statusFilterValue === 'all' || item.status === statusFilterValue);
@@ -251,6 +251,11 @@ function renderInsuranceCases() {
             ${legacyDetails}
             ${item.request_notes ? `<p class="mb-3 rounded-lg bg-slate-950/60 p-3 text-xs leading-relaxed text-slate-300">${escapeHtml(item.request_notes)}</p>` : ''}
             <div class="mb-4 flex flex-wrap gap-2">${photoButton('identity_photo_path', 'Cédula', item.identity_photo_name)}${photoButton('circulation_card_photo_path', 'Carnet de circulación', item.circulation_card_photo_name)}${photoButton('payment_proof_path', 'Comprobante de pago', item.payment_proof_name)}${legacyDocument}${!item.identity_photo_path && !item.circulation_card_photo_path && !item.payment_proof_path && !item.document_path ? '<span class="text-[10px] text-slate-500">Sin archivos adjuntos</span>' : ''}</div>
+            <div class="mb-4 flex flex-wrap gap-2" aria-label="Exportar datos del registro">
+                <button type="button" data-insurance-export="${escapeHtml(item.id)}" data-format="pdf" class="rounded-lg border border-rose-400/30 px-3 py-2 text-[10px] font-bold text-rose-200 hover:bg-rose-500/10"><i class="fa-solid fa-file-pdf mr-1"></i>PDF</button>
+                <button type="button" data-insurance-export="${escapeHtml(item.id)}" data-format="txt" class="rounded-lg border border-slate-500/40 px-3 py-2 text-[10px] font-bold text-slate-200 hover:bg-slate-500/10"><i class="fa-solid fa-file-lines mr-1"></i>TXT</button>
+                <button type="button" data-insurance-export="${escapeHtml(item.id)}" data-format="xlsx" class="rounded-lg border border-emerald-400/30 px-3 py-2 text-[10px] font-bold text-emerald-200 hover:bg-emerald-500/10"><i class="fa-solid fa-file-excel mr-1"></i>Excel</button>
+            </div>
             <form class="insurance-case-update space-y-3" data-case-id="${escapeHtml(item.id)}">
                 <div class="rounded-xl border border-emerald-500/15 bg-slate-950/40 p-3">
                     <p class="mb-2 text-[9px] font-black uppercase tracking-widest text-emerald-200">Seguimiento de póliza</p>
@@ -262,9 +267,6 @@ function renderInsuranceCases() {
                         <label class="text-[10px] font-bold text-slate-400">Vigencia desde<input name="policy_start" type="date" value="${escapeHtml(item.policy_start || '')}" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white"></label>
                         <label class="text-[10px] font-bold text-slate-400">Vigencia hasta<input name="policy_end" type="date" value="${escapeHtml(item.policy_end || '')}" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white"></label>
                         <label class="text-[10px] font-bold text-slate-400 sm:col-span-2">Notas internas<textarea name="admin_notes" maxlength="2000" rows="2" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white">${escapeHtml(item.admin_notes || '')}</textarea></label>
-                        <label class="text-[10px] font-bold text-slate-400 sm:col-span-2">Reemplazar foto de cédula<input name="identity_photo" type="file" accept="image/jpeg,image/png,image/webp" class="mt-1 block w-full rounded-lg border border-slate-700 bg-slate-950 p-2 text-[10px] text-slate-300"></label>
-                        <label class="text-[10px] font-bold text-slate-400 sm:col-span-2">Reemplazar foto del carnet de circulación<input name="circulation_card_photo" type="file" accept="image/jpeg,image/png,image/webp" class="mt-1 block w-full rounded-lg border border-slate-700 bg-slate-950 p-2 text-[10px] text-slate-300"></label>
-                        <label class="text-[10px] font-bold text-slate-400 sm:col-span-2">Reemplazar comprobante de pago<input name="payment_proof" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" class="mt-1 block w-full rounded-lg border border-slate-700 bg-slate-950 p-2 text-[10px] text-slate-300"></label>
                     </div>
                 </div>
                 <button type="submit" class="w-full rounded-xl bg-emerald-700 px-4 py-2.5 text-xs font-black text-white hover:bg-emerald-600 disabled:cursor-wait disabled:opacity-50"><i class="fa-solid fa-floppy-disk mr-2"></i>Guardar ficha</button>
@@ -369,17 +371,7 @@ async function saveInsuranceCase(form) {
     const button = form.querySelector('button[type="submit"]');
     button.disabled = true;
     insuranceCasesStatus.textContent = `Guardando ficha de ${current.customer_name}…`;
-    const newDocumentPaths = [];
     try {
-        const identityFile = data.get('identity_photo');
-        const circulationFile = data.get('circulation_card_photo');
-        const paymentFile = data.get('payment_proof');
-        const identityInfo = identityFile instanceof File && identityFile.size ? await uploadInsuranceDocument(identityFile, caseId) : null;
-        if (identityInfo) newDocumentPaths.push(identityInfo.path);
-        const circulationInfo = circulationFile instanceof File && circulationFile.size ? await uploadInsuranceDocument(circulationFile, caseId) : null;
-        if (circulationInfo) newDocumentPaths.push(circulationInfo.path);
-        const paymentInfo = paymentFile instanceof File && paymentFile.size ? await uploadInsuranceDocument(paymentFile, caseId, true) : null;
-        if (paymentInfo) newDocumentPaths.push(paymentInfo.path);
         const payload = {
             status: String(data.get('status') || ''),
             quote_amount: quoteAmount,
@@ -391,33 +383,95 @@ async function saveInsuranceCase(form) {
             admin_notes: String(data.get('admin_notes') || '').trim() || null,
             updated_at: new Date().toISOString()
         };
-        if (identityInfo) {
-            payload.identity_photo_path = identityInfo.path;
-            payload.identity_photo_name = identityInfo.name;
-        }
-        if (circulationInfo) {
-            payload.circulation_card_photo_path = circulationInfo.path;
-            payload.circulation_card_photo_name = circulationInfo.name;
-        }
-        if (paymentInfo) {
-            payload.payment_proof_path = paymentInfo.path;
-            payload.payment_proof_name = paymentInfo.name;
-        }
         const { error } = await supabaseClient.from('insurance_cases').update(payload).eq('id', caseId);
         if (error) throw error;
-        const oldPaths = [];
-        if (identityInfo && current.identity_photo_path) oldPaths.push(current.identity_photo_path);
-        if (circulationInfo && current.circulation_card_photo_path) oldPaths.push(current.circulation_card_photo_path);
-        if (paymentInfo && current.payment_proof_path) oldPaths.push(current.payment_proof_path);
-        if (oldPaths.length) {
-            await supabaseClient.storage.from(INSURANCE_DOCUMENT_BUCKET).remove(oldPaths);
-        }
         await loadInsuranceCases();
         insuranceCasesStatus.textContent = 'Ficha actualizada.';
     } catch (error) {
-        if (newDocumentPaths.length) await supabaseClient.storage.from(INSURANCE_DOCUMENT_BUCKET).remove(newDocumentPaths);
         insuranceCasesStatus.textContent = error.message || 'No se pudo actualizar la ficha.';
         console.error('Error actualizando ficha de seguros:', error);
+    } finally {
+        button.disabled = false;
+    }
+}
+
+function insuranceCaseExportFields(item) {
+    const activityLabels = { independiente: 'Independiente', empleado: 'Empleado', socio: 'Socio' };
+    return [
+        ['Módulo de ventas', item.sales_location || 'Elorza, Apure'],
+        ['Aliado', item.ally],
+        ['Fecha', item.sales_date || item.created_at?.slice(0, 10)],
+        ['Dirección', item.customer_address],
+        ['Código postal', item.customer_postal_code],
+        ['Correo electrónico', item.customer_email],
+        ['Teléfono', item.customer_phone],
+        ['Grado de licencia', item.license_grade],
+        ['Actividad económica', activityLabels[item.economic_activity] || item.economic_activity],
+        ['Cilindros del vehículo', item.vehicle_cylinders],
+        ['Estado del trámite', insuranceStatuses[item.status] || item.status],
+        ['Empresa aseguradora', item.insurer],
+        ['Número de póliza', item.policy_number],
+        ['Vigencia desde', item.policy_start],
+        ['Vigencia hasta', item.policy_end],
+        ['Notas internas', item.admin_notes]
+    ].map(([label, value]) => [label, value == null || value === '' ? '—' : String(value)]);
+}
+
+async function exportInsuranceCase(caseId, format, button) {
+    const item = insuranceCases.find(record => record.id === caseId);
+    if (!item) return;
+    const fields = insuranceCaseExportFields(item);
+    const safeDate = String(item.sales_date || item.created_at?.slice(0, 10) || 'registro').replace(/[^\d-]/g, '');
+    const baseName = `inv-armijhon-seguro-${safeDate}-${String(item.id).slice(0, 8)}`;
+    button.disabled = true;
+    try {
+        if (format === 'txt') {
+            const text = ['INV. ARMIJHON - REGISTRO DE VENTA DE SEGURO', '', ...fields.map(([label, value]) => `${label}: ${value}`)].join('\r\n');
+            downloadLocalSalesFile(new Blob([`\uFEFF${text}`], { type: 'text/plain;charset=utf-8' }), `${baseName}.txt`);
+        } else if (format === 'xlsx') {
+            if (!window.ExcelJS) throw new Error('No se pudo cargar Excel. Recarga la página e inténtalo de nuevo.');
+            const workbook = new ExcelJS.Workbook();
+            workbook.creator = 'INV. Armijhon';
+            const sheet = workbook.addWorksheet('Registro', { views: [{ state: 'frozen', ySplit: 1 }] });
+            sheet.columns = [{ header: 'Campo', key: 'field', width: 30 }, { header: 'Dato', key: 'value', width: 48 }];
+            sheet.addRows(fields.map(([field, value]) => ({ field, value })));
+            sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF201D18' } };
+            sheet.eachRow(row => { row.alignment = { vertical: 'top', wrapText: true }; });
+            const bytes = await workbook.xlsx.writeBuffer();
+            downloadLocalSalesFile(new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `${baseName}.xlsx`);
+        } else if (format === 'pdf') {
+            if (!window.jspdf?.jsPDF) throw new Error('No se pudo cargar PDF. Recarga la página e inténtalo de nuevo.');
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(17);
+            doc.text('INV. ARMIJHON', 14, 18);
+            doc.setFontSize(11);
+            doc.text('REGISTRO DE VENTA DE SEGURO', 14, 26);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+            doc.text(`Generado: ${localSalesFileTimestamp()}`, 14, 32);
+            doc.autoTable({
+                startY: 38,
+                head: [['Campo', 'Dato']],
+                body: fields,
+                theme: 'striped',
+                headStyles: { fillColor: [44, 39, 31], textColor: [247, 243, 234] },
+                styles: { font: 'helvetica', fontSize: 9, cellPadding: 3, overflow: 'linebreak' },
+                columnStyles: { 0: { cellWidth: 52 } },
+                didDrawPage: data => {
+                    const height = doc.internal.pageSize.getHeight();
+                    doc.setFontSize(8);
+                    doc.setTextColor(125, 119, 108);
+                    doc.text('Registro privado de INV. Armijhon', 14, height - 7);
+                    doc.text(`Página ${data.pageNumber}`, doc.internal.pageSize.getWidth() - 28, height - 7);
+                }
+            });
+            doc.save(`${baseName}.pdf`);
+        }
+    } catch (error) {
+        insuranceCasesStatus.textContent = error.message || 'No se pudo exportar el registro.';
     } finally {
         button.disabled = false;
     }
@@ -3136,6 +3190,11 @@ insuranceCasesList.addEventListener('submit', event => {
     saveInsuranceCase(form);
 });
 insuranceCasesList.addEventListener('click', event => {
+    const exportButton = event.target.closest('[data-insurance-export]');
+    if (exportButton) {
+        exportInsuranceCase(exportButton.dataset.insuranceExport, exportButton.dataset.format, exportButton);
+        return;
+    }
     const button = event.target.closest('[data-insurance-document]');
     if (button) openInsuranceDocument(button.dataset.insuranceDocument, button);
 });
