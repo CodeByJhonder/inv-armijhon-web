@@ -32,9 +32,9 @@
         <section class="self-start lg:sticky lg:top-8">
             <span class="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[.16em] text-emerald-200"><i class="fa-solid fa-shield-halved"></i> Atención personalizada</span>
             <h1 class="mt-5 text-4xl font-black leading-tight sm:text-5xl">Gestiona la protección de tu vehículo</h1>
-            <p class="mt-4 max-w-xl text-sm leading-relaxed text-slate-400">Cuéntanos qué vehículo deseas asegurar. Revisaremos tu solicitud y nos pondremos en contacto para orientarte sobre los requisitos y los siguientes pasos.</p>
+            <p class="mt-4 max-w-xl text-sm leading-relaxed text-slate-400">Completa los datos del módulo de ventas y adjunta una foto de tu cédula y del carnet de circulación. Los documentos se almacenan de forma privada.</p>
             <div class="mt-7 space-y-3">
-                <div class="flex gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 p-4"><span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-400/10 text-emerald-300"><i class="fa-solid fa-clipboard-check"></i></span><p class="text-xs leading-relaxed text-slate-300"><strong class="block text-white">1. Envíanos los datos</strong>Completa la solicitud y adjunta los documentos disponibles.</p></div>
+                <div class="flex gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 p-4"><span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-400/10 text-emerald-300"><i class="fa-solid fa-clipboard-check"></i></span><p class="text-xs leading-relaxed text-slate-300"><strong class="block text-white">1. Envíanos los datos</strong>Completa los campos solicitados y adjunta ambas fotos.</p></div>
                 <div class="flex gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 p-4"><span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-400/10 text-sky-300"><i class="fa-solid fa-comments"></i></span><p class="text-xs leading-relaxed text-slate-300"><strong class="block text-white">2. Revisamos contigo</strong>Te contactaremos para confirmar la información y continuar la gestión.</p></div>
                 <div class="flex gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 p-4"><span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-400/10 text-violet-300"><i class="fa-solid fa-file-shield"></i></span><p class="text-xs leading-relaxed text-slate-300"><strong class="block text-white">3. Seguimos el proceso</strong>Podrás recibir orientación sobre cotización, documentación y emisión con la empresa aseguradora.</p></div>
             </div>
@@ -44,54 +44,66 @@
 
         <section class="rounded-3xl border border-slate-800 bg-slate-900 p-5 shadow-2xl shadow-black/20 sm:p-8" aria-labelledby="insurance-form-heading">
             <div class="mb-6">
-                <h2 id="insurance-form-heading" class="text-xl font-black">Solicitar asesoría para mi vehículo</h2>
-                <p class="mt-1 text-xs leading-relaxed text-slate-400">Los campos marcados con * son necesarios para iniciar la revisión.</p>
+                <h2 id="insurance-form-heading" class="text-xl font-black">Módulo de ventas: Elorza, Apure</h2>
+                <p class="mt-1 text-xs leading-relaxed text-slate-400">Completa los datos y carga las dos imágenes solicitadas.</p>
             </div>
             <form id="insurance-request-form" class="space-y-5" enctype="multipart/form-data" novalidate>
                 <div class="grid gap-4 sm:grid-cols-2">
-                    <label class="text-xs font-bold text-slate-300 sm:col-span-2">Nombre y apellido *
-                        <input name="customerName" class="insurance-input mt-1" maxlength="120" autocomplete="name" required>
+                    <label class="text-xs font-bold text-slate-300">Módulo de ventas
+                        <input value="Elorza, Apure" class="insurance-input mt-1" readonly>
                     </label>
-                    <label class="text-xs font-bold text-slate-300">Cédula o documento
-                        <input name="customerDocument" class="insurance-input mt-1" maxlength="40" autocomplete="off">
+                    <label class="text-xs font-bold text-slate-300">Aliado
+                        <input name="ally" class="insurance-input mt-1" maxlength="120" autocomplete="organization">
                     </label>
-                    <label class="text-xs font-bold text-slate-300">Teléfono / WhatsApp *
-                        <input name="customerPhone" class="insurance-input mt-1" type="tel" maxlength="40" autocomplete="tel" placeholder="Ej. +58 426 000 0000" required>
+                    <label class="text-xs font-bold text-slate-300">Fecha *
+                        <input name="sales_date" class="insurance-input mt-1" type="date" required>
                     </label>
-                    <label class="text-xs font-bold text-slate-300 sm:col-span-2">Correo electrónico (opcional)
-                        <input name="customerEmail" class="insurance-input mt-1" type="email" maxlength="160" autocomplete="email">
+                    <label class="text-xs font-bold text-slate-300 sm:col-span-2">Dirección *
+                        <input name="customer_address" class="insurance-input mt-1" maxlength="240" autocomplete="street-address" required>
+                    </label>
+                    <label class="text-xs font-bold text-slate-300">Código postal del cliente *
+                        <input name="customer_postal_code" class="insurance-input mt-1" maxlength="20" autocomplete="postal-code" required>
+                    </label>
+                    <label class="text-xs font-bold text-slate-300">Correo electrónico *
+                        <input name="customer_email" class="insurance-input mt-1" type="email" maxlength="160" autocomplete="email" required>
+                    </label>
+                    <label class="text-xs font-bold text-slate-300">Teléfono *
+                        <input name="customer_phone" class="insurance-input mt-1" type="tel" maxlength="40" autocomplete="tel" placeholder="Ej. +58 426 000 0000" required>
+                    </label>
+                    <label class="text-xs font-bold text-slate-300">Grado de licencia *
+                        <input name="license_grade" class="insurance-input mt-1" maxlength="40" required>
+                    </label>
+                    <label class="text-xs font-bold text-slate-300">Actividad económica *
+                        <select name="economic_activity" class="insurance-input mt-1" required>
+                            <option value="">Selecciona una opción</option>
+                            <option value="independiente">Independiente</option>
+                            <option value="empleado">Empleado</option>
+                            <option value="socio">Socio</option>
+                        </select>
+                    </label>
+                    <label class="text-xs font-bold text-slate-300">Cilindros del vehículo *
+                        <input name="vehicle_cylinders" class="insurance-input mt-1" type="number" min="1" max="32" step="1" inputmode="numeric" required>
+                    </label>
+                    <label class="text-xs font-bold text-slate-300">Monto cobrado al cliente *
+                        <input name="amount_charged" class="insurance-input mt-1" type="number" min="0.01" max="999999999999" step="0.01" inputmode="decimal" required>
+                    </label>
+                    <label class="text-xs font-bold text-slate-300">Forma de pago *
+                        <input name="payment_method" class="insurance-input mt-1" maxlength="80" placeholder="Ej. efectivo, transferencia" required>
                     </label>
                 </div>
-                <fieldset class="rounded-2xl border border-slate-800 p-4">
-                    <legend class="px-2 text-xs font-black text-emerald-200"><i class="fa-solid fa-car-side mr-2"></i>Datos del vehículo</legend>
-                    <div class="grid gap-4 sm:grid-cols-2">
-                        <label class="text-xs font-bold text-slate-300">Marca *
-                            <input name="vehicleMake" class="insurance-input mt-1" maxlength="80" placeholder="Ej. Toyota" required>
-                        </label>
-                        <label class="text-xs font-bold text-slate-300">Modelo *
-                            <input name="vehicleModel" class="insurance-input mt-1" maxlength="100" placeholder="Ej. Corolla" required>
-                        </label>
-                        <label class="text-xs font-bold text-slate-300">Año
-                            <input name="vehicleYear" class="insurance-input mt-1" type="number" min="1900" max="2100" step="1" inputmode="numeric" placeholder="Ej. 2020">
-                        </label>
-                        <label class="text-xs font-bold text-slate-300">Placa *
-                            <input name="vehiclePlate" class="insurance-input mt-1 uppercase" maxlength="16" autocomplete="off" placeholder="Ej. ABC123" required>
-                        </label>
-                        <label class="text-xs font-bold text-slate-300 sm:col-span-2">Serial / VIN (opcional)
-                            <input name="vehicleSerial" class="insurance-input mt-1" maxlength="80" autocomplete="off">
-                        </label>
-                    </div>
-                </fieldset>
-                <label class="block text-xs font-bold text-slate-300">Plantilla o documento del vehículo (opcional)
-                    <input name="document" class="mt-2 block w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-xs text-slate-300 file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-700 file:px-3 file:py-2 file:text-xs file:font-bold file:text-white" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp">
-                    <span class="mt-1 block text-[10px] font-normal text-slate-500">PDF o imagen, máximo 5 MB. Adjunta solo documentos solicitados para la gestión.</span>
-                </label>
-                <label class="block text-xs font-bold text-slate-300">Comentario para iniciar (opcional)
-                    <textarea name="requestNotes" class="insurance-input mt-1 min-h-24 resize-y" maxlength="1000" placeholder="¿Hay algo que debamos saber para orientarte?"></textarea>
-                </label>
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <label class="block text-xs font-bold text-slate-300">Foto de la cédula *
+                        <input name="identity_photo" class="mt-2 block w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-xs text-slate-300 file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-700 file:px-3 file:py-2 file:text-xs file:font-bold file:text-white" type="file" accept="image/jpeg,image/png,image/webp" required>
+                        <span class="mt-1 block text-[10px] font-normal text-slate-500">JPG, PNG o WebP; máximo 5 MB.</span>
+                    </label>
+                    <label class="block text-xs font-bold text-slate-300">Foto del carnet de circulación *
+                        <input name="circulation_card_photo" class="mt-2 block w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-xs text-slate-300 file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-700 file:px-3 file:py-2 file:text-xs file:font-bold file:text-white" type="file" accept="image/jpeg,image/png,image/webp" required>
+                        <span class="mt-1 block text-[10px] font-normal text-slate-500">JPG, PNG o WebP; máximo 5 MB.</span>
+                    </label>
+                </div>
                 <label class="flex items-start gap-3 rounded-xl bg-slate-950/60 p-3 text-[11px] leading-relaxed text-slate-400">
                     <input name="consent" type="checkbox" class="mt-0.5 accent-emerald-500" required>
-                    <span>Autorizo a INV. Armijhon a utilizar estos datos y el documento adjunto para contactarme y gestionar esta solicitud de seguro vehicular. Consulta nuestra <a href="politica-privacidad.html" class="font-bold text-emerald-300 underline hover:text-emerald-200">Política de privacidad</a>.</span>
+                    <span>Autorizo a INV. Armijhon a utilizar los datos y las fotos adjuntas para gestionar esta venta. Consulta nuestra <a href="politica-privacidad.html" class="font-bold text-emerald-300 underline hover:text-emerald-200">Política de privacidad</a>.</span>
                 </label>
                 <input name="website" type="text" tabindex="-1" autocomplete="off" aria-hidden="true" class="absolute -left-[10000px] h-px w-px opacity-0">
                 <p id="insurance-request-status" class="min-h-5 text-xs text-slate-400" role="status" aria-live="polite"></p>
@@ -107,14 +119,20 @@
         const insuranceForm = document.getElementById('insurance-request-form');
         const insuranceStatus = document.getElementById('insurance-request-status');
         const insuranceSubmit = document.getElementById('insurance-request-submit');
+        const salesDateInput = insuranceForm.querySelector('[name="sales_date"]');
+        const today = new Date();
+        today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
+        salesDateInput.value = today.toISOString().slice(0, 10);
         insuranceForm.addEventListener('submit', async event => {
             event.preventDefault();
             if (!insuranceForm.reportValidity()) return;
-            const file = insuranceForm.querySelector('[name="document"]').files[0];
-            if (file && file.size > 5 * 1024 * 1024) {
-                insuranceStatus.textContent = 'El documento supera el máximo de 5 MB.';
-                insuranceStatus.className = 'min-h-5 text-xs text-rose-300';
-                return;
+            for (const [name, label] of [['identity_photo', 'la foto de la cédula'], ['circulation_card_photo', 'la foto del carnet de circulación']]) {
+                const file = insuranceForm.querySelector(`[name="${name}"]`).files[0];
+                if (!file || file.size > 5 * 1024 * 1024 || !['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+                    insuranceStatus.textContent = `Selecciona ${label} en JPG, PNG o WebP (máximo 5 MB).`;
+                    insuranceStatus.className = 'min-h-5 text-xs text-rose-300';
+                    return;
+                }
             }
             const config = window.SUPABASE_CONFIG || {};
             if (!config.url || !config.publishableKey) {
@@ -134,6 +152,9 @@
                 const result = await response.json().catch(() => ({}));
                 if (!response.ok) throw new Error(result.error || 'No se pudo enviar la solicitud.');
                 insuranceForm.reset();
+                const resetDate = new Date();
+                resetDate.setMinutes(resetDate.getMinutes() - resetDate.getTimezoneOffset());
+                salesDateInput.value = resetDate.toISOString().slice(0, 10);
                 insuranceStatus.textContent = '¡Recibimos tu solicitud! Nos comunicaremos contigo para continuar la gestión.';
                 insuranceStatus.className = 'min-h-5 text-xs font-bold text-emerald-300';
             } catch (error) {

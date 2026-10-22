@@ -180,11 +180,11 @@ const normalizeSearchValue = value => String(value ?? '')
 
 async function uploadInsuranceDocument(file, caseId) {
     if (!file || file.size <= 0 || file.size > 5 * 1024 * 1024) {
-        throw new Error('El documento debe pesar máximo 5 MB.');
+        throw new Error('Cada foto debe pesar máximo 5 MB.');
     }
-    const extensions = { 'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+    const extensions = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
     const extension = extensions[file.type];
-    if (!extension) throw new Error('Adjunta un PDF o una imagen JPG, PNG o WebP.');
+    if (!extension) throw new Error('Adjunta una foto JPG, PNG o WebP.');
     const path = `${caseId}/${crypto.randomUUID()}.${extension}`;
     const { error } = await supabaseClient.storage.from(INSURANCE_DOCUMENT_BUCKET).upload(path, file, {
         contentType: file.type,
@@ -194,14 +194,23 @@ async function uploadInsuranceDocument(file, caseId) {
     return { path, name: file.name.replace(/[\\/\r\n]/g, '_').slice(0, 160) || `documento.${extension}` };
 }
 
+function setInsuranceDate(input) {
+    if (!input) return;
+    const today = new Date();
+    today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
+    input.value = today.toISOString().slice(0, 10);
+}
+
 function renderInsuranceCases() {
     if (!insuranceCasesList) return;
     const query = normalizeSearchValue(document.getElementById('insurance-search').value);
     const statusFilterValue = document.getElementById('insurance-status-filter').value;
     const filtered = insuranceCases.filter(item => {
         const searchable = normalizeSearchValue([
-            item.customer_name, item.customer_document, item.customer_phone, item.customer_email,
-            item.vehicle_make, item.vehicle_model, item.vehicle_plate, item.policy_number
+            item.ally, item.customer_phone, item.customer_email, item.customer_address,
+            item.customer_postal_code, item.license_grade, item.economic_activity,
+            item.vehicle_cylinders, item.payment_method, item.policy_number,
+            item.customer_name, item.vehicle_make, item.vehicle_model, item.vehicle_plate
         ].join(' '));
         return (!query || searchable.includes(query)) && (statusFilterValue === 'all' || item.status === statusFilterValue);
     });
@@ -210,33 +219,41 @@ function renderInsuranceCases() {
         const statusOptions = Object.entries(insuranceStatuses).map(([value, label]) =>
             `<option value="${value}" ${item.status === value ? 'selected' : ''}>${label}</option>`
         ).join('');
-        const sourceLabel = item.source === 'web' ? 'Solicitud web' : 'Registro manual';
+        const sourceLabel = item.source === 'web' ? 'Formulario web' : 'Registro manual';
         const createdAt = new Intl.DateTimeFormat('es-VE', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(item.created_at));
-        const documentLink = item.document_path
-            ? `<button type="button" data-insurance-document="${escapeHtml(item.id)}" class="rounded-lg border border-sky-400/30 px-3 py-2 text-[10px] font-bold text-sky-200 hover:bg-sky-500/10"><i class="fa-solid fa-file-arrow-down mr-1"></i>${escapeHtml(item.document_name || 'Abrir documento')}</button>`
-            : '<span class="text-[10px] text-slate-500">Sin documento adjunto</span>';
+        const photoButton = (field, label, name) => item[field]
+            ? `<button type="button" data-insurance-document="${escapeHtml(item.id)}" data-insurance-photo="${field}" class="rounded-lg border border-sky-400/30 px-3 py-2 text-[10px] font-bold text-sky-200 hover:bg-sky-500/10"><i class="fa-solid fa-image mr-1"></i>${label}: ${escapeHtml(name || 'Abrir foto')}</button>`
+            : '';
+        const legacyDocument = item.document_path
+            ? `<button type="button" data-insurance-document="${escapeHtml(item.id)}" data-insurance-photo="document_path" class="rounded-lg border border-sky-400/30 px-3 py-2 text-[10px] font-bold text-sky-200 hover:bg-sky-500/10"><i class="fa-solid fa-file-arrow-down mr-1"></i>${escapeHtml(item.document_name || 'Documento anterior')}</button>`
+            : '';
+        const title = item.ally || item.customer_name || item.customer_phone || 'Registro de seguro';
+        const activityLabels = { independiente: 'Independiente', empleado: 'Empleado', socio: 'Socio' };
+        const legacyDetails = item.customer_name || item.customer_document || item.vehicle_make || item.vehicle_model || item.vehicle_plate
+            ? `<p class="mb-3 rounded-lg border border-slate-800 bg-slate-950/50 p-3 text-[10px] text-slate-400">Registro anterior: ${escapeHtml(item.customer_name || '')} ${escapeHtml(item.customer_document || '')} · ${escapeHtml([item.vehicle_make, item.vehicle_model, item.vehicle_year, item.vehicle_plate].filter(Boolean).join(' · '))}</p>`
+            : '';
         return `<article class="rounded-2xl border border-slate-800 bg-slate-900 p-4 sm:p-5">
             <div class="mb-4 flex flex-wrap items-start justify-between gap-3 border-b border-slate-800 pb-3">
                 <div class="min-w-0">
                     <p class="text-[9px] font-black uppercase tracking-widest text-emerald-300">${sourceLabel} · ${escapeHtml(createdAt)}</p>
-                    <h3 class="mt-1 break-words text-base font-black">${escapeHtml(item.customer_name)}</h3>
-                    <p class="mt-1 text-xs text-slate-400">${escapeHtml(item.vehicle_make)} ${escapeHtml(item.vehicle_model)}${item.vehicle_year ? ` · ${escapeHtml(item.vehicle_year)}` : ''} · <span class="font-bold text-sky-200">${escapeHtml(item.vehicle_plate)}</span></p>
+                    <h3 class="mt-1 break-words text-base font-black">${escapeHtml(title)}</h3>
+                    <p class="mt-1 text-xs text-slate-400">${escapeHtml(item.sales_location || 'Elorza, Apure')} · ${escapeHtml(item.sales_date || item.created_at?.slice(0, 10) || '')} · ${escapeHtml(item.customer_phone || '')}</p>
                 </div>
-                ${documentLink}
             </div>
-            ${item.request_notes ? `<p class="mb-3 rounded-lg bg-slate-950/60 p-3 text-xs leading-relaxed text-slate-300"><span class="mb-1 block text-[9px] font-black uppercase text-slate-500">Comentario inicial</span>${escapeHtml(item.request_notes)}</p>` : ''}
+            <dl class="mb-4 grid grid-cols-2 gap-x-3 gap-y-2 rounded-xl bg-slate-950/60 p-3 text-[10px] sm:grid-cols-3">
+                <div><dt class="text-slate-500">Dirección</dt><dd class="break-words text-slate-200">${escapeHtml(item.customer_address || '—')}</dd></div>
+                <div><dt class="text-slate-500">Código postal</dt><dd class="text-slate-200">${escapeHtml(item.customer_postal_code || '—')}</dd></div>
+                <div><dt class="text-slate-500">Correo</dt><dd class="break-all text-slate-200">${escapeHtml(item.customer_email || '—')}</dd></div>
+                <div><dt class="text-slate-500">Grado de licencia</dt><dd class="text-slate-200">${escapeHtml(item.license_grade || '—')}</dd></div>
+                <div><dt class="text-slate-500">Actividad</dt><dd class="text-slate-200">${activityLabels[item.economic_activity] || '—'}</dd></div>
+                <div><dt class="text-slate-500">Cilindros</dt><dd class="text-slate-200">${escapeHtml(item.vehicle_cylinders || '—')}</dd></div>
+                <div><dt class="text-slate-500">Monto cobrado</dt><dd class="text-slate-200">${item.amount_charged == null ? '—' : escapeHtml(item.amount_charged)}</dd></div>
+                <div><dt class="text-slate-500">Forma de pago</dt><dd class="text-slate-200">${escapeHtml(item.payment_method || '—')}</dd></div>
+            </dl>
+            ${legacyDetails}
+            ${item.request_notes ? `<p class="mb-3 rounded-lg bg-slate-950/60 p-3 text-xs leading-relaxed text-slate-300">${escapeHtml(item.request_notes)}</p>` : ''}
+            <div class="mb-4 flex flex-wrap gap-2">${photoButton('identity_photo_path', 'Cédula', item.identity_photo_name)}${photoButton('circulation_card_photo_path', 'Carnet de circulación', item.circulation_card_photo_name)}${legacyDocument}${!item.identity_photo_path && !item.circulation_card_photo_path && !item.document_path ? '<span class="text-[10px] text-slate-500">Sin fotos adjuntas</span>' : ''}</div>
             <form class="insurance-case-update space-y-3" data-case-id="${escapeHtml(item.id)}">
-                <div class="grid gap-3 sm:grid-cols-2">
-                    <label class="text-[10px] font-bold text-slate-400">Nombre del cliente<input name="customer_name" required maxlength="120" value="${escapeHtml(item.customer_name)}" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white"></label>
-                    <label class="text-[10px] font-bold text-slate-400">Cédula / documento<input name="customer_document" maxlength="40" value="${escapeHtml(item.customer_document || '')}" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white"></label>
-                    <label class="text-[10px] font-bold text-slate-400">Teléfono<input name="customer_phone" required maxlength="40" value="${escapeHtml(item.customer_phone)}" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white"></label>
-                    <label class="text-[10px] font-bold text-slate-400">Correo<input name="customer_email" type="email" maxlength="160" value="${escapeHtml(item.customer_email || '')}" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white"></label>
-                    <label class="text-[10px] font-bold text-slate-400">Marca<input name="vehicle_make" required maxlength="80" value="${escapeHtml(item.vehicle_make)}" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white"></label>
-                    <label class="text-[10px] font-bold text-slate-400">Modelo<input name="vehicle_model" required maxlength="100" value="${escapeHtml(item.vehicle_model)}" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white"></label>
-                    <label class="text-[10px] font-bold text-slate-400">Año<input name="vehicle_year" type="number" min="1900" max="2100" step="1" value="${escapeHtml(item.vehicle_year || '')}" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white"></label>
-                    <label class="text-[10px] font-bold text-slate-400">Placa<input name="vehicle_plate" required maxlength="16" value="${escapeHtml(item.vehicle_plate)}" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs uppercase text-white"></label>
-                    <label class="text-[10px] font-bold text-slate-400 sm:col-span-2">Serial / VIN<input name="vehicle_serial" maxlength="80" value="${escapeHtml(item.vehicle_serial || '')}" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white"></label>
-                </div>
                 <div class="rounded-xl border border-emerald-500/15 bg-slate-950/40 p-3">
                     <p class="mb-2 text-[9px] font-black uppercase tracking-widest text-emerald-200">Seguimiento de póliza</p>
                     <div class="grid gap-3 sm:grid-cols-2">
@@ -247,7 +264,8 @@ function renderInsuranceCases() {
                         <label class="text-[10px] font-bold text-slate-400">Vigencia desde<input name="policy_start" type="date" value="${escapeHtml(item.policy_start || '')}" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white"></label>
                         <label class="text-[10px] font-bold text-slate-400">Vigencia hasta<input name="policy_end" type="date" value="${escapeHtml(item.policy_end || '')}" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white"></label>
                         <label class="text-[10px] font-bold text-slate-400 sm:col-span-2">Notas internas<textarea name="admin_notes" maxlength="2000" rows="2" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white">${escapeHtml(item.admin_notes || '')}</textarea></label>
-                        <label class="text-[10px] font-bold text-slate-400 sm:col-span-2">Adjuntar documento nuevo (opcional)<input name="document" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp" class="mt-1 block w-full rounded-lg border border-slate-700 bg-slate-950 p-2 text-[10px] text-slate-300"></label>
+                        <label class="text-[10px] font-bold text-slate-400 sm:col-span-2">Reemplazar foto de cédula<input name="identity_photo" type="file" accept="image/jpeg,image/png,image/webp" class="mt-1 block w-full rounded-lg border border-slate-700 bg-slate-950 p-2 text-[10px] text-slate-300"></label>
+                        <label class="text-[10px] font-bold text-slate-400 sm:col-span-2">Reemplazar foto del carnet de circulación<input name="circulation_card_photo" type="file" accept="image/jpeg,image/png,image/webp" class="mt-1 block w-full rounded-lg border border-slate-700 bg-slate-950 p-2 text-[10px] text-slate-300"></label>
                     </div>
                 </div>
                 <button type="submit" class="w-full rounded-xl bg-emerald-700 px-4 py-2.5 text-xs font-black text-white hover:bg-emerald-600 disabled:cursor-wait disabled:opacity-50"><i class="fa-solid fa-floppy-disk mr-2"></i>Guardar ficha</button>
@@ -276,46 +294,52 @@ async function registerManualInsuranceCase(event) {
     const status = document.getElementById('insurance-manual-status');
     const button = form.querySelector('button[type="submit"]');
     const values = new FormData(form);
-    const name = String(values.get('customer_name') || '').trim();
     const phone = String(values.get('customer_phone') || '').trim();
-    const plate = String(values.get('vehicle_plate') || '').trim().toUpperCase();
-    const make = String(values.get('vehicle_make') || '').trim();
-    const model = String(values.get('vehicle_model') || '').trim();
-    const yearValue = String(values.get('vehicle_year') || '').trim();
-    const file = values.get('document');
-    if (!name || !phone || !plate || !make || !model) {
-        status.textContent = 'Completa el nombre, teléfono, placa, marca y modelo.';
+    const identityPhoto = values.get('identity_photo');
+    const circulationPhoto = values.get('circulation_card_photo');
+    if (!phone || !(identityPhoto instanceof File) || !identityPhoto.size || !(circulationPhoto instanceof File) || !circulationPhoto.size) {
+        status.textContent = 'Completa el teléfono y adjunta las fotos de cédula y carnet de circulación.';
         return;
     }
     button.disabled = true;
     status.textContent = 'Guardando ficha…';
-    let uploadedPath = null;
+    const uploadedPaths = [];
     try {
         const caseId = crypto.randomUUID();
-        let documentInfo = null;
-        if (file instanceof File && file.size) {
-            documentInfo = await uploadInsuranceDocument(file, caseId);
-            uploadedPath = documentInfo.path;
-        }
+        const identityDocument = await uploadInsuranceDocument(identityPhoto, caseId);
+        uploadedPaths.push(identityDocument.path);
+        const circulationDocument = await uploadInsuranceDocument(circulationPhoto, caseId);
+        uploadedPaths.push(circulationDocument.path);
         const { data: authData, error: authError } = await supabaseClient.auth.getUser();
         if (authError) throw authError;
         if (!authData.user) throw new Error('Inicia sesión de nuevo para guardar la ficha.');
         const { error } = await supabaseClient.from('insurance_cases').insert({
-            id: caseId, source: 'admin', status: documentInfo ? 'new' : 'documents_pending',
-            customer_name: name, customer_document: String(values.get('customer_document') || '').trim() || null,
-            customer_phone: phone, customer_email: String(values.get('customer_email') || '').trim().toLowerCase() || null,
-            vehicle_make: make, vehicle_model: model, vehicle_year: yearValue ? Number(yearValue) : null,
-            vehicle_plate: plate, vehicle_serial: String(values.get('vehicle_serial') || '').trim() || null,
-            request_notes: String(values.get('request_notes') || '').trim() || null,
-            document_path: documentInfo?.path || null, document_name: documentInfo?.name || null,
+            id: caseId, source: 'admin', status: 'new',
+            sales_location: 'Elorza, Apure',
+            ally: String(values.get('ally') || '').trim() || null,
+            sales_date: String(values.get('sales_date') || ''),
+            customer_address: String(values.get('customer_address') || '').trim(),
+            customer_postal_code: String(values.get('customer_postal_code') || '').trim(),
+            customer_email: String(values.get('customer_email') || '').trim().toLowerCase() || null,
+            customer_phone: phone,
+            license_grade: String(values.get('license_grade') || '').trim(),
+            economic_activity: String(values.get('economic_activity') || ''),
+            vehicle_cylinders: Number(values.get('vehicle_cylinders')),
+            amount_charged: Number(String(values.get('amount_charged') || '').replace(',', '.')),
+            payment_method: String(values.get('payment_method') || '').trim(),
+            identity_photo_path: identityDocument.path,
+            identity_photo_name: identityDocument.name,
+            circulation_card_photo_path: circulationDocument.path,
+            circulation_card_photo_name: circulationDocument.name,
             created_by: authData.user.id
         });
         if (error) throw error;
         form.reset();
-        status.textContent = 'Cliente registrado. Ya aparece en el seguimiento.';
+        setInsuranceDate(form.querySelector('[name="sales_date"]'));
+        status.textContent = 'Venta registrada. Ya aparece en el historial.';
         await loadInsuranceCases();
     } catch (error) {
-        if (uploadedPath) await supabaseClient.storage.from(INSURANCE_DOCUMENT_BUCKET).remove([uploadedPath]);
+        if (uploadedPaths.length) await supabaseClient.storage.from(INSURANCE_DOCUMENT_BUCKET).remove(uploadedPaths);
         status.textContent = error.message || 'No se pudo guardar la ficha.';
         console.error('Error registrando cliente de seguros:', error);
     } finally {
@@ -343,24 +367,15 @@ async function saveInsuranceCase(form) {
     const button = form.querySelector('button[type="submit"]');
     button.disabled = true;
     insuranceCasesStatus.textContent = `Guardando ficha de ${current.customer_name}…`;
-    let newDocumentPath = null;
+    const newDocumentPaths = [];
     try {
-        const file = data.get('document');
-        let documentInfo = null;
-        if (file instanceof File && file.size) {
-            documentInfo = await uploadInsuranceDocument(file, caseId);
-            newDocumentPath = documentInfo.path;
-        }
+        const identityFile = data.get('identity_photo');
+        const circulationFile = data.get('circulation_card_photo');
+        const identityInfo = identityFile instanceof File && identityFile.size ? await uploadInsuranceDocument(identityFile, caseId) : null;
+        if (identityInfo) newDocumentPaths.push(identityInfo.path);
+        const circulationInfo = circulationFile instanceof File && circulationFile.size ? await uploadInsuranceDocument(circulationFile, caseId) : null;
+        if (circulationInfo) newDocumentPaths.push(circulationInfo.path);
         const payload = {
-            customer_name: String(data.get('customer_name') || '').trim(),
-            customer_document: String(data.get('customer_document') || '').trim() || null,
-            customer_phone: String(data.get('customer_phone') || '').trim(),
-            customer_email: String(data.get('customer_email') || '').trim().toLowerCase() || null,
-            vehicle_make: String(data.get('vehicle_make') || '').trim(),
-            vehicle_model: String(data.get('vehicle_model') || '').trim(),
-            vehicle_year: String(data.get('vehicle_year') || '').trim() ? Number(data.get('vehicle_year')) : null,
-            vehicle_plate: String(data.get('vehicle_plate') || '').trim().toUpperCase(),
-            vehicle_serial: String(data.get('vehicle_serial') || '').trim() || null,
             status: String(data.get('status') || ''),
             quote_amount: quoteAmount,
             quote_currency: quoteAmount === null ? null : String(data.get('quote_currency') || 'USD'),
@@ -371,19 +386,26 @@ async function saveInsuranceCase(form) {
             admin_notes: String(data.get('admin_notes') || '').trim() || null,
             updated_at: new Date().toISOString()
         };
-        if (documentInfo) {
-            payload.document_path = documentInfo.path;
-            payload.document_name = documentInfo.name;
+        if (identityInfo) {
+            payload.identity_photo_path = identityInfo.path;
+            payload.identity_photo_name = identityInfo.name;
+        }
+        if (circulationInfo) {
+            payload.circulation_card_photo_path = circulationInfo.path;
+            payload.circulation_card_photo_name = circulationInfo.name;
         }
         const { error } = await supabaseClient.from('insurance_cases').update(payload).eq('id', caseId);
         if (error) throw error;
-        if (newDocumentPath && current.document_path) {
-            await supabaseClient.storage.from(INSURANCE_DOCUMENT_BUCKET).remove([current.document_path]);
+        const oldPaths = [];
+        if (identityInfo && current.identity_photo_path) oldPaths.push(current.identity_photo_path);
+        if (circulationInfo && current.circulation_card_photo_path) oldPaths.push(current.circulation_card_photo_path);
+        if (oldPaths.length) {
+            await supabaseClient.storage.from(INSURANCE_DOCUMENT_BUCKET).remove(oldPaths);
         }
         await loadInsuranceCases();
-        insuranceCasesStatus.textContent = `Ficha actualizada: ${payload.customer_name}.`;
+        insuranceCasesStatus.textContent = 'Ficha actualizada.';
     } catch (error) {
-        if (newDocumentPath) await supabaseClient.storage.from(INSURANCE_DOCUMENT_BUCKET).remove([newDocumentPath]);
+        if (newDocumentPaths.length) await supabaseClient.storage.from(INSURANCE_DOCUMENT_BUCKET).remove(newDocumentPaths);
         insuranceCasesStatus.textContent = error.message || 'No se pudo actualizar la ficha.';
         console.error('Error actualizando ficha de seguros:', error);
     } finally {
@@ -393,12 +415,13 @@ async function saveInsuranceCase(form) {
 
 async function openInsuranceDocument(caseId, button) {
     const insuranceCase = insuranceCases.find(item => item.id === caseId);
-    if (!insuranceCase?.document_path) return;
+    const path = insuranceCase?.[button.dataset.insurancePhoto];
+    if (!path) return;
     const tab = window.open('about:blank', '_blank');
     button.disabled = true;
     try {
         const { data, error } = await supabaseClient.storage.from(INSURANCE_DOCUMENT_BUCKET)
-            .createSignedUrl(insuranceCase.document_path, 300);
+            .createSignedUrl(path, 300);
         if (error) throw error;
         if (tab) tab.location.replace(data.signedUrl);
         else window.location.assign(data.signedUrl);
@@ -3090,7 +3113,10 @@ document.getElementById('insurance-status-filter').addEventListener('change', re
 document.getElementById('toggle-insurance-manual-form').addEventListener('click', event => {
     const isHidden = insuranceManualForm.classList.toggle('hidden');
     event.currentTarget.setAttribute('aria-expanded', String(!isHidden));
-    if (!isHidden) insuranceManualForm.querySelector('[name="customer_name"]').focus();
+    if (!isHidden) {
+        setInsuranceDate(insuranceManualForm.querySelector('[name="sales_date"]'));
+        insuranceManualForm.querySelector('[name="ally"]').focus();
+    }
 });
 insuranceManualForm.addEventListener('submit', registerManualInsuranceCase);
 insuranceCasesList.addEventListener('submit', event => {

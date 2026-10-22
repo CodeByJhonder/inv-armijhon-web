@@ -317,39 +317,42 @@
                 <div class="mb-5 flex flex-wrap items-end justify-between gap-3">
                     <div>
                         <h2 id="insurance-heading" class="text-xl font-black"><i class="fa-solid fa-car-side mr-2 text-emerald-300" aria-hidden="true"></i>Clientes y pólizas</h2>
-                        <p class="mt-1 text-xs text-slate-400">Solicitudes de la web y clientes registrados por ti, en un solo seguimiento privado.</p>
+                        <p class="mt-1 text-xs text-slate-400">Ventas enviadas desde la web y registradas directamente desde el panel.</p>
                     </div>
                     <button id="refresh-insurance-cases" type="button" class="rounded-xl border border-slate-700 px-4 py-2 text-xs font-bold hover:bg-slate-800"><i class="fa-solid fa-rotate mr-2" aria-hidden="true"></i>Actualizar</button>
                 </div>
                 <section class="mb-5 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4 sm:p-5">
                     <div class="flex flex-wrap items-center justify-between gap-3">
                         <div>
-                            <h3 class="text-sm font-black">Registrar cliente desde el panel</h3>
-                            <p class="mt-1 text-[11px] text-slate-400">Úsalo cuando la persona te contacte directamente.</p>
+                            <h3 class="text-sm font-black">Registrar venta desde el panel</h3>
+                            <p class="mt-1 text-[11px] text-slate-400">Úsalo cuando atiendas la venta directamente.</p>
                         </div>
                         <button id="toggle-insurance-manual-form" type="button" aria-expanded="false" class="rounded-xl border border-emerald-400/40 px-4 py-2 text-xs font-bold text-emerald-200 hover:bg-emerald-500/10"><i class="fa-solid fa-plus mr-2"></i>Nuevo registro</button>
                     </div>
                     <form id="insurance-manual-form" class="mt-4 hidden space-y-4">
                         <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                            <label class="text-xs font-bold text-slate-300">Nombre y apellido *<input name="customer_name" required maxlength="120" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white"></label>
-                            <label class="text-xs font-bold text-slate-300">Cédula / documento<input name="customer_document" maxlength="40" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white"></label>
-                            <label class="text-xs font-bold text-slate-300">Teléfono / WhatsApp *<input name="customer_phone" required maxlength="40" type="tel" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white"></label>
-                            <label class="text-xs font-bold text-slate-300">Correo electrónico<input name="customer_email" maxlength="160" type="email" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white"></label>
-                            <label class="text-xs font-bold text-slate-300">Marca del vehículo *<input name="vehicle_make" required maxlength="80" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white"></label>
-                            <label class="text-xs font-bold text-slate-300">Modelo *<input name="vehicle_model" required maxlength="100" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white"></label>
-                            <label class="text-xs font-bold text-slate-300">Año<input name="vehicle_year" type="number" min="1900" max="2100" step="1" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white"></label>
-                            <label class="text-xs font-bold text-slate-300">Placa *<input name="vehicle_plate" required maxlength="16" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm uppercase text-white"></label>
-                            <label class="text-xs font-bold text-slate-300">Serial / VIN<input name="vehicle_serial" maxlength="80" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white"></label>
-                            <label class="text-xs font-bold text-slate-300 sm:col-span-2 xl:col-span-3">Comentario inicial<textarea name="request_notes" maxlength="1000" rows="2" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white"></textarea></label>
-                            <label class="text-xs font-bold text-slate-300 sm:col-span-2 xl:col-span-3">Plantilla o documento (opcional)<input name="document" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp" class="mt-1 block w-full rounded-xl border border-slate-700 bg-slate-950 p-2 text-xs text-slate-300"></label>
+                            <label class="text-xs font-bold text-slate-300">Módulo de ventas<input name="sales_location" value="Elorza, Apure" readonly class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white"></label>
+                            <label class="text-xs font-bold text-slate-300">Aliado<input name="ally" maxlength="120" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white"></label>
+                            <label class="text-xs font-bold text-slate-300">Fecha *<input name="sales_date" type="date" required class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white"></label>
+                            <label class="text-xs font-bold text-slate-300 sm:col-span-2">Dirección *<input name="customer_address" required maxlength="240" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white"></label>
+                            <label class="text-xs font-bold text-slate-300">Código postal del cliente *<input name="customer_postal_code" required maxlength="20" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white"></label>
+                            <label class="text-xs font-bold text-slate-300">Correo electrónico *<input name="customer_email" type="email" required maxlength="160" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white"></label>
+                            <label class="text-xs font-bold text-slate-300">Teléfono *<input name="customer_phone" required maxlength="40" type="tel" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white"></label>
+                            <label class="text-xs font-bold text-slate-300">Grado de licencia *<input name="license_grade" required maxlength="40" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white"></label>
+                            <label class="text-xs font-bold text-slate-300">Actividad económica *<select name="economic_activity" required class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white"><option value="">Selecciona</option><option value="independiente">Independiente</option><option value="empleado">Empleado</option><option value="socio">Socio</option></select></label>
+                            <label class="text-xs font-bold text-slate-300">Cilindros del vehículo *<input name="vehicle_cylinders" type="number" min="1" max="32" step="1" required class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white"></label>
+                            <label class="text-xs font-bold text-slate-300">Monto cobrado al cliente *<input name="amount_charged" type="number" min="0.01" max="999999999999" step="0.01" required class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white"></label>
+                            <label class="text-xs font-bold text-slate-300">Forma de pago *<input name="payment_method" required maxlength="80" placeholder="Ej. efectivo, transferencia" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white"></label>
+                            <label class="text-xs font-bold text-slate-300 sm:col-span-2">Foto de la cédula *<input name="identity_photo" type="file" accept="image/jpeg,image/png,image/webp" required class="mt-1 block w-full rounded-xl border border-slate-700 bg-slate-950 p-2 text-xs text-slate-300"></label>
+                            <label class="text-xs font-bold text-slate-300 sm:col-span-2">Foto del carnet de circulación *<input name="circulation_card_photo" type="file" accept="image/jpeg,image/png,image/webp" required class="mt-1 block w-full rounded-xl border border-slate-700 bg-slate-950 p-2 text-xs text-slate-300"></label>
                         </div>
                         <p id="insurance-manual-status" class="min-h-4 text-xs text-slate-400" role="status" aria-live="polite"></p>
-                        <button type="submit" class="rounded-xl bg-emerald-600 px-5 py-3 text-xs font-black text-white hover:bg-emerald-500 disabled:opacity-50"><i class="fa-solid fa-floppy-disk mr-2"></i>Guardar cliente</button>
+                        <button type="submit" class="rounded-xl bg-emerald-600 px-5 py-3 text-xs font-black text-white hover:bg-emerald-500 disabled:opacity-50"><i class="fa-solid fa-floppy-disk mr-2"></i>Registrar venta</button>
                     </form>
                 </section>
                 <div class="mb-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_14rem]">
-                    <label class="sr-only" for="insurance-search">Buscar cliente o vehículo</label>
-                    <input id="insurance-search" type="search" placeholder="Buscar nombre, teléfono o placa" class="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white placeholder:text-slate-500">
+                    <label class="sr-only" for="insurance-search">Buscar aliado, teléfono, dirección o correo</label>
+                    <input id="insurance-search" type="search" placeholder="Buscar aliado, teléfono, dirección o correo" class="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white placeholder:text-slate-500">
                     <label class="sr-only" for="insurance-status-filter">Filtrar por estado</label>
                     <select id="insurance-status-filter" class="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-white">
                         <option value="all">Todos los estados</option><option value="new">Nuevas solicitudes</option><option value="documents_pending">Documentos pendientes</option><option value="in_review">En revisión</option><option value="quoted">Cotizadas</option><option value="sold">Pólizas vendidas</option><option value="renewal_due">Renovación próxima</option><option value="closed">Cerradas</option><option value="cancelled">Canceladas</option>

@@ -419,10 +419,10 @@ moneda, el total cobrado y la tasa VES aplicada al vender.
 
 ## Clientes y pólizas de seguro vehicular
 
-1. Ejecutar `supabase/vehicle-insurance-migration.sql` en Supabase SQL Editor. Crea
-   el registro privado de solicitudes y pólizas, junto con el bucket privado
-   `insurance-documents`. Solo los administradores pueden consultar estos registros
-   y archivos.
+1. Ejecutar `supabase/vehicle-insurance-migration.sql` y luego
+   `supabase/vehicle-insurance-sales-fields-migration.sql` en Supabase SQL Editor.
+   La segunda migración adapta el formulario al módulo de ventas de Elorza sin borrar
+   registros anteriores. Las fotos permanecen en el bucket privado `insurance-documents`.
 2. Desde la raíz del proyecto, desplegar la recepción pública del formulario:
 
    ```bash
@@ -433,11 +433,12 @@ moneda, el total cobrado y la tasa VES aplicada al vender.
    de Supabase. La clave `service_role` nunca se publica en el sitio.
 3. Publicar `seguros.html`, `index.html`, `admin.html`, `assets/js/admin.js`,
    `supabase/config.toml` y `supabase/functions/insurance-request/index.ts`.
-4. En el sitio, **Seguro vehicular** abre el formulario público. En el panel, la
-   sección **Clientes y pólizas** reúne solicitudes web y registros manuales, permite
-   actualizar cotización, aseguradora, número y vigencia de la póliza, notas internas
-   y documentos privados.
+4. En el sitio, **Seguro vehicular** abre el formulario del módulo de ventas con las
+   fotos de cédula y carnet de circulación, y los campos de aliado, fecha, dirección,
+   código postal, correo, teléfono, licencia, actividad, cilindros, monto y pago. En
+   el panel, **Clientes y pólizas** reúne solicitudes web y registros manuales, permite
+   actualizar seguimiento de póliza y consultar las fotos privadas.
 
-La plantilla oficial aún puede incorporarse cuando esté disponible: esta primera
-versión solicita datos básicos del cliente y del vehículo, y acepta un PDF o imagen
-opcional de hasta 5 MB.
+Las dos fotos son obligatorias; cada una admite JPG, PNG o WebP de hasta 5 MB. El
+formulario conserva los datos de ventas tal como se ingresan y no intenta convertir
+el monto cobrado a otra moneda.
