@@ -49,29 +49,29 @@
             </div>
             <form id="insurance-request-form" class="space-y-5" enctype="multipart/form-data" novalidate>
                 <div class="grid gap-4 sm:grid-cols-2">
-                    <label class="text-xs font-bold text-slate-300">Módulo de ventas
-                        <input value="Elorza, Apure" class="insurance-input mt-1" readonly>
+                    <label class="text-xs font-bold text-slate-300">Módulo de ventas *
+                        <input name="sales_location" value="Elorza, Apure" class="insurance-input mt-1" maxlength="120" placeholder="Ej. Elorza, Apure" required>
                     </label>
                     <label class="text-xs font-bold text-slate-300">Aliado
-                        <input name="ally" class="insurance-input mt-1" maxlength="120" autocomplete="organization">
+                        <input name="ally" class="insurance-input mt-1" maxlength="120" autocomplete="organization" placeholder="Nombre completo">
                     </label>
                     <label class="text-xs font-bold text-slate-300">Fecha *
                         <input name="sales_date" class="insurance-input mt-1" type="date" required>
                     </label>
                     <label class="text-xs font-bold text-slate-300 sm:col-span-2">Dirección *
-                        <input name="customer_address" class="insurance-input mt-1" maxlength="240" autocomplete="street-address" required>
+                        <input name="customer_address" class="insurance-input mt-1" maxlength="240" autocomplete="street-address" placeholder="Ej. Calle Bolívar, casa 12" required>
                     </label>
-                    <label class="text-xs font-bold text-slate-300">Código postal del cliente *
-                        <input name="customer_postal_code" class="insurance-input mt-1" maxlength="20" autocomplete="postal-code" required>
+                    <label class="text-xs font-bold text-slate-300">Código postal *
+                        <input name="customer_postal_code" class="insurance-input mt-1" maxlength="20" autocomplete="postal-code" placeholder="Ej. 7001" required>
                     </label>
                     <label class="text-xs font-bold text-slate-300">Correo electrónico *
-                        <input name="customer_email" class="insurance-input mt-1" type="email" maxlength="160" autocomplete="email" required>
+                        <input name="customer_email" class="insurance-input mt-1" type="email" maxlength="160" autocomplete="email" placeholder="nombre@correo.com" required>
                     </label>
                     <label class="text-xs font-bold text-slate-300">Teléfono *
                         <input name="customer_phone" class="insurance-input mt-1" type="tel" maxlength="40" autocomplete="tel" placeholder="Ej. +58 426 000 0000" required>
                     </label>
                     <label class="text-xs font-bold text-slate-300">Grado de licencia *
-                        <input name="license_grade" class="insurance-input mt-1" maxlength="40" required>
+                        <input name="license_grade" class="insurance-input mt-1" maxlength="40" placeholder="Ej. Segundo grado" required>
                     </label>
                     <label class="text-xs font-bold text-slate-300">Actividad económica *
                         <select name="economic_activity" class="insurance-input mt-1" required>
@@ -82,13 +82,7 @@
                         </select>
                     </label>
                     <label class="text-xs font-bold text-slate-300">Cilindros del vehículo *
-                        <input name="vehicle_cylinders" class="insurance-input mt-1" type="number" min="1" max="32" step="1" inputmode="numeric" required>
-                    </label>
-                    <label class="text-xs font-bold text-slate-300">Monto cobrado al cliente *
-                        <input name="amount_charged" class="insurance-input mt-1" type="number" min="0.01" max="999999999999" step="0.01" inputmode="decimal" required>
-                    </label>
-                    <label class="text-xs font-bold text-slate-300">Forma de pago *
-                        <input name="payment_method" class="insurance-input mt-1" maxlength="80" placeholder="Ej. efectivo, transferencia" required>
+                        <input name="vehicle_cylinders" class="insurance-input mt-1" type="number" min="1" max="32" step="1" inputmode="numeric" placeholder="Ej. 4" required>
                     </label>
                 </div>
                 <div class="grid gap-4 sm:grid-cols-2">
@@ -101,9 +95,13 @@
                         <span class="mt-1 block text-[10px] font-normal text-slate-500">JPG, PNG o WebP; máximo 5 MB.</span>
                     </label>
                 </div>
+                <label class="block text-xs font-bold text-slate-300">Comprobante de pago *
+                    <input name="payment_proof" class="mt-2 block w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-xs text-slate-300 file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-700 file:px-3 file:py-2 file:text-xs file:font-bold file:text-white" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" required>
+                    <span class="mt-1 block text-[10px] font-normal text-slate-500">PDF, JPG, PNG o WebP; máximo 5 MB.</span>
+                </label>
                 <label class="flex items-start gap-3 rounded-xl bg-slate-950/60 p-3 text-[11px] leading-relaxed text-slate-400">
                     <input name="consent" type="checkbox" class="mt-0.5 accent-emerald-500" required>
-                    <span>Autorizo a INV. Armijhon a utilizar los datos y las fotos adjuntas para gestionar esta venta. Consulta nuestra <a href="politica-privacidad.html" class="font-bold text-emerald-300 underline hover:text-emerald-200">Política de privacidad</a>.</span>
+                    <span>Autorizo a INV. Armijhon a utilizar los datos, las fotos y el comprobante adjuntos para gestionar esta venta. Consulta nuestra <a href="politica-privacidad.html" class="font-bold text-emerald-300 underline hover:text-emerald-200">Política de privacidad</a>.</span>
                 </label>
                 <input name="website" type="text" tabindex="-1" autocomplete="off" aria-hidden="true" class="absolute -left-[10000px] h-px w-px opacity-0">
                 <p id="insurance-request-status" class="min-h-5 text-xs text-slate-400" role="status" aria-live="polite"></p>
@@ -126,10 +124,15 @@
         insuranceForm.addEventListener('submit', async event => {
             event.preventDefault();
             if (!insuranceForm.reportValidity()) return;
-            for (const [name, label] of [['identity_photo', 'la foto de la cédula'], ['circulation_card_photo', 'la foto del carnet de circulación']]) {
+            for (const [name, label, allowPdf] of [
+                ['identity_photo', 'la foto de la cédula', false],
+                ['circulation_card_photo', 'la foto del carnet de circulación', false],
+                ['payment_proof', 'el comprobante de pago', true]
+            ]) {
                 const file = insuranceForm.querySelector(`[name="${name}"]`).files[0];
-                if (!file || file.size > 5 * 1024 * 1024 || !['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-                    insuranceStatus.textContent = `Selecciona ${label} en JPG, PNG o WebP (máximo 5 MB).`;
+                const allowedTypes = allowPdf ? ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'] : ['image/jpeg', 'image/png', 'image/webp'];
+                if (!file || file.size > 5 * 1024 * 1024 || !allowedTypes.includes(file.type)) {
+                    insuranceStatus.textContent = `Selecciona ${label} en ${allowPdf ? 'PDF, JPG, PNG o WebP' : 'JPG, PNG o WebP'} (máximo 5 MB).`;
                     insuranceStatus.className = 'min-h-5 text-xs text-rose-300';
                     return;
                 }

@@ -419,10 +419,11 @@ moneda, el total cobrado y la tasa VES aplicada al vender.
 
 ## Clientes y pólizas de seguro vehicular
 
-1. Ejecutar `supabase/vehicle-insurance-migration.sql` y luego
-   `supabase/vehicle-insurance-sales-fields-migration.sql` en Supabase SQL Editor.
-   La segunda migración adapta el formulario al módulo de ventas de Elorza sin borrar
-   registros anteriores. Las fotos permanecen en el bucket privado `insurance-documents`.
+1. Ejecutar `supabase/vehicle-insurance-migration.sql`, luego
+   `supabase/vehicle-insurance-sales-fields-migration.sql` y finalmente
+   `supabase/vehicle-insurance-payment-proof-migration.sql` en Supabase SQL Editor.
+   Las migraciones adaptan el formulario al módulo de ventas y agregan el comprobante
+   privado sin borrar registros anteriores. El bucket `insurance-documents` permanece privado.
 2. Desde la raíz del proyecto, desplegar la recepción pública del formulario:
 
    ```bash
@@ -433,12 +434,12 @@ moneda, el total cobrado y la tasa VES aplicada al vender.
    de Supabase. La clave `service_role` nunca se publica en el sitio.
 3. Publicar `seguros.html`, `index.html`, `admin.html`, `assets/js/admin.js`,
    `supabase/config.toml` y `supabase/functions/insurance-request/index.ts`.
-4. En el sitio, **Seguro vehicular** abre el formulario del módulo de ventas con las
-   fotos de cédula y carnet de circulación, y los campos de aliado, fecha, dirección,
-   código postal, correo, teléfono, licencia, actividad, cilindros, monto y pago. En
-   el panel, **Clientes y pólizas** reúne solicitudes web y registros manuales, permite
-   actualizar seguimiento de póliza y consultar las fotos privadas.
+4. En el sitio, **Seguro vehicular** abre el formulario del módulo de ventas con ubicación
+   editable (por defecto, Elorza, Apure), los datos solicitados, las fotos de cédula y
+   carnet de circulación y el comprobante de pago. El monto y la forma de pago no se
+   solicitan. En el panel, **Clientes y pólizas** reúne solicitudes web y registros
+   manuales, permite actualizar el seguimiento y consultar los archivos privados.
 
-Las dos fotos son obligatorias; cada una admite JPG, PNG o WebP de hasta 5 MB. El
-formulario conserva los datos de ventas tal como se ingresan y no intenta convertir
-el monto cobrado a otra moneda.
+Las dos fotos y el comprobante son obligatorios. Las fotos admiten JPG, PNG o WebP; el
+comprobante admite PDF, JPG, PNG o WebP. Cada archivo puede pesar hasta 5 MB. Los datos
+históricos de monto y forma de pago se conservan en la base de datos.

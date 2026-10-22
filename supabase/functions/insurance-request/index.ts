@@ -18,7 +18,7 @@ Deno.serve(async request => {
     if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
     if (request.method !== 'POST') return json({ error: 'Método no permitido.' }, 405);
     const contentLength = Number(request.headers.get('content-length') || 0);
-    if (Number.isFinite(contentLength) && contentLength > 11 * 1024 * 1024) {
+    if (Number.isFinite(contentLength) && contentLength > 16 * 1024 * 1024) {
         return json({ error: 'La solicitud supera el tamaño permitido.' }, 413);
     }
 
@@ -27,6 +27,7 @@ Deno.serve(async request => {
         // Hidden honeypot for basic bot filtering; give bots a generic success response.
         if (cleanText(form.get('website'), 200)) return json({ ok: true });
 
+        const salesLocation = cleanText(form.get('sales_location'), 120);
         const ally = cleanText(form.get('ally'), 120);
         const salesDate = cleanText(form.get('sales_date'), 10);
         const customerAddress = cleanText(form.get('customer_address'), 240);
@@ -36,35 +37,34 @@ Deno.serve(async request => {
         const licenseGrade = cleanText(form.get('license_grade'), 40);
         const economicActivity = cleanText(form.get('economic_activity'), 20);
         const cylindersText = cleanText(form.get('vehicle_cylinders'), 2);
-        const amountText = cleanText(form.get('amount_charged'), 20).replace(',', '.');
-        const paymentMethod = cleanText(form.get('payment_method'), 80);
         const consent = form.get('consent') === 'on';
         const cylinders = Number(cylindersText);
-        const amountCharged = Number(amountText);
 
         const parsedSalesDate = /^\d{4}-\d{2}-\d{2}$/.test(salesDate) ? new Date(`${salesDate}T00:00:00.000Z`) : null;
         const validSalesDate = parsedSalesDate && !Number.isNaN(parsedSalesDate.getTime())
             && parsedSalesDate.toISOString().slice(0, 10) === salesDate;
         if (!consent) return json({ error: 'Debes aceptar el uso de estos datos para gestionar la solicitud.' }, 400);
-        if (!/^[+\d()\s.-]{7,40}$/.test(customerPhone)
+        if (salesLocation.length < 2 || !/^[+\d()\s.-]{7,40}$/.test(customerPhone)
             || !validSalesDate
             || !customerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)
             || !customerAddress || !customerPostalCode || !licenseGrade
             || !['independiente', 'empleado', 'socio'].includes(economicActivity)
-            || !Number.isInteger(cylinders) || cylinders < 1 || cylinders > 32
-            || !Number.isFinite(amountCharged) || amountCharged <= 0 || amountCharged > 999999999999
-            || !paymentMethod) {
-            return json({ error: 'Revisa los datos del módulo de ventas; el teléfono, fecha, actividad, cilindros y monto deben ser válidos.' }, 400);
+            || !Number.isInteger(cylinders) || cylinders < 1 || cylinders > 32) {
+            return json({ error: 'Revisa los datos del módulo de ventas; el teléfono, ubicación, fecha, actividad y cilindros deben ser válidos.' }, 400);
         }
 
         const identityPhoto = form.get('identity_photo');
         const circulationPhoto = form.get('circulation_card_photo');
-        const allowedTypes = new Map([['image/jpeg', 'jpg'], ['image/png', 'png'], ['image/webp', 'webp']]);
+        const paymentProof = form.get('payment_proof');
+        const photoTypes = new Map([['image/jpeg', 'jpg'], ['image/png', 'png'], ['image/webp', 'webp']]);
+        const proofTypes = new Map([...photoTypes, ['application/pdf', 'pdf']]);
         if (!(identityPhoto instanceof File) || !(circulationPhoto instanceof File)
             || identityPhoto.size <= 0 || circulationPhoto.size <= 0
             || identityPhoto.size > 5 * 1024 * 1024 || circulationPhoto.size > 5 * 1024 * 1024
-            || !allowedTypes.has(identityPhoto.type) || !allowedTypes.has(circulationPhoto.type)) {
-            return json({ error: 'Adjunta una foto de la cédula y otra del carnet de circulación. Cada imagen debe ser JPG, PNG o WebP y pesar máximo 5 MB.' }, 400);
+            || !photoTypes.has(identityPhoto.type) || !photoTypes.has(circulationPhoto.type)
+            || !(paymentProof instanceof File) || paymentProof.size <= 0 || paymentProof.size > 5 * 1024 * 1024
+            || !proofTypes.has(paymentProof.type)) {
+            return json({ error: 'Adjunta las fotos de cédula y carnet (JPG, PNG o WebP) y el comprobante (PDF, JPG, PNG o WebP). Cada archivo debe pesar máximo 5 MB.' }, 400);
         }
 
         const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -75,7 +75,7 @@ Deno.serve(async request => {
         });
 
         const caseId = crypto.randomUUID();
-        const uploadPrivatePhoto = async (file: File, kind: string) => {
+        const uploadPrivateFile = async (file: File, kind: string, allowedTypes: Map<string, string>) => {
             const extension = allowedTypes.get(file.type)!;
             const path = `${caseId}/${kind}-${crypto.randomUUID()}.${extension}`;
             const { error } = await supabase.storage.from('insurance-documents').upload(
@@ -90,21 +90,23 @@ Deno.serve(async request => {
 
         let identityDocument: { path: string; name: string } | null = null;
         let circulationDocument: { path: string; name: string } | null = null;
+        let paymentDocument: { path: string; name: string } | null = null;
         try {
-            identityDocument = await uploadPrivatePhoto(identityPhoto, 'cedula');
-            circulationDocument = await uploadPrivatePhoto(circulationPhoto, 'carnet-circulacion');
+            identityDocument = await uploadPrivateFile(identityPhoto, 'cedula', photoTypes);
+            circulationDocument = await uploadPrivateFile(circulationPhoto, 'carnet-circulacion', photoTypes);
+            paymentDocument = await uploadPrivateFile(paymentProof, 'comprobante', proofTypes);
         } catch (error) {
-            const paths = [identityDocument?.path, circulationDocument?.path].filter(Boolean) as string[];
+            const paths = [identityDocument?.path, circulationDocument?.path, paymentDocument?.path].filter(Boolean) as string[];
             if (paths.length) await supabase.storage.from('insurance-documents').remove(paths);
-            console.error('No se pudieron guardar las fotos de la solicitud:', error);
-            return json({ error: 'No se pudieron guardar las fotos. Intenta nuevamente.' }, 500);
+            console.error('No se pudieron guardar los archivos de la solicitud:', error);
+            return json({ error: 'No se pudieron guardar los archivos. Intenta nuevamente.' }, 500);
         }
 
         const { error: insertError } = await supabase.from('insurance_cases').insert({
             id: caseId,
             source: 'web',
             status: 'new',
-            sales_location: 'Elorza, Apure',
+            sales_location: salesLocation,
             ally: ally || null,
             sales_date: salesDate,
             customer_address: customerAddress,
@@ -114,15 +116,15 @@ Deno.serve(async request => {
             license_grade: licenseGrade,
             economic_activity: economicActivity,
             vehicle_cylinders: cylinders,
-            amount_charged: amountCharged,
-            payment_method: paymentMethod,
             identity_photo_path: identityDocument.path,
             identity_photo_name: identityDocument.name,
             circulation_card_photo_path: circulationDocument.path,
-            circulation_card_photo_name: circulationDocument.name
+            circulation_card_photo_name: circulationDocument.name,
+            payment_proof_path: paymentDocument.path,
+            payment_proof_name: paymentDocument.name
         });
         if (insertError) {
-            await supabase.storage.from('insurance-documents').remove([identityDocument.path, circulationDocument.path]);
+            await supabase.storage.from('insurance-documents').remove([identityDocument.path, circulationDocument.path, paymentDocument.path]);
             console.error('No se pudo crear la solicitud de seguro:', insertError);
             return json({ error: 'No se pudo registrar la solicitud. Intenta nuevamente.' }, 500);
         }

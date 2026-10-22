@@ -178,13 +178,13 @@ const normalizeSearchValue = value => String(value ?? '')
     .toLowerCase()
     .replace(/[\s-]/g, '');
 
-async function uploadInsuranceDocument(file, caseId) {
+async function uploadInsuranceDocument(file, caseId, allowPdf = false) {
     if (!file || file.size <= 0 || file.size > 5 * 1024 * 1024) {
         throw new Error('Cada foto debe pesar máximo 5 MB.');
     }
-    const extensions = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+    const extensions = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', ...(allowPdf ? { 'application/pdf': 'pdf' } : {}) };
     const extension = extensions[file.type];
-    if (!extension) throw new Error('Adjunta una foto JPG, PNG o WebP.');
+    if (!extension) throw new Error(allowPdf ? 'Adjunta un PDF o una imagen JPG, PNG o WebP.' : 'Adjunta una foto JPG, PNG o WebP.');
     const path = `${caseId}/${crypto.randomUUID()}.${extension}`;
     const { error } = await supabaseClient.storage.from(INSURANCE_DOCUMENT_BUCKET).upload(path, file, {
         contentType: file.type,
@@ -247,12 +247,10 @@ function renderInsuranceCases() {
                 <div><dt class="text-slate-500">Grado de licencia</dt><dd class="text-slate-200">${escapeHtml(item.license_grade || '—')}</dd></div>
                 <div><dt class="text-slate-500">Actividad</dt><dd class="text-slate-200">${activityLabels[item.economic_activity] || '—'}</dd></div>
                 <div><dt class="text-slate-500">Cilindros</dt><dd class="text-slate-200">${escapeHtml(item.vehicle_cylinders || '—')}</dd></div>
-                <div><dt class="text-slate-500">Monto cobrado</dt><dd class="text-slate-200">${item.amount_charged == null ? '—' : escapeHtml(item.amount_charged)}</dd></div>
-                <div><dt class="text-slate-500">Forma de pago</dt><dd class="text-slate-200">${escapeHtml(item.payment_method || '—')}</dd></div>
             </dl>
             ${legacyDetails}
             ${item.request_notes ? `<p class="mb-3 rounded-lg bg-slate-950/60 p-3 text-xs leading-relaxed text-slate-300">${escapeHtml(item.request_notes)}</p>` : ''}
-            <div class="mb-4 flex flex-wrap gap-2">${photoButton('identity_photo_path', 'Cédula', item.identity_photo_name)}${photoButton('circulation_card_photo_path', 'Carnet de circulación', item.circulation_card_photo_name)}${legacyDocument}${!item.identity_photo_path && !item.circulation_card_photo_path && !item.document_path ? '<span class="text-[10px] text-slate-500">Sin fotos adjuntas</span>' : ''}</div>
+            <div class="mb-4 flex flex-wrap gap-2">${photoButton('identity_photo_path', 'Cédula', item.identity_photo_name)}${photoButton('circulation_card_photo_path', 'Carnet de circulación', item.circulation_card_photo_name)}${photoButton('payment_proof_path', 'Comprobante de pago', item.payment_proof_name)}${legacyDocument}${!item.identity_photo_path && !item.circulation_card_photo_path && !item.payment_proof_path && !item.document_path ? '<span class="text-[10px] text-slate-500">Sin archivos adjuntos</span>' : ''}</div>
             <form class="insurance-case-update space-y-3" data-case-id="${escapeHtml(item.id)}">
                 <div class="rounded-xl border border-emerald-500/15 bg-slate-950/40 p-3">
                     <p class="mb-2 text-[9px] font-black uppercase tracking-widest text-emerald-200">Seguimiento de póliza</p>
@@ -266,6 +264,7 @@ function renderInsuranceCases() {
                         <label class="text-[10px] font-bold text-slate-400 sm:col-span-2">Notas internas<textarea name="admin_notes" maxlength="2000" rows="2" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white">${escapeHtml(item.admin_notes || '')}</textarea></label>
                         <label class="text-[10px] font-bold text-slate-400 sm:col-span-2">Reemplazar foto de cédula<input name="identity_photo" type="file" accept="image/jpeg,image/png,image/webp" class="mt-1 block w-full rounded-lg border border-slate-700 bg-slate-950 p-2 text-[10px] text-slate-300"></label>
                         <label class="text-[10px] font-bold text-slate-400 sm:col-span-2">Reemplazar foto del carnet de circulación<input name="circulation_card_photo" type="file" accept="image/jpeg,image/png,image/webp" class="mt-1 block w-full rounded-lg border border-slate-700 bg-slate-950 p-2 text-[10px] text-slate-300"></label>
+                        <label class="text-[10px] font-bold text-slate-400 sm:col-span-2">Reemplazar comprobante de pago<input name="payment_proof" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" class="mt-1 block w-full rounded-lg border border-slate-700 bg-slate-950 p-2 text-[10px] text-slate-300"></label>
                     </div>
                 </div>
                 <button type="submit" class="w-full rounded-xl bg-emerald-700 px-4 py-2.5 text-xs font-black text-white hover:bg-emerald-600 disabled:cursor-wait disabled:opacity-50"><i class="fa-solid fa-floppy-disk mr-2"></i>Guardar ficha</button>
@@ -297,8 +296,9 @@ async function registerManualInsuranceCase(event) {
     const phone = String(values.get('customer_phone') || '').trim();
     const identityPhoto = values.get('identity_photo');
     const circulationPhoto = values.get('circulation_card_photo');
-    if (!phone || !(identityPhoto instanceof File) || !identityPhoto.size || !(circulationPhoto instanceof File) || !circulationPhoto.size) {
-        status.textContent = 'Completa el teléfono y adjunta las fotos de cédula y carnet de circulación.';
+    const paymentProof = values.get('payment_proof');
+    if (!phone || !(identityPhoto instanceof File) || !identityPhoto.size || !(circulationPhoto instanceof File) || !circulationPhoto.size || !(paymentProof instanceof File) || !paymentProof.size) {
+        status.textContent = 'Completa el teléfono y adjunta las fotos y el comprobante de pago.';
         return;
     }
     button.disabled = true;
@@ -310,12 +310,14 @@ async function registerManualInsuranceCase(event) {
         uploadedPaths.push(identityDocument.path);
         const circulationDocument = await uploadInsuranceDocument(circulationPhoto, caseId);
         uploadedPaths.push(circulationDocument.path);
+        const paymentDocument = await uploadInsuranceDocument(paymentProof, caseId, true);
+        uploadedPaths.push(paymentDocument.path);
         const { data: authData, error: authError } = await supabaseClient.auth.getUser();
         if (authError) throw authError;
         if (!authData.user) throw new Error('Inicia sesión de nuevo para guardar la ficha.');
         const { error } = await supabaseClient.from('insurance_cases').insert({
             id: caseId, source: 'admin', status: 'new',
-            sales_location: 'Elorza, Apure',
+            sales_location: String(values.get('sales_location') || '').trim(),
             ally: String(values.get('ally') || '').trim() || null,
             sales_date: String(values.get('sales_date') || ''),
             customer_address: String(values.get('customer_address') || '').trim(),
@@ -325,12 +327,12 @@ async function registerManualInsuranceCase(event) {
             license_grade: String(values.get('license_grade') || '').trim(),
             economic_activity: String(values.get('economic_activity') || ''),
             vehicle_cylinders: Number(values.get('vehicle_cylinders')),
-            amount_charged: Number(String(values.get('amount_charged') || '').replace(',', '.')),
-            payment_method: String(values.get('payment_method') || '').trim(),
             identity_photo_path: identityDocument.path,
             identity_photo_name: identityDocument.name,
             circulation_card_photo_path: circulationDocument.path,
             circulation_card_photo_name: circulationDocument.name,
+            payment_proof_path: paymentDocument.path,
+            payment_proof_name: paymentDocument.name,
             created_by: authData.user.id
         });
         if (error) throw error;
@@ -371,10 +373,13 @@ async function saveInsuranceCase(form) {
     try {
         const identityFile = data.get('identity_photo');
         const circulationFile = data.get('circulation_card_photo');
+        const paymentFile = data.get('payment_proof');
         const identityInfo = identityFile instanceof File && identityFile.size ? await uploadInsuranceDocument(identityFile, caseId) : null;
         if (identityInfo) newDocumentPaths.push(identityInfo.path);
         const circulationInfo = circulationFile instanceof File && circulationFile.size ? await uploadInsuranceDocument(circulationFile, caseId) : null;
         if (circulationInfo) newDocumentPaths.push(circulationInfo.path);
+        const paymentInfo = paymentFile instanceof File && paymentFile.size ? await uploadInsuranceDocument(paymentFile, caseId, true) : null;
+        if (paymentInfo) newDocumentPaths.push(paymentInfo.path);
         const payload = {
             status: String(data.get('status') || ''),
             quote_amount: quoteAmount,
@@ -394,11 +399,16 @@ async function saveInsuranceCase(form) {
             payload.circulation_card_photo_path = circulationInfo.path;
             payload.circulation_card_photo_name = circulationInfo.name;
         }
+        if (paymentInfo) {
+            payload.payment_proof_path = paymentInfo.path;
+            payload.payment_proof_name = paymentInfo.name;
+        }
         const { error } = await supabaseClient.from('insurance_cases').update(payload).eq('id', caseId);
         if (error) throw error;
         const oldPaths = [];
         if (identityInfo && current.identity_photo_path) oldPaths.push(current.identity_photo_path);
         if (circulationInfo && current.circulation_card_photo_path) oldPaths.push(current.circulation_card_photo_path);
+        if (paymentInfo && current.payment_proof_path) oldPaths.push(current.payment_proof_path);
         if (oldPaths.length) {
             await supabaseClient.storage.from(INSURANCE_DOCUMENT_BUCKET).remove(oldPaths);
         }
