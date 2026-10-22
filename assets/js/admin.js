@@ -433,10 +433,8 @@ async function exportInsuranceCase(caseId, format, button) {
             const workbook = new ExcelJS.Workbook();
             workbook.creator = 'INV. Armijhon';
             const sheet = workbook.addWorksheet('Registro', { views: [{ state: 'frozen', ySplit: 1 }] });
-            sheet.columns = [{ header: 'Campo', key: 'field', width: 30 }, { header: 'Dato', key: 'value', width: 48 }];
-            sheet.addRows(fields.map(([field, value]) => ({ field, value })));
-            sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
-            sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF201D18' } };
+            sheet.columns = [{ key: 'value', width: 64 }];
+            sheet.addRows(fields.map(([, value]) => [value]));
             sheet.eachRow(row => { row.alignment = { vertical: 'top', wrapText: true }; });
             const bytes = await workbook.xlsx.writeBuffer();
             downloadLocalSalesFile(new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `${baseName}.xlsx`);
