@@ -14,6 +14,8 @@
         body { font-family: 'Jost', sans-serif; }
         .insurance-input { width: 100%; border-radius: .75rem; border: 1px solid #334155; background: #020617; padding: .75rem 1rem; color: white; outline: none; }
         .insurance-input:focus { border-color: #34d399; box-shadow: 0 0 0 2px rgb(52 211 153 / .15); }
+        .insurance-price-filter[aria-pressed="true"] { border-color: #34d399; background: rgb(16 185 129 / .14); color: #a7f3d0; }
+        .insurance-price-card[aria-pressed="true"] { border-color: #34d399; box-shadow: 0 0 0 1px rgb(52 211 153 / .45), 0 12px 32px rgb(16 185 129 / .1); }
         html.light body { background: #f8fafc; color: #0f172a; }
     </style>
 </head>
@@ -28,13 +30,49 @@
         </div>
     </header>
 
-    <main class="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[.85fr_1.15fr] lg:py-16">
+    <main class="mx-auto max-w-6xl space-y-10 px-4 py-10 sm:px-6 lg:py-16">
+        <section id="insurance-prices" class="overflow-hidden rounded-3xl border border-blue-400/20 bg-slate-900 shadow-2xl shadow-blue-950/20" aria-labelledby="insurance-prices-heading">
+            <div class="border-b border-slate-800 bg-gradient-to-r from-blue-950/70 via-slate-900 to-emerald-950/40 p-5 sm:p-8">
+                <div class="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                        <span class="inline-flex items-center gap-2 rounded-full border border-blue-300/20 bg-blue-400/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[.16em] text-blue-200"><i class="fa-solid fa-tags"></i> Tarifas anuales</span>
+                        <h1 id="insurance-prices-heading" class="mt-4 text-3xl font-black sm:text-4xl">Precios de seguro vehicular</h1>
+                        <p class="mt-2 max-w-2xl text-sm leading-relaxed text-slate-400">Explora las categorías y selecciona tu vehículo para consultar su prima anual y las sumas aseguradas.</p>
+                    </div>
+                    <div class="rounded-2xl border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-right">
+                        <span class="block text-[9px] font-black uppercase tracking-widest text-amber-200">Moneda de la tarifa</span>
+                        <strong class="mt-1 block text-2xl font-black text-amber-100">EUR €</strong>
+                    </div>
+                </div>
+                <div class="mt-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div id="insurance-price-filters" class="flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Filtrar tarifas por categoría"></div>
+                    <label class="relative block shrink-0 lg:w-72">
+                        <span class="sr-only">Buscar tipo de vehículo</span>
+                        <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                        <input id="insurance-price-search" type="search" class="insurance-input py-2.5 pl-9 text-xs" placeholder="Buscar vehículo o uso" autocomplete="off">
+                    </label>
+                </div>
+                <p id="insurance-price-count" class="mt-3 text-[10px] text-slate-500" aria-live="polite"></p>
+            </div>
+            <div id="insurance-price-cards" class="grid gap-3 p-4 sm:grid-cols-2 sm:p-6 xl:grid-cols-3" aria-live="polite"></div>
+            <div id="insurance-price-selection" class="hidden flex-col border-t border-slate-800 bg-slate-950/70 p-5 sm:flex-row sm:items-center sm:justify-between sm:gap-5 sm:p-6" aria-live="polite">
+                <div>
+                    <p class="text-[9px] font-black uppercase tracking-widest text-emerald-300">Tarifa seleccionada</p>
+                    <p id="insurance-price-selection-name" class="mt-1 font-bold text-white"></p>
+                    <p id="insurance-price-selection-details" class="mt-1 text-xs text-slate-400"></p>
+                </div>
+                <a id="insurance-price-whatsapp" href="https://wa.me/584264057916" target="_blank" rel="noopener noreferrer" class="mt-4 inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-xs font-black text-white transition hover:bg-emerald-500 sm:mt-0"><i class="fa-brands fa-whatsapp text-base"></i>Consultar esta tarifa</a>
+            </div>
+            <p class="border-t border-slate-800 px-5 py-4 text-[10px] leading-relaxed text-slate-500 sm:px-8">Montos y sumas aseguradas expresados en euros, tal como aparecen en la tabla recibida. La emisión y las condiciones finales dependen de la revisión de la empresa aseguradora. Los remolques se calculan con la misma tarifa de vehículos de carga.</p>
+        </section>
+
+        <div class="grid gap-8 lg:grid-cols-[.85fr_1.15fr]">
         <section class="self-start lg:sticky lg:top-8">
             <span class="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[.16em] text-emerald-200"><i class="fa-solid fa-shield-halved"></i> Atención personalizada</span>
-            <h1 class="mt-5 text-4xl font-black leading-tight sm:text-5xl">Gestiona la protección de tu vehículo</h1>
-            <p class="mt-4 max-w-xl text-sm leading-relaxed text-slate-400">Completa los datos del módulo de ventas y adjunta una foto de tu cédula y del carnet de circulación. Los documentos se almacenan de forma privada.</p>
+            <h2 class="mt-5 text-4xl font-black leading-tight sm:text-5xl">Gestiona la protección de tu vehículo</h2>
+            <p class="mt-4 max-w-xl text-sm leading-relaxed text-slate-400">Completa los datos del módulo de ventas y adjunta las fotos de cédula y carnet de circulación, además del comprobante de pago. Los archivos se almacenan de forma privada.</p>
             <div class="mt-7 space-y-3">
-                <div class="flex gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 p-4"><span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-400/10 text-emerald-300"><i class="fa-solid fa-clipboard-check"></i></span><p class="text-xs leading-relaxed text-slate-300"><strong class="block text-white">1. Envíanos los datos</strong>Completa los campos solicitados y adjunta ambas fotos.</p></div>
+                <div class="flex gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 p-4"><span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-400/10 text-emerald-300"><i class="fa-solid fa-clipboard-check"></i></span><p class="text-xs leading-relaxed text-slate-300"><strong class="block text-white">1. Envíanos los datos</strong>Completa los campos solicitados y adjunta las fotos y el comprobante de pago.</p></div>
                 <div class="flex gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 p-4"><span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-400/10 text-sky-300"><i class="fa-solid fa-comments"></i></span><p class="text-xs leading-relaxed text-slate-300"><strong class="block text-white">2. Revisamos contigo</strong>Te contactaremos para confirmar la información y continuar la gestión.</p></div>
                 <div class="flex gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 p-4"><span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-400/10 text-violet-300"><i class="fa-solid fa-file-shield"></i></span><p class="text-xs leading-relaxed text-slate-300"><strong class="block text-white">3. Seguimos el proceso</strong>Podrás recibir orientación sobre cotización, documentación y emisión con la empresa aseguradora.</p></div>
             </div>
@@ -45,7 +83,7 @@
         <section class="rounded-3xl border border-slate-800 bg-slate-900 p-5 shadow-2xl shadow-black/20 sm:p-8" aria-labelledby="insurance-form-heading">
             <div class="mb-6">
                 <h2 id="insurance-form-heading" class="text-xl font-black">Módulo de ventas: Elorza, Apure</h2>
-                <p class="mt-1 text-xs leading-relaxed text-slate-400">Completa los datos y carga las dos imágenes solicitadas.</p>
+                <p class="mt-1 text-xs leading-relaxed text-slate-400">Completa los datos y adjunta las fotos y el comprobante de pago.</p>
             </div>
             <form id="insurance-request-form" class="space-y-5" enctype="multipart/form-data" novalidate>
                 <div class="grid gap-4 sm:grid-cols-2">
@@ -108,12 +146,84 @@
                 <button id="insurance-request-submit" class="w-full rounded-xl bg-emerald-600 px-5 py-3.5 text-sm font-black text-white transition hover:bg-emerald-500 disabled:cursor-wait disabled:opacity-60" type="submit"><i class="fa-solid fa-paper-plane mr-2"></i>Enviar solicitud</button>
             </form>
         </section>
+        </div>
     </main>
 
     <footer class="border-t border-slate-800 px-4 py-6 text-center text-[10px] text-slate-500">© <span id="year"></span> INV. Armijhon · <a href="index.html" class="text-emerald-300 hover:text-emerald-200">Inicio</a></footer>
     <script src="assets/js/supabase-config.js"></script>
     <script>
         document.getElementById('year').textContent = new Date().getFullYear();
+        const insurancePrices = [
+            { category: 'Motocicletas', vehicle: 'Motocicleta', insuredThings: '€2.000', insuredPeople: '€2.505', premium: '€15' },
+            { category: 'Motocicletas', vehicle: 'Moto carro hasta 750 kg', insuredThings: '€1.874', insuredPeople: '€2.505', premium: '€21' },
+            { category: 'Vehículos particulares', vehicle: 'Hasta 800 kg', insuredThings: '€2.000', insuredPeople: '€2.505', premium: '€33' },
+            { category: 'Vehículos particulares', vehicle: 'Más de 800 kg', insuredThings: '€2.000', insuredPeople: '€2.505', premium: '€39' },
+            { category: 'Vehículos particulares', vehicle: 'Casa móvil · tracción propia', insuredThings: '€2.000', insuredPeople: '€2.505', premium: '€39' },
+            { category: 'Vehículos particulares', vehicle: 'Auto escuela', insuredThings: '€2.252', insuredPeople: '€3.315', premium: '€45' },
+            { category: 'Vehículos particulares', vehicle: 'Alquiler sin chofer', insuredThings: '€2.252', insuredPeople: '€3.315', premium: '€102' },
+            { category: 'Vehículos particulares', vehicle: 'Alquiler con chofer · taxi o por puesto', insuredThings: '€2.252', insuredPeople: '€3.315', premium: '€114' },
+            { category: 'Carga y chutos', vehicle: 'Carga · hasta 2 TM de capacidad', insuredThings: '€1.877', insuredPeople: '€2.505', premium: '€45' },
+            { category: 'Carga y chutos', vehicle: 'Carga · más de 2 TM hasta 5 TM', insuredThings: '€2.192', insuredPeople: '€3.315', premium: '€84' },
+            { category: 'Carga y chutos', vehicle: 'Carga · más de 5 TM hasta 8 TM', insuredThings: '€2.312', insuredPeople: '€3.441', premium: '€84' },
+            { category: 'Carga y chutos', vehicle: 'Carga · más de 8 TM hasta 12 TM', insuredThings: '€2.595', insuredPeople: '€4.378', premium: '€108' },
+            { category: 'Carga y chutos', vehicle: 'Carga · más de 12 TM', insuredThings: '€2.595', insuredPeople: '€4.378', premium: '€108 + 5 TCR × tonelada' },
+            { category: 'Carga y chutos', vehicle: 'Chuto · hasta 2 TM de capacidad', insuredThings: '€1.877', insuredPeople: '€2.505', premium: '€45' },
+            { category: 'Autobuses', vehicle: 'Autobús urbano', insuredThings: '€1.502', insuredPeople: '€2.817', premium: '€114' },
+            { category: 'Autobuses', vehicle: 'Autobús suburbano', insuredThings: '€1.502', insuredPeople: '€2.817', premium: '€114' },
+            { category: 'Autobuses', vehicle: 'Autobús interurbano', insuredThings: '€2.000', insuredPeople: '€3.754', premium: '€258' },
+            { category: 'Minibuses y rústicos', vehicle: 'Minibús urbano', insuredThings: '€1.502', insuredPeople: '€2.817', premium: '€75' },
+            { category: 'Minibuses y rústicos', vehicle: 'Minibús suburbano', insuredThings: '€1.502', insuredPeople: '€2.817', premium: '€75' },
+            { category: 'Minibuses y rústicos', vehicle: 'Minibús interurbano', insuredThings: '€2.505', insuredPeople: '€3.754', premium: '€168' },
+            { category: 'Minibuses y rústicos', vehicle: 'Rústico · hasta 15 pasajeros', insuredThings: '€1.874', insuredPeople: '€2.817', premium: '€75' }
+        ];
+        const priceCategories = ['Todos', ...new Set(insurancePrices.map(item => item.category))];
+        const priceFilters = document.getElementById('insurance-price-filters');
+        const priceCards = document.getElementById('insurance-price-cards');
+        const priceSearch = document.getElementById('insurance-price-search');
+        const priceCount = document.getElementById('insurance-price-count');
+        const priceSelection = document.getElementById('insurance-price-selection');
+        let selectedInsurancePrice = -1;
+        let activePriceCategory = 'Todos';
+        const renderInsurancePrices = () => {
+            priceFilters.innerHTML = priceCategories.map(category => `<button type="button" data-price-category="${category}" aria-pressed="${activePriceCategory === category}" class="insurance-price-filter shrink-0 rounded-full border border-slate-700 px-4 py-2 text-[10px] font-bold text-slate-400 transition hover:border-emerald-400/50 hover:text-white">${category}</button>`).join('');
+            const query = priceSearch.value.trim().toLocaleLowerCase('es');
+            const results = insurancePrices.map((item, index) => ({ ...item, index })).filter(item =>
+                (activePriceCategory === 'Todos' || item.category === activePriceCategory)
+                && (!query || `${item.category} ${item.vehicle}`.toLocaleLowerCase('es').includes(query))
+            );
+            priceCount.textContent = `${results.length} tarifas${activePriceCategory === 'Todos' ? '' : ` en ${activePriceCategory.toLocaleLowerCase('es')}`}`;
+            priceCards.innerHTML = results.length ? results.map(item => `<button type="button" data-price-select="${item.index}" aria-pressed="${selectedInsurancePrice === item.index}" class="insurance-price-card rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-left transition hover:-translate-y-0.5 hover:border-emerald-400/50">
+                <span class="inline-flex rounded-full bg-blue-400/10 px-2.5 py-1 text-[9px] font-black uppercase tracking-wide text-blue-200">${item.category}</span>
+                <span class="mt-3 block min-h-10 text-sm font-bold leading-snug text-white">${item.vehicle}</span>
+                <span class="mt-4 block border-t border-slate-800 pt-3 text-[9px] font-black uppercase tracking-widest text-slate-500">Prima anual</span>
+                <span class="mt-1 block text-3xl font-black leading-tight text-emerald-300">${item.premium}</span>
+                <span class="mt-4 grid grid-cols-2 gap-2 border-t border-slate-800 pt-3 text-[9px]">
+                    <span><span class="block text-slate-500">Daños a cosas</span><strong class="mt-1 block text-slate-200">${item.insuredThings}</strong></span>
+                    <span><span class="block text-slate-500">Daños a personas</span><strong class="mt-1 block text-slate-200">${item.insuredPeople}</strong></span>
+                </span>
+                <span class="mt-3 block text-[9px] font-bold text-emerald-200">Seleccionar tarifa <i class="fa-solid fa-arrow-right ml-1"></i></span>
+            </button>`).join('') : '<p class="rounded-xl border border-slate-800 p-6 text-sm text-slate-400 sm:col-span-2 xl:col-span-3">No encontramos tarifas con esa búsqueda.</p>';
+        };
+        priceFilters.addEventListener('click', event => {
+            const button = event.target.closest('[data-price-category]');
+            if (!button) return;
+            activePriceCategory = button.dataset.priceCategory;
+            renderInsurancePrices();
+        });
+        priceSearch.addEventListener('input', renderInsurancePrices);
+        priceCards.addEventListener('click', event => {
+            const button = event.target.closest('[data-price-select]');
+            if (!button) return;
+            selectedInsurancePrice = Number(button.dataset.priceSelect);
+            const item = insurancePrices[selectedInsurancePrice];
+            document.getElementById('insurance-price-selection-name').textContent = item.vehicle;
+            document.getElementById('insurance-price-selection-details').textContent = `Prima anual ${item.premium} · Cosas ${item.insuredThings} · Personas ${item.insuredPeople}`;
+            document.getElementById('insurance-price-whatsapp').href = `https://wa.me/584264057916?text=${encodeURIComponent(`Hola, quiero consultar la tarifa de ${item.vehicle}: ${item.premium} anual.`)}`;
+            priceSelection.classList.remove('hidden');
+            priceSelection.style.display = 'flex';
+            renderInsurancePrices();
+        });
+        renderInsurancePrices();
         const insuranceForm = document.getElementById('insurance-request-form');
         const insuranceStatus = document.getElementById('insurance-request-status');
         const insuranceSubmit = document.getElementById('insurance-request-submit');
