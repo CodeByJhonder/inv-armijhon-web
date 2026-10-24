@@ -136,7 +136,41 @@
             <p class="mt-4 text-[11px] leading-relaxed text-slate-500">El envío de esta solicitud inicia una gestión de asesoría. La cobertura y emisión dependen de la evaluación y aprobación de la empresa aseguradora.</p>
         </section>
 
-        <section id="insurance-request-section" class="scroll-mt-8 rounded-3xl border border-slate-800 bg-slate-900 p-5 shadow-2xl shadow-black/20 sm:p-8" aria-labelledby="insurance-form-heading">
+        <section class="self-start rounded-3xl border border-emerald-400/20 bg-slate-900 p-5 shadow-2xl shadow-emerald-950/20 lg:order-3 lg:col-span-2 xl:col-span-1 xl:sticky xl:top-8" aria-labelledby="insurance-price-quote-heading">
+            <span class="inline-flex items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-400/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[.15em] text-emerald-200"><i class="fa-solid fa-calculator"></i> Conversión referencial</span>
+            <h2 id="insurance-price-quote-heading" class="mt-4 text-xl font-black">Precio en bolívares</h2>
+            <p id="insurance-euro-rate-status" class="mt-2 text-[11px] leading-relaxed text-slate-400" aria-live="polite">Consultando tasa EUR/VES de referencia…</p>
+            <a href="https://www.dolarvzla.com/settings/api" target="_blank" rel="noopener noreferrer" class="mt-1 inline-block text-[10px] text-slate-500 underline decoration-slate-700 underline-offset-2 hover:text-emerald-200">Fuente de consulta: DolarVZLA · tasa publicada por el BCV</a>
+            <div class="mt-5 border-t border-slate-800 pt-5">
+                <div class="flex items-center gap-2 text-emerald-300"><i class="fa-solid fa-mobile-screen-button"></i><h3 class="text-sm font-black text-white">Datos para Pago Móvil</h3></div>
+                <div class="mt-3 grid grid-cols-2 gap-2" role="group" aria-label="Seleccionar banco de Pago Móvil">
+                    <button type="button" class="insurance-bank-option rounded-xl border border-slate-700 px-3 py-2.5 text-xs font-bold transition hover:border-emerald-400" data-insurance-bank="0105" aria-pressed="false">Banco Mercantil (0105)</button>
+                    <button type="button" class="insurance-bank-option rounded-xl border border-slate-700 px-3 py-2.5 text-xs font-bold transition hover:border-emerald-400" data-insurance-bank="0102" aria-pressed="true">Banco de Venezuela (0102)</button>
+                </div>
+                <dl class="mt-3 space-y-2 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-xs" aria-live="polite">
+                    <div class="flex flex-wrap justify-between gap-x-3 gap-y-1"><dt class="text-slate-400">Banco</dt><dd id="insurance-payment-bank" class="font-bold text-slate-100">Banco de Venezuela (0102)</dd></div>
+                    <div class="flex flex-wrap justify-between gap-x-3 gap-y-1"><dt class="text-slate-400">Identificación</dt><dd id="insurance-payment-id" class="font-bold text-slate-100">33550719</dd></div>
+                    <div class="flex flex-wrap justify-between gap-x-3 gap-y-1"><dt class="text-slate-400">Teléfono</dt><dd id="insurance-payment-phone" class="font-bold text-slate-100">04262400644</dd></div>
+                </dl>
+                <button id="copy-insurance-payment-details" type="button" class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-400/30 px-4 py-3 text-xs font-bold text-emerald-200 transition hover:bg-emerald-400/10 disabled:cursor-not-allowed disabled:opacity-50"><i class="fa-regular fa-copy"></i><span>Copiar datos de pago</span></button>
+                <p id="copy-insurance-payment-status" class="mt-2 min-h-4 text-center text-[10px] text-slate-400" role="status" aria-live="polite"></p>
+                <p class="text-[10px] leading-relaxed text-slate-500">Confirma el total en bolívares antes de pagar y adjunta el comprobante en el formulario.</p>
+            </div>
+            <div id="insurance-price-empty" class="mt-5 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-xs leading-relaxed text-slate-400">Elige una categoría y selecciona tu vehículo para ver el cálculo aquí.</div>
+            <div id="insurance-price-selection" class="mt-5 hidden flex-col" aria-live="polite">
+                <p class="text-[10px] font-black uppercase tracking-widest text-emerald-300">Vehículo seleccionado</p>
+                <p id="insurance-price-selection-name" class="mt-1 text-base font-bold text-white"></p>
+                <p id="insurance-price-selection-details" class="mt-4 text-xs text-slate-400"></p>
+                <div class="mt-4 rounded-2xl border border-emerald-300/20 bg-emerald-300/10 p-4">
+                    <span class="block text-[10px] font-black uppercase tracking-widest text-emerald-200">Total anual estimado</span>
+                    <strong id="insurance-price-selection-ves" class="mt-2 block break-words text-3xl font-black leading-tight text-emerald-100">—</strong>
+                    <span id="insurance-price-selection-calculation" class="mt-2 block text-[11px] leading-relaxed text-emerald-100/70"></span>
+                </div>
+                <a id="insurance-price-whatsapp" href="https://wa.me/584264057916" target="_blank" rel="noopener noreferrer" class="mt-4 inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-xs font-black text-white transition hover:bg-emerald-500"><i class="fa-brands fa-whatsapp text-base"></i>Consultar esta tarifa</a>
+            </div>
+        </section>
+
+        <section id="insurance-request-section" class="scroll-mt-8 rounded-3xl border border-slate-800 bg-slate-900 p-5 shadow-2xl shadow-black/20 lg:order-2 sm:p-8" aria-labelledby="insurance-form-heading">
             <div class="mb-6">
                 <h2 id="insurance-form-heading" class="text-xl font-black">Módulo de ventas: Elorza, Apure</h2>
                 <p class="mt-1 text-xs leading-relaxed text-slate-400">Completa los datos y adjunta las fotos y el comprobante de pago.</p>
@@ -201,39 +235,6 @@
                 <p id="insurance-request-status" class="min-h-5 text-xs text-slate-400" role="status" aria-live="polite"></p>
                 <button id="insurance-request-submit" class="w-full rounded-xl bg-emerald-600 px-5 py-3.5 text-sm font-black text-white transition hover:bg-emerald-500 disabled:cursor-wait disabled:opacity-60" type="submit"><i class="fa-solid fa-paper-plane mr-2"></i>Enviar solicitud</button>
             </form>
-        </section>
-        <section class="self-start rounded-3xl border border-emerald-400/20 bg-slate-900 p-5 shadow-2xl shadow-emerald-950/20 lg:col-span-2 xl:col-span-1 xl:sticky xl:top-8" aria-labelledby="insurance-price-quote-heading">
-            <span class="inline-flex items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-400/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[.15em] text-emerald-200"><i class="fa-solid fa-calculator"></i> Conversión referencial</span>
-            <h2 id="insurance-price-quote-heading" class="mt-4 text-xl font-black">Precio en bolívares</h2>
-            <p id="insurance-euro-rate-status" class="mt-2 text-[11px] leading-relaxed text-slate-400" aria-live="polite">Consultando tasa EUR/VES de referencia…</p>
-            <a href="https://www.dolarvzla.com/settings/api" target="_blank" rel="noopener noreferrer" class="mt-1 inline-block text-[10px] text-slate-500 underline decoration-slate-700 underline-offset-2 hover:text-emerald-200">Fuente de consulta: DolarVZLA · tasa publicada por el BCV</a>
-            <div class="mt-5 border-t border-slate-800 pt-5">
-                <div class="flex items-center gap-2 text-emerald-300"><i class="fa-solid fa-mobile-screen-button"></i><h3 class="text-sm font-black text-white">Datos para Pago Móvil</h3></div>
-                <div class="mt-3 grid grid-cols-2 gap-2" role="group" aria-label="Seleccionar banco de Pago Móvil">
-                    <button type="button" class="insurance-bank-option rounded-xl border border-slate-700 px-3 py-2.5 text-xs font-bold transition hover:border-emerald-400" data-insurance-bank="0105" aria-pressed="false">Banco Mercantil (0105)</button>
-                    <button type="button" class="insurance-bank-option rounded-xl border border-slate-700 px-3 py-2.5 text-xs font-bold transition hover:border-emerald-400" data-insurance-bank="0102" aria-pressed="true">Banco de Venezuela (0102)</button>
-                </div>
-                <dl class="mt-3 space-y-2 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-xs" aria-live="polite">
-                    <div class="flex flex-wrap justify-between gap-x-3 gap-y-1"><dt class="text-slate-400">Banco</dt><dd id="insurance-payment-bank" class="font-bold text-slate-100">Banco de Venezuela (0102)</dd></div>
-                    <div class="flex flex-wrap justify-between gap-x-3 gap-y-1"><dt class="text-slate-400">Identificación</dt><dd id="insurance-payment-id" class="font-bold text-slate-100">33550719</dd></div>
-                    <div class="flex flex-wrap justify-between gap-x-3 gap-y-1"><dt class="text-slate-400">Teléfono</dt><dd id="insurance-payment-phone" class="font-bold text-slate-100">04262400644</dd></div>
-                </dl>
-                <button id="copy-insurance-payment-details" type="button" class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-400/30 px-4 py-3 text-xs font-bold text-emerald-200 transition hover:bg-emerald-400/10 disabled:cursor-not-allowed disabled:opacity-50"><i class="fa-regular fa-copy"></i><span>Copiar datos de pago</span></button>
-                <p id="copy-insurance-payment-status" class="mt-2 min-h-4 text-center text-[10px] text-slate-400" role="status" aria-live="polite"></p>
-                <p class="text-[10px] leading-relaxed text-slate-500">Confirma el total en bolívares antes de pagar y adjunta el comprobante en el formulario.</p>
-            </div>
-            <div id="insurance-price-empty" class="mt-5 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-xs leading-relaxed text-slate-400">Elige una categoría y selecciona tu vehículo para ver el cálculo aquí.</div>
-            <div id="insurance-price-selection" class="mt-5 hidden flex-col" aria-live="polite">
-                <p class="text-[10px] font-black uppercase tracking-widest text-emerald-300">Vehículo seleccionado</p>
-                <p id="insurance-price-selection-name" class="mt-1 text-base font-bold text-white"></p>
-                <p id="insurance-price-selection-details" class="mt-4 text-xs text-slate-400"></p>
-                <div class="mt-4 rounded-2xl border border-emerald-300/20 bg-emerald-300/10 p-4">
-                    <span class="block text-[10px] font-black uppercase tracking-widest text-emerald-200">Total anual estimado</span>
-                    <strong id="insurance-price-selection-ves" class="mt-2 block break-words text-3xl font-black leading-tight text-emerald-100">—</strong>
-                    <span id="insurance-price-selection-calculation" class="mt-2 block text-[11px] leading-relaxed text-emerald-100/70"></span>
-                </div>
-                <a id="insurance-price-whatsapp" href="https://wa.me/584264057916" target="_blank" rel="noopener noreferrer" class="mt-4 inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-xs font-black text-white transition hover:bg-emerald-500"><i class="fa-brands fa-whatsapp text-base"></i>Consultar esta tarifa</a>
-            </div>
         </section>
         </div>
     </main>
