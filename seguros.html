@@ -6,6 +6,13 @@
     <meta name="theme-color" content="#100F0C">
     <title>Seguro vehicular | INV. Armijhon</title>
     <meta name="description" content="Solicita asesoría para gestionar una póliza de seguro vehicular con INV. Armijhon en Venezuela.">
+    <script>
+        try {
+            const savedInsuranceTheme = localStorage.getItem('theme') || 'dark';
+            document.documentElement.classList.toggle('dark', savedInsuranceTheme === 'dark');
+            document.documentElement.classList.toggle('light', savedInsuranceTheme === 'light');
+        } catch (_) {}
+    </script>
     <link rel="icon" href="assets/images/favicon.ico" type="image/x-icon" sizes="32x32">
     <link rel="stylesheet" href="assets/css/tailwind.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -16,7 +23,24 @@
         .insurance-input:focus { border-color: #34d399; box-shadow: 0 0 0 2px rgb(52 211 153 / .15); }
         .insurance-price-filter[aria-pressed="true"] { border-color: #34d399; background: rgb(16 185 129 / .14); color: #a7f3d0; }
         .insurance-price-card[aria-pressed="true"] { border-color: #34d399; box-shadow: 0 0 0 1px rgb(52 211 153 / .45), 0 12px 32px rgb(16 185 129 / .1); }
-        html.light body { background: #f8fafc; color: #0f172a; }
+        html.light body { background: #F7F3EA; color: #171512; }
+        html.light .bg-slate-900, html.light [class~="bg-slate-900/70"] { background-color: #FFFFFF; }
+        html.light .bg-slate-950, html.light [class~="bg-slate-950/60"] { background-color: #F7F3EA; }
+        html.light .bg-gradient-to-r { background-image: linear-gradient(to right, #EAF1EC, #FFFFFF, #FBF6EC); }
+        html.light .border-slate-800, html.light .border-slate-700 { border-color: #DED4C1; }
+        html.light .text-white, html.light .text-slate-100, html.light .text-slate-200 { color: #171512; }
+        html.light .text-slate-300, html.light .text-slate-400 { color: #6A6459; }
+        html.light .text-emerald-100, html.light .text-emerald-200 { color: #15382B; }
+        html.light .text-emerald-300 { color: #1D4A38; }
+        html.light .text-blue-200 { color: #1E3A8A; }
+        html.light .text-amber-100, html.light .text-amber-200 { color: #78350F; }
+        html.light .text-sky-300 { color: #075985; }
+        html.light .text-violet-300 { color: #6B21A8; }
+        html.light .insurance-input { border-color: #C4B8A0; background: #FFFFFF; color: #171512; }
+        html.light .insurance-input::placeholder { color: #9C9280; }
+        html.light .insurance-price-card { background-color: #FFFFFF; }
+        html.light .insurance-price-card:hover { background-color: #F7F3EA; }
+        html.light #insurance-price-selection .bg-emerald-300\/10 { background-color: #EAF1EC; }
     </style>
 </head>
 <body class="min-h-screen bg-slate-950 text-slate-100">
@@ -26,7 +50,10 @@
                 <img src="assets/images/logo.png" alt="INV. Armijhon" class="h-11 w-auto">
                 <span>INV. <span class="text-emerald-300">ARMIJHON</span></span>
             </a>
-            <a href="index.html" class="rounded-xl border border-slate-700 px-4 py-2 text-xs font-bold text-slate-300 hover:bg-slate-800"><i class="fa-solid fa-arrow-left mr-2"></i>Volver al inicio</a>
+            <div class="flex items-center gap-2">
+                <button id="theme-toggle" type="button" onclick="toggleTheme()" class="rounded-xl border border-slate-700 px-3 py-2 text-xs font-bold text-slate-300 transition hover:bg-slate-800" aria-label="Cambiar a modo claro" title="Cambiar a modo claro"><i id="theme-icon" class="fa-solid fa-sun text-amber-300"></i><span id="theme-label" class="ml-2 hidden sm:inline">Modo claro</span></button>
+                <a href="index.html" class="rounded-xl border border-slate-700 px-4 py-2 text-xs font-bold text-slate-300 hover:bg-slate-800"><i class="fa-solid fa-arrow-left mr-2"></i>Volver al inicio</a>
+            </div>
         </div>
     </header>
 
@@ -164,6 +191,26 @@
     <script src="assets/js/supabase-config.js"></script>
     <script>
         document.getElementById('year').textContent = new Date().getFullYear();
+        const updateInsuranceThemeControl = () => {
+            const isDark = document.documentElement.classList.contains('dark');
+            const icon = document.getElementById('theme-icon');
+            const button = document.getElementById('theme-toggle');
+            const label = document.getElementById('theme-label');
+            icon.className = `fa-solid ${isDark ? 'fa-sun text-amber-300' : 'fa-moon text-indigo-500'}`;
+            button.setAttribute('aria-label', `Cambiar a modo ${isDark ? 'claro' : 'oscuro'}`);
+            button.title = `Cambiar a modo ${isDark ? 'claro' : 'oscuro'}`;
+            label.textContent = `Modo ${isDark ? 'claro' : 'oscuro'}`;
+            document.querySelector('meta[name="theme-color"]').content = isDark ? '#100F0C' : '#F7F3EA';
+        };
+        function toggleTheme() {
+            const html = document.documentElement;
+            const isDark = !html.classList.contains('dark');
+            html.classList.toggle('dark', isDark);
+            html.classList.toggle('light', !isDark);
+            try { localStorage.setItem('theme', isDark ? 'dark' : 'light'); } catch (_) {}
+            updateInsuranceThemeControl();
+        }
+        updateInsuranceThemeControl();
         const insurancePrices = [
             { category: 'Motocicletas', vehicle: 'Motocicleta', insuredThings: '€2.000', insuredPeople: '€2.505', premium: '€15', premiumEUR: 15 },
             { category: 'Motocicletas', vehicle: 'Moto carro hasta 750 kg', insuredThings: '€1.874', insuredPeople: '€2.505', premium: '€21', premiumEUR: 21 },
