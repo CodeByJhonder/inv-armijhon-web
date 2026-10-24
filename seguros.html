@@ -25,6 +25,17 @@
         .insurance-price-card[aria-pressed="true"] { border-color: #34d399; box-shadow: 0 0 0 1px rgb(52 211 153 / .45), 0 12px 32px rgb(16 185 129 / .1); }
         .insurance-bank-option[aria-pressed="true"] { border-color: #10b981; background: rgb(16 185 129 / .14); color: #047857; }
         html.dark .insurance-bank-option[aria-pressed="true"] { color: #a7f3d0; }
+        .insurance-process-step { animation: insurance-process-highlight 16s ease-in-out infinite; }
+        .insurance-process-step:nth-child(2) { animation-delay: 4s; }
+        .insurance-process-step:nth-child(3) { animation-delay: 8s; }
+        .insurance-process-step:nth-child(4) { animation-delay: 12s; }
+        @keyframes insurance-process-highlight {
+            0%, 18% { box-shadow: 0 0 0 2px rgb(16 185 129 / .2), 0 8px 24px rgb(16 185 129 / .08); transform: translateY(-1px); }
+            24%, 100% { box-shadow: 0 0 0 0 transparent; transform: translateY(0); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .insurance-process-step { animation: none; }
+        }
         html.light body { background: #F7F3EA; color: #171512; }
         html.light .bg-slate-900, html.light [class~="bg-slate-900/70"] { background-color: #FFFFFF; }
         html.light .bg-slate-950, html.light [class~="bg-slate-950/60"] { background-color: #F7F3EA; }
@@ -101,12 +112,26 @@
         <section class="self-start lg:sticky lg:top-8">
             <span class="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[.16em] text-emerald-200"><i class="fa-solid fa-shield-halved"></i> Atención personalizada</span>
             <h2 class="mt-5 text-4xl font-black leading-tight sm:text-5xl">Gestiona la protección de tu vehículo</h2>
-            <p class="mt-4 max-w-xl text-sm leading-relaxed text-slate-400">Completa los datos del módulo de ventas y adjunta las fotos de cédula y carnet de circulación, además del comprobante de pago. Los archivos se almacenan de forma privada.</p>
-            <div class="mt-7 space-y-3">
-                <div class="flex gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 p-4"><span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-400/10 text-emerald-300"><i class="fa-solid fa-clipboard-check"></i></span><p class="text-xs leading-relaxed text-slate-300"><strong class="block text-white">1. Envíanos los datos</strong>Completa los campos solicitados y adjunta las fotos y el comprobante de pago.</p></div>
-                <div class="flex gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 p-4"><span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-400/10 text-sky-300"><i class="fa-solid fa-comments"></i></span><p class="text-xs leading-relaxed text-slate-300"><strong class="block text-white">2. Revisamos contigo</strong>Te contactaremos para confirmar la información y continuar la gestión.</p></div>
-                <div class="flex gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 p-4"><span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-400/10 text-violet-300"><i class="fa-solid fa-file-shield"></i></span><p class="text-xs leading-relaxed text-slate-300"><strong class="block text-white">3. Seguimos el proceso</strong>Podrás recibir orientación sobre cotización, documentación y emisión con la empresa aseguradora.</p></div>
-            </div>
+            <p class="mt-4 max-w-xl text-sm leading-relaxed text-slate-400">Sigue estos pasos desde la página. Te indicamos qué elegir, cómo pagar y qué documentos enviar.</p>
+            <h3 class="mt-7 text-base font-black text-white">Así adquieres tu póliza</h3>
+            <ol class="mt-3 space-y-3" aria-label="Pasos para adquirir una póliza vehicular">
+                <li class="insurance-process-step flex gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-400/10 text-sm font-black text-emerald-300"><i class="fa-solid fa-car-side" aria-hidden="true"></i></span>
+                    <p class="text-xs leading-relaxed text-slate-300"><strong class="block text-white">1. Elige tu vehículo y tarifa</strong>Selecciona el cuadro de precio, revisa el total estimado en bolívares y continúa al formulario.</p>
+                </li>
+                <li class="insurance-process-step flex gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-400/10 text-sm text-sky-300"><i class="fa-solid fa-mobile-screen-button" aria-hidden="true"></i></span>
+                    <p class="text-xs leading-relaxed text-slate-300"><strong class="block text-white">2. Realiza el Pago Móvil</strong>Elige Banco Mercantil o Banco de Venezuela, paga el monto confirmado y guarda el comprobante.</p>
+                </li>
+                <li class="insurance-process-step flex gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-400/10 text-sm text-violet-300"><i class="fa-solid fa-file-arrow-up" aria-hidden="true"></i></span>
+                    <p class="text-xs leading-relaxed text-slate-300"><strong class="block text-white">3. Completa y envía el formulario</strong>Adjunta una foto de la cédula, otra del carnet de circulación y el comprobante de pago.</p>
+                </li>
+                <li class="insurance-process-step flex gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-400/10 text-sm text-amber-300"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i></span>
+                    <p class="text-xs leading-relaxed text-slate-300"><strong class="block text-white">4. Revisamos tu solicitud</strong>Te contactamos para confirmar los datos. La aseguradora evalúa y aprueba la emisión de la póliza.</p>
+                </li>
+            </ol>
             <a href="https://wa.me/584264057916?text=Hola%2C%20quiero%20informaci%C3%B3n%20sobre%20una%20p%C3%B3liza%20para%20mi%20veh%C3%ADculo." target="_blank" rel="noopener noreferrer" class="mt-6 inline-flex items-center gap-2 rounded-xl border border-emerald-400/30 px-4 py-3 text-xs font-bold text-emerald-200 transition hover:bg-emerald-400/10"><i class="fa-brands fa-whatsapp text-lg"></i>Prefiero hablar por WhatsApp</a>
             <p class="mt-4 text-[11px] leading-relaxed text-slate-500">El envío de esta solicitud inicia una gestión de asesoría. La cobertura y emisión dependen de la evaluación y aprobación de la empresa aseguradora.</p>
         </section>
