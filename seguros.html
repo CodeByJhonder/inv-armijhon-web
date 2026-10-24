@@ -299,15 +299,15 @@
             );
             priceCount.textContent = `${results.length} tarifas${activePriceCategory === 'Todos' ? '' : ` en ${activePriceCategory.toLocaleLowerCase('es')}`}`;
             priceCards.innerHTML = results.length ? results.map(item => `<button type="button" data-price-select="${item.index}" aria-pressed="${selectedInsurancePrice === item.index}" class="insurance-price-card rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-left transition hover:-translate-y-0.5 hover:border-emerald-400/50">
-                <span class="inline-flex rounded-full bg-blue-400/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-blue-200">${item.category}</span>
+                <span class="inline-flex rounded-full bg-blue-400/10 px-2.5 py-1 text-xs font-black uppercase tracking-wide text-blue-200">${item.category}</span>
                 <span class="mt-3 block min-h-10 text-sm font-bold leading-snug text-white">${item.vehicle}</span>
-                <span class="mt-4 block border-t border-slate-800 pt-3 text-[10px] font-black uppercase tracking-widest text-slate-500">Prima anual</span>
+                <span class="mt-4 block border-t border-slate-800 pt-3 text-xs font-black uppercase tracking-widest text-slate-500">Prima anual</span>
                 <span class="mt-1 block text-3xl font-black leading-tight text-emerald-300">${item.premium}</span>
-                <span class="mt-4 grid grid-cols-2 gap-2 border-t border-slate-800 pt-3 text-[11px]">
-                    <span><span class="block text-slate-500">Daños a cosas</span><strong class="mt-1 block text-slate-200">${item.insuredThings}</strong></span>
-                    <span><span class="block text-slate-500">Daños a personas</span><strong class="mt-1 block text-slate-200">${item.insuredPeople}</strong></span>
+                <span class="mt-4 grid grid-cols-2 gap-2 border-t border-slate-800 pt-3 text-sm">
+                    <span><span class="block text-xs text-slate-500">Daños a cosas</span><strong class="mt-1 block text-slate-200">${item.insuredThings}</strong></span>
+                    <span><span class="block text-xs text-slate-500">Daños a personas</span><strong class="mt-1 block text-slate-200">${item.insuredPeople}</strong></span>
                 </span>
-                <span class="mt-3 block text-[11px] font-bold text-emerald-200">Seleccionar tarifa <i class="fa-solid fa-arrow-right ml-1"></i></span>
+                <span class="mt-3 block text-sm font-bold text-emerald-200">Seleccionar tarifa <i class="fa-solid fa-arrow-right ml-1"></i></span>
             </button>`).join('') : '<p class="rounded-xl border border-slate-800 p-6 text-sm text-slate-400 sm:col-span-2 xl:col-span-3">No encontramos tarifas con esa búsqueda.</p>';
         };
         priceFilters.addEventListener('click', event => {
