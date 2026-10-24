@@ -108,6 +108,37 @@
             <p class="border-t border-slate-800 px-5 py-4 text-[11px] leading-relaxed text-slate-500 sm:px-8">Las primas y sumas aseguradas están expresadas en euros según la tabla recibida. El pago se realiza en bolívares usando la tasa EUR/VES de referencia consultada; no necesitas pagar en euros. La emisión y las condiciones finales dependen de la revisión de la aseguradora. Los remolques se calculan con la misma tarifa de vehículos de carga.</p>
         </section>
 
+        <section id="insurance-quote-tool" class="rounded-3xl border border-emerald-400/20 bg-slate-900 p-5 shadow-2xl shadow-emerald-950/10 sm:p-8" aria-labelledby="insurance-quote-tool-heading">
+            <div class="max-w-3xl">
+                <span class="inline-flex items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-400/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[.15em] text-emerald-200"><i class="fa-solid fa-wand-magic-sparkles"></i> Cotizador asistido</span>
+                <h2 id="insurance-quote-tool-heading" class="mt-4 text-2xl font-black">Encuentra una tarifa para tu vehículo</h2>
+                <p class="mt-2 text-sm leading-relaxed text-slate-400">Sube una foto legible del carnet de circulación o certificado de origen. El sistema intentará reconocer el tipo, uso y capacidad del vehículo para sugerir una tarifa.</p>
+            </div>
+            <div class="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,.8fr)]">
+                <div class="space-y-4">
+                    <label class="block text-xs font-bold text-slate-300">Documento del vehículo
+                        <input id="insurance-quote-document" class="insurance-input mt-2" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" aria-describedby="insurance-quote-privacy">
+                    </label>
+                    <p id="insurance-quote-privacy" class="text-[11px] leading-relaxed text-slate-500">JPG, PNG o WebP; máximo 5 MB. La imagen se procesa en este navegador y no se envía ni se guarda. Para tramitar la póliza, luego adjunta los documentos en el formulario seguro.</p>
+                    <button id="insurance-quote-analyze" type="button" class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-500 disabled:cursor-wait disabled:opacity-60"><i class="fa-solid fa-magnifying-glass"></i><span>Analizar documento</span></button>
+                    <p id="insurance-quote-status" class="min-h-5 text-xs text-slate-400" role="status" aria-live="polite"></p>
+                </div>
+                <div class="rounded-2xl border border-slate-800 bg-slate-950/50 p-4">
+                    <label class="block text-xs font-bold text-slate-300" for="insurance-quote-policy">También puedes elegir la categoría manualmente</label>
+                    <select id="insurance-quote-policy" class="insurance-input mt-2" aria-describedby="insurance-quote-policy-note"><option value="">Selecciona tipo de vehículo</option></select>
+                    <p id="insurance-quote-policy-note" class="mt-2 text-[11px] leading-relaxed text-slate-500">Revisa la sugerencia y corrígela si no coincide con los datos del documento.</p>
+                </div>
+            </div>
+            <div id="insurance-quote-result" class="mt-5 hidden rounded-2xl border border-emerald-400/20 bg-emerald-400/5 p-5" aria-live="polite">
+                <p class="text-[10px] font-black uppercase tracking-widest text-emerald-300">Tarifa sugerida · revisa antes de continuar</p>
+                <h3 id="insurance-quote-result-name" class="mt-2 text-lg font-black text-white"></h3>
+                <p id="insurance-quote-result-evidence" class="mt-1 text-xs leading-relaxed text-slate-400"></p>
+                <p id="insurance-quote-result-price" class="mt-3 text-sm font-bold text-emerald-200"></p>
+                <button id="insurance-quote-continue" type="button" class="mt-4 inline-flex items-center gap-2 rounded-xl border border-emerald-400/30 px-4 py-3 text-xs font-black text-emerald-100 transition hover:bg-emerald-400/10">Ver precio y continuar al formulario <i class="fa-solid fa-arrow-down"></i></button>
+                <p class="mt-3 text-[11px] leading-relaxed text-slate-500">La lectura puede equivocarse. Esta orientación no confirma la cobertura: la tarifa y la emisión deben validarse con la aseguradora.</p>
+            </div>
+        </section>
+
         <div class="grid gap-8 lg:grid-cols-[.85fr_1.15fr] xl:grid-cols-[minmax(260px,.75fr)_minmax(480px,1.25fr)_minmax(280px,.85fr)]">
         <section class="self-start lg:sticky lg:top-8">
             <span class="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[.16em] text-emerald-200"><i class="fa-solid fa-shield-halved"></i> Atención personalizada</span>
@@ -341,6 +372,23 @@
             { category: 'Minibuses y rústicos', vehicle: 'Minibús interurbano', insuredThings: '€2.505', insuredPeople: '€3.754', premium: '€168', premiumEUR: 168 },
             { category: 'Minibuses y rústicos', vehicle: 'Rústico · hasta 15 pasajeros', insuredThings: '€1.874', insuredPeople: '€2.817', premium: '€75', premiumEUR: 75 }
         ];
+        const quotePolicySelect = document.getElementById('insurance-quote-policy');
+        const quotePolicyGroups = [...new Set(insurancePrices.map(item => item.category))];
+        quotePolicyGroups.forEach(category => {
+            const group = document.createElement('optgroup');
+            group.label = category;
+            insurancePrices.forEach((item, index) => {
+                if (item.category !== category) return;
+                const option = document.createElement('option');
+                option.value = String(index);
+                option.textContent = `${item.vehicle} · ${item.premium}`;
+                group.append(option);
+            });
+            quotePolicySelect.append(group);
+        });
+        const quoteResult = document.getElementById('insurance-quote-result');
+        const quoteStatus = document.getElementById('insurance-quote-status');
+        const quoteFile = document.getElementById('insurance-quote-document');
         const priceCategories = ['Todos', ...new Set(insurancePrices.map(item => item.category))];
         const priceFilters = document.getElementById('insurance-price-filters');
         const priceCards = document.getElementById('insurance-price-cards');
@@ -378,6 +426,133 @@
                 : '';
             document.getElementById('insurance-price-whatsapp').href = `https://wa.me/584264057916?text=${encodeURIComponent(`Hola, quiero consultar la tarifa anual de ${item.vehicle}: ${item.premium}.${whatsappAmount}`)}`;
         };
+        const renderInsuranceQuoteSuggestion = (index, evidence) => {
+            const item = insurancePrices[index];
+            quotePolicySelect.value = String(index);
+            document.getElementById('insurance-quote-result-name').textContent = item.vehicle;
+            document.getElementById('insurance-quote-result-evidence').textContent = evidence;
+            document.getElementById('insurance-quote-result-price').textContent = insuranceEurRate.ves && Number.isFinite(item.premiumEUR)
+                ? `Prima anual ${item.premium} · estimado Bs. ${formatInsuranceVes(item.premiumEUR * insuranceEurRate.ves)} al cambio EUR/VES vigente.`
+                : item.basePremiumEUR
+                    ? `Prima ${item.premium}. La tarifa incluye un componente por tonelada; confirma el total por WhatsApp.`
+                    : `Prima anual ${item.premium} · la tasa EUR/VES no está disponible ahora.`;
+            quoteResult.classList.remove('hidden');
+        };
+        quotePolicySelect.addEventListener('change', () => {
+            const index = Number(quotePolicySelect.value);
+            if (quotePolicySelect.value && insurancePrices[index]) {
+                renderInsuranceQuoteSuggestion(index, 'Categoría seleccionada manualmente. Comprueba que coincida con el uso y las características del vehículo.');
+                quoteStatus.textContent = '';
+            } else {
+                quoteResult.classList.add('hidden');
+            }
+        });
+        const normalizeInsuranceOcr = value => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9.,\s]/g, ' ').replace(/\s+/g, ' ');
+        const classifyInsuranceDocument = rawText => {
+            const text = normalizeInsuranceOcr(rawText);
+            const choose = (needle, evidence) => ({ index: insurancePrices.findIndex(item => normalizeInsuranceOcr(item.vehicle).includes(needle)), evidence });
+            if (/MOTO\s*CARRO/.test(text)) return choose('MOTO CARRO', 'El documento parece identificar un moto carro. Confirma su capacidad máxima de 750 kg.');
+            if (/MOTOCICLETA|\bMOTO\b/.test(text)) return choose('MOTOCICLETA', 'El documento parece identificar una motocicleta.');
+            if (/CHUTO/.test(text)) return choose('CHUTO', 'El documento menciona un chuto; confirma que la capacidad no supere 2 TM.');
+            if (/RUSTICO/.test(text)) return choose('RUSTICO', 'El documento parece identificar un rústico. Confirma que sea para hasta 15 pasajeros.');
+            if (/MINIBUS/.test(text)) {
+                const route = /INTERURBAN/.test(text) ? 'INTERURBANO' : /SUBURBAN/.test(text) ? 'SUBURBANO' : /URBAN/.test(text) ? 'URBANO' : '';
+                if (route) return choose(`MINIBUS ${route.toLowerCase()}`, `Se detectó minibús ${route.toLowerCase()}. Confirma el tipo de servicio.`);
+                return { index: -1, evidence: 'Se detectó minibús, pero hace falta confirmar si es urbano, suburbano o interurbano.' };
+            }
+            if (/AUTOBUS/.test(text)) {
+                const route = /INTERURBAN/.test(text) ? 'INTERURBANO' : /SUBURBAN/.test(text) ? 'SUBURBANO' : /URBAN/.test(text) ? 'URBANO' : '';
+                if (route) return choose(`AUTOBUS ${route.toLowerCase()}`, `Se detectó autobús ${route.toLowerCase()}. Confirma el tipo de servicio.`);
+                return { index: -1, evidence: 'Se detectó autobús, pero hace falta confirmar si es urbano, suburbano o interurbano.' };
+            }
+            if (/TAXI|POR PUESTO|ALQUILER CON CHOFER/.test(text)) return choose('ALQUILER CON CHOFER', 'El documento o texto menciona taxi, por puesto o alquiler con chofer.');
+            if (/AUTO ESCUELA|ESCUELA DE MANEJO/.test(text)) return choose('AUTO ESCUELA', 'El documento menciona uso de auto escuela.');
+            if (/ALQUILER/.test(text)) return choose('ALQUILER SIN CHOFER', 'El documento menciona alquiler. Confirma que el vehículo se alquila sin chofer.');
+            if (/CASA MOVIL|MOTORHOME/.test(text)) return choose('CASA MOVIL', 'El documento parece identificar una casa móvil de tracción propia.');
+            if (/CAMION|CARGA|CAPACIDAD/.test(text)) {
+                const capacityText = text.match(/(?:CAPACIDAD(?: DE CARGA)?|CARGA UTIL|TONELADAS?)\s*[:\-]?\s*(\d{1,2}(?:[.,]\d{1,2})?)\s*(TM|TON(?:ELADAS?)?|KG)?/);
+                if (capacityText) {
+                    const raw = Number(capacityText[1].replace(',', '.'));
+                    const tons = /KG/.test(capacityText[2] || '') ? raw / 1000 : raw;
+                    if (!Number.isFinite(tons) || tons <= 0) return { index: -1, evidence: 'No se pudo confirmar una capacidad válida. Elige la capacidad manualmente.' };
+                    const ranges = tons <= 2 ? 'HASTA 2 TM' : tons <= 5 ? 'MAS DE 2 TM' : tons <= 8 ? 'MAS DE 5 TM' : tons <= 12 ? 'MAS DE 8 TM' : 'MAS DE 12 TM';
+                    return choose(ranges, `Capacidad detectada aproximadamente: ${formatInsuranceVes(tons)} TM. Revisa el peso/capacidad indicado en el documento.`);
+                }
+                return { index: -1, evidence: 'Se detectó posible vehículo de carga, pero no se pudo leer su capacidad en toneladas. Elige la capacidad manualmente.' };
+            }
+            if (/AUTOMOVIL|SEDAN|CAMIONETA|VEHICULO PARTICULAR/.test(text)) {
+                return { index: -1, evidence: 'Se detectó posible vehículo particular. La tabla separa tarifas por peso, pero no se pudo confirmar qué dato de peso aplica. Selecciona “Hasta 800 kg” o “Más de 800 kg” según la tarifa.' };
+            }
+            return { index: -1, evidence: 'No se pudo reconocer con suficiente seguridad el tipo de vehículo. Puedes seleccionar la tarifa manualmente.' };
+        };
+        let insuranceOcrScriptPromise;
+        const loadInsuranceOcr = () => {
+            if (window.Tesseract) return Promise.resolve(window.Tesseract);
+            if (!insuranceOcrScriptPromise) insuranceOcrScriptPromise = new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+                script.async = true;
+                script.onload = () => window.Tesseract ? resolve(window.Tesseract) : reject(new Error('No se pudo iniciar el lector de documentos.'));
+                script.onerror = () => reject(new Error('No se pudo cargar el lector. Revisa tu conexión o elige la tarifa manualmente.'));
+                document.head.append(script);
+            });
+            return insuranceOcrScriptPromise;
+        };
+        document.getElementById('insurance-quote-analyze').addEventListener('click', async event => {
+            const button = event.currentTarget;
+            const file = quoteFile.files?.[0];
+            quoteResult.classList.add('hidden');
+            if (!file) { quoteStatus.textContent = 'Selecciona primero una foto del documento del vehículo.'; return; }
+            if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) {
+                quoteStatus.textContent = 'Usa una foto JPG, PNG o WebP de máximo 5 MB.'; return;
+            }
+            button.disabled = true;
+            button.querySelector('span').textContent = 'Preparando lector…';
+            quoteStatus.textContent = 'Cargando reconocimiento en español. La imagen permanece en tu dispositivo.';
+            let worker;
+            try {
+                const Tesseract = await loadInsuranceOcr();
+                worker = await Tesseract.createWorker('spa', 1, { logger: progress => {
+                    if (progress.status === 'recognizing text') quoteStatus.textContent = `Leyendo texto del documento: ${Math.round((progress.progress || 0) * 100)}%`;
+                } });
+                button.querySelector('span').textContent = 'Analizando imagen…';
+                const { data } = await worker.recognize(file);
+                const suggestion = classifyInsuranceDocument(data.text || '');
+                if (suggestion.index >= 0) {
+                    renderInsuranceQuoteSuggestion(suggestion.index, suggestion.evidence);
+                    quoteStatus.textContent = 'Lectura lista. Confirma que la sugerencia coincida con el documento.';
+                } else {
+                    quotePolicySelect.value = '';
+                    document.getElementById('insurance-quote-result-name').textContent = 'Falta confirmar la categoría';
+                    document.getElementById('insurance-quote-result-evidence').textContent = suggestion.evidence;
+                    document.getElementById('insurance-quote-result-price').textContent = 'Selecciona la categoría manualmente para ver su tarifa.';
+                    quoteResult.classList.remove('hidden');
+                    quoteStatus.textContent = 'No se asignó automáticamente una tarifa.';
+                }
+            } catch (error) {
+                console.warn('No se pudo analizar el documento del vehículo:', error);
+                quoteStatus.textContent = error?.message || 'No se pudo leer la imagen. Puedes seleccionar la categoría manualmente.';
+            } finally {
+                if (worker) await worker.terminate().catch(() => {});
+                button.disabled = false;
+                button.querySelector('span').textContent = 'Analizar documento';
+            }
+        });
+        document.getElementById('insurance-quote-continue').addEventListener('click', () => {
+            const index = Number(quotePolicySelect.value);
+            if (!quotePolicySelect.value || !insurancePrices[index]) {
+                quoteStatus.textContent = 'Confirma una categoría antes de continuar.';
+                quotePolicySelect.focus();
+                return;
+            }
+            selectedInsurancePrice = index;
+            priceSelection.classList.remove('hidden');
+            priceSelection.style.display = 'flex';
+            document.getElementById('insurance-price-empty').classList.add('hidden');
+            renderInsurancePriceQuote();
+            renderInsurancePrices();
+            window.setTimeout(() => document.getElementById('insurance-request-section').scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+        });
         const loadInsuranceEuroRate = async () => {
             try {
                 const response = await fetch(`https://rates.dolarvzla.com/bcv/current.json?v=${Date.now()}`, { cache: 'no-store' });
