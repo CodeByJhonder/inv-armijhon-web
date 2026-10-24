@@ -109,7 +109,7 @@
             <p class="mt-4 text-[11px] leading-relaxed text-slate-500">El envío de esta solicitud inicia una gestión de asesoría. La cobertura y emisión dependen de la evaluación y aprobación de la empresa aseguradora.</p>
         </section>
 
-        <section class="rounded-3xl border border-slate-800 bg-slate-900 p-5 shadow-2xl shadow-black/20 sm:p-8" aria-labelledby="insurance-form-heading">
+        <section id="insurance-request-section" class="scroll-mt-8 rounded-3xl border border-slate-800 bg-slate-900 p-5 shadow-2xl shadow-black/20 sm:p-8" aria-labelledby="insurance-form-heading">
             <div class="mb-6">
                 <h2 id="insurance-form-heading" class="text-xl font-black">Módulo de ventas: Elorza, Apure</h2>
                 <p class="mt-1 text-xs leading-relaxed text-slate-400">Completa los datos y adjunta las fotos y el comprobante de pago.</p>
@@ -180,6 +180,17 @@
             <h2 id="insurance-price-quote-heading" class="mt-4 text-xl font-black">Precio en bolívares</h2>
             <p id="insurance-euro-rate-status" class="mt-2 text-[11px] leading-relaxed text-slate-400" aria-live="polite">Consultando tasa EUR/VES de referencia…</p>
             <a href="https://www.dolarvzla.com/settings/api" target="_blank" rel="noopener noreferrer" class="mt-1 inline-block text-[10px] text-slate-500 underline decoration-slate-700 underline-offset-2 hover:text-emerald-200">Fuente de consulta: DolarVZLA · tasa publicada por el BCV</a>
+            <div class="mt-5 border-t border-slate-800 pt-5">
+                <div class="flex items-center gap-2 text-emerald-300"><i class="fa-solid fa-mobile-screen-button"></i><h3 class="text-sm font-black text-white">Datos para Pago Móvil</h3></div>
+                <dl class="mt-3 space-y-2 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-xs">
+                    <div class="flex flex-wrap justify-between gap-x-3 gap-y-1"><dt class="text-slate-400">Banco</dt><dd class="font-bold text-slate-100">Banco de Venezuela (0102)</dd></div>
+                    <div class="flex flex-wrap justify-between gap-x-3 gap-y-1"><dt class="text-slate-400">Identificación</dt><dd class="font-bold text-slate-100">33550719</dd></div>
+                    <div class="flex flex-wrap justify-between gap-x-3 gap-y-1"><dt class="text-slate-400">Teléfono</dt><dd class="font-bold text-slate-100">04262400644</dd></div>
+                </dl>
+                <button id="copy-insurance-payment-details" type="button" class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-400/30 px-4 py-3 text-xs font-bold text-emerald-200 transition hover:bg-emerald-400/10"><i class="fa-regular fa-copy"></i><span>Copiar datos de pago</span></button>
+                <p id="copy-insurance-payment-status" class="mt-2 min-h-4 text-center text-[10px] text-slate-400" role="status" aria-live="polite"></p>
+                <p class="text-[10px] leading-relaxed text-slate-500">Confirma el total en bolívares antes de pagar y adjunta el comprobante en el formulario.</p>
+            </div>
             <div id="insurance-price-empty" class="mt-5 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-xs leading-relaxed text-slate-400">Elige una categoría y selecciona tu vehículo para ver el cálculo aquí.</div>
             <div id="insurance-price-selection" class="mt-5 hidden flex-col" aria-live="polite">
                 <p class="text-[10px] font-black uppercase tracking-widest text-emerald-300">Vehículo seleccionado</p>
@@ -212,6 +223,37 @@
             label.textContent = `Modo ${isDark ? 'claro' : 'oscuro'}`;
             document.querySelector('meta[name="theme-color"]').content = isDark ? '#100F0C' : '#F7F3EA';
         };
+        const insurancePaymentText = [
+            'Pago móvil',
+            'Banco: Banco de Venezuela (0102)',
+            'Identificación: 33550719',
+            'Teléfono: 04262400644'
+        ].join('\n');
+        document.getElementById('copy-insurance-payment-details').addEventListener('click', async event => {
+            const button = event.currentTarget;
+            const status = document.getElementById('copy-insurance-payment-status');
+            try {
+                if (navigator.clipboard?.writeText) {
+                    await navigator.clipboard.writeText(insurancePaymentText);
+                } else {
+                    const copyField = document.createElement('textarea');
+                    copyField.value = insurancePaymentText;
+                    copyField.setAttribute('readonly', '');
+                    copyField.style.position = 'fixed';
+                    copyField.style.opacity = '0';
+                    document.body.appendChild(copyField);
+                    copyField.select();
+                    const copied = document.execCommand('copy');
+                    copyField.remove();
+                    if (!copied) throw new Error('No se pudo copiar.');
+                }
+                status.textContent = 'Datos de Pago Móvil copiados.';
+                button.querySelector('span').textContent = 'Datos copiados';
+                window.setTimeout(() => { button.querySelector('span').textContent = 'Copiar datos de pago'; }, 2000);
+            } catch (error) {
+                status.textContent = 'No se pudo copiar. Selecciona y copia los datos manualmente.';
+            }
+        });
         function toggleTheme() {
             const html = document.documentElement;
             const isDark = !html.classList.contains('dark');
@@ -336,6 +378,7 @@
             document.getElementById('insurance-price-empty').classList.add('hidden');
             renderInsurancePriceQuote();
             renderInsurancePrices();
+            window.setTimeout(() => document.getElementById('insurance-request-section').scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
         });
         renderInsurancePrices();
         loadInsuranceEuroRate();
