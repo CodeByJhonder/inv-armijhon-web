@@ -23,6 +23,8 @@
         .insurance-input:focus { border-color: #34d399; box-shadow: 0 0 0 2px rgb(52 211 153 / .15); }
         .insurance-price-filter[aria-pressed="true"] { border-color: #34d399; background: rgb(16 185 129 / .14); color: #a7f3d0; }
         .insurance-price-card[aria-pressed="true"] { border-color: #34d399; box-shadow: 0 0 0 1px rgb(52 211 153 / .45), 0 12px 32px rgb(16 185 129 / .1); }
+        .insurance-bank-option[aria-pressed="true"] { border-color: #10b981; background: rgb(16 185 129 / .14); color: #047857; }
+        html.dark .insurance-bank-option[aria-pressed="true"] { color: #a7f3d0; }
         html.light body { background: #F7F3EA; color: #171512; }
         html.light .bg-slate-900, html.light [class~="bg-slate-900/70"] { background-color: #FFFFFF; }
         html.light .bg-slate-950, html.light [class~="bg-slate-950/60"] { background-color: #F7F3EA; }
@@ -182,12 +184,16 @@
             <a href="https://www.dolarvzla.com/settings/api" target="_blank" rel="noopener noreferrer" class="mt-1 inline-block text-[10px] text-slate-500 underline decoration-slate-700 underline-offset-2 hover:text-emerald-200">Fuente de consulta: DolarVZLA · tasa publicada por el BCV</a>
             <div class="mt-5 border-t border-slate-800 pt-5">
                 <div class="flex items-center gap-2 text-emerald-300"><i class="fa-solid fa-mobile-screen-button"></i><h3 class="text-sm font-black text-white">Datos para Pago Móvil</h3></div>
-                <dl class="mt-3 space-y-2 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-xs">
-                    <div class="flex flex-wrap justify-between gap-x-3 gap-y-1"><dt class="text-slate-400">Banco</dt><dd class="font-bold text-slate-100">Banco de Venezuela (0102)</dd></div>
-                    <div class="flex flex-wrap justify-between gap-x-3 gap-y-1"><dt class="text-slate-400">Identificación</dt><dd class="font-bold text-slate-100">33550719</dd></div>
-                    <div class="flex flex-wrap justify-between gap-x-3 gap-y-1"><dt class="text-slate-400">Teléfono</dt><dd class="font-bold text-slate-100">04262400644</dd></div>
+                <div class="mt-3 grid grid-cols-2 gap-2" role="group" aria-label="Seleccionar banco de Pago Móvil">
+                    <button type="button" class="insurance-bank-option rounded-xl border border-slate-700 px-3 py-2.5 text-xs font-bold transition hover:border-emerald-400" data-insurance-bank="0105" aria-pressed="false">Banco Mercantil (0105)</button>
+                    <button type="button" class="insurance-bank-option rounded-xl border border-slate-700 px-3 py-2.5 text-xs font-bold transition hover:border-emerald-400" data-insurance-bank="0102" aria-pressed="true">Banco de Venezuela (0102)</button>
+                </div>
+                <dl class="mt-3 space-y-2 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-xs" aria-live="polite">
+                    <div class="flex flex-wrap justify-between gap-x-3 gap-y-1"><dt class="text-slate-400">Banco</dt><dd id="insurance-payment-bank" class="font-bold text-slate-100">Banco de Venezuela (0102)</dd></div>
+                    <div class="flex flex-wrap justify-between gap-x-3 gap-y-1"><dt class="text-slate-400">Identificación</dt><dd id="insurance-payment-id" class="font-bold text-slate-100">33550719</dd></div>
+                    <div class="flex flex-wrap justify-between gap-x-3 gap-y-1"><dt class="text-slate-400">Teléfono</dt><dd id="insurance-payment-phone" class="font-bold text-slate-100">04262400644</dd></div>
                 </dl>
-                <button id="copy-insurance-payment-details" type="button" class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-400/30 px-4 py-3 text-xs font-bold text-emerald-200 transition hover:bg-emerald-400/10"><i class="fa-regular fa-copy"></i><span>Copiar datos de pago</span></button>
+                <button id="copy-insurance-payment-details" type="button" class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-400/30 px-4 py-3 text-xs font-bold text-emerald-200 transition hover:bg-emerald-400/10 disabled:cursor-not-allowed disabled:opacity-50"><i class="fa-regular fa-copy"></i><span>Copiar datos de pago</span></button>
                 <p id="copy-insurance-payment-status" class="mt-2 min-h-4 text-center text-[10px] text-slate-400" role="status" aria-live="polite"></p>
                 <p class="text-[10px] leading-relaxed text-slate-500">Confirma el total en bolívares antes de pagar y adjunta el comprobante en el formulario.</p>
             </div>
@@ -202,7 +208,6 @@
                     <span id="insurance-price-selection-calculation" class="mt-2 block text-[11px] leading-relaxed text-emerald-100/70"></span>
                 </div>
                 <a id="insurance-price-whatsapp" href="https://wa.me/584264057916" target="_blank" rel="noopener noreferrer" class="mt-4 inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-xs font-black text-white transition hover:bg-emerald-500"><i class="fa-brands fa-whatsapp text-base"></i>Consultar esta tarifa</a>
-                <p class="mt-3 text-[10px] leading-relaxed text-slate-500">El importe es referencial. Confirma la tasa y el monto final antes del pago.</p>
             </div>
         </section>
         </div>
@@ -223,15 +228,39 @@
             label.textContent = `Modo ${isDark ? 'claro' : 'oscuro'}`;
             document.querySelector('meta[name="theme-color"]').content = isDark ? '#100F0C' : '#F7F3EA';
         };
-        const insurancePaymentText = [
-            'Pago móvil',
-            'Banco: Banco de Venezuela (0102)',
-            'Identificación: 33550719',
-            'Teléfono: 04262400644'
-        ].join('\n');
+        const insurancePaymentAccounts = {
+            '0102': { bank: 'Banco de Venezuela (0102)', identification: '33550719', phone: '04262400644' },
+            '0105': { bank: 'Banco Mercantil (0105)', identification: '14857321', phone: '04162369187' }
+        };
+        let selectedInsuranceBank = '0102';
+        const renderInsurancePaymentDetails = () => {
+            const account = insurancePaymentAccounts[selectedInsuranceBank];
+            document.getElementById('insurance-payment-bank').textContent = account.bank;
+            document.getElementById('insurance-payment-id').textContent = account.identification || 'Por confirmar';
+            document.getElementById('insurance-payment-phone').textContent = account.phone || 'Por confirmar';
+            document.querySelectorAll('[data-insurance-bank]').forEach(button => {
+                button.setAttribute('aria-pressed', String(button.dataset.insuranceBank === selectedInsuranceBank));
+            });
+            document.getElementById('copy-insurance-payment-details').disabled = !account.identification || !account.phone;
+            document.getElementById('copy-insurance-payment-status').textContent = account.identification && account.phone
+                ? ''
+                : 'Los datos de esta cuenta están pendientes de configuración.';
+        };
+        document.querySelectorAll('[data-insurance-bank]').forEach(button => {
+            button.addEventListener('click', () => {
+                selectedInsuranceBank = button.dataset.insuranceBank;
+                renderInsurancePaymentDetails();
+            });
+        });
+        renderInsurancePaymentDetails();
+        const getInsurancePaymentText = () => {
+            const account = insurancePaymentAccounts[selectedInsuranceBank];
+            return ['Pago móvil', `Banco: ${account.bank}`, `Identificación: ${account.identification}`, `Teléfono: ${account.phone}`].join('\n');
+        };
         document.getElementById('copy-insurance-payment-details').addEventListener('click', async event => {
             const button = event.currentTarget;
             const status = document.getElementById('copy-insurance-payment-status');
+            const insurancePaymentText = getInsurancePaymentText();
             try {
                 if (navigator.clipboard?.writeText) {
                     await navigator.clipboard.writeText(insurancePaymentText);
