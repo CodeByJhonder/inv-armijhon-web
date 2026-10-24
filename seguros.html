@@ -134,6 +134,7 @@
                 <h3 id="insurance-quote-result-name" class="mt-2 text-lg font-black text-white"></h3>
                 <p id="insurance-quote-result-evidence" class="mt-1 text-xs leading-relaxed text-slate-400"></p>
                 <p id="insurance-quote-result-price" class="mt-3 text-sm font-bold text-emerald-200"></p>
+                <a id="insurance-quote-whatsapp" href="https://wa.me/584264057916" target="_blank" rel="noopener noreferrer" class="mt-3 hidden text-xs font-bold text-emerald-300 underline underline-offset-2">Consultar precio final por WhatsApp</a>
                 <button id="insurance-quote-continue" type="button" class="mt-4 inline-flex items-center gap-2 rounded-xl border border-emerald-400/30 px-4 py-3 text-xs font-black text-emerald-100 transition hover:bg-emerald-400/10">Ver precio y continuar al formulario <i class="fa-solid fa-arrow-down"></i></button>
                 <p class="mt-3 text-[11px] leading-relaxed text-slate-500">La lectura puede equivocarse. Esta orientación no confirma la cobertura: la tarifa y la emisión deben validarse con la aseguradora.</p>
             </div>
@@ -429,6 +430,7 @@
         const renderInsuranceQuoteSuggestion = (index, evidence) => {
             const item = insurancePrices[index];
             quotePolicySelect.value = String(index);
+            document.getElementById('insurance-quote-whatsapp').classList.add('hidden');
             document.getElementById('insurance-quote-result-name').textContent = item.vehicle;
             document.getElementById('insurance-quote-result-evidence').textContent = evidence;
             document.getElementById('insurance-quote-result-price').textContent = insuranceEurRate.ves && Number.isFinite(item.premiumEUR)
@@ -448,7 +450,38 @@
             }
         });
         const normalizeInsuranceOcr = value => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9.,\s]/g, ' ').replace(/\s+/g, ' ');
-        const classifyInsuranceDocument = rawText => {
+        const findKgsWeight = (rawText, ocrData) => {
+            const text = normalizeInsuranceOcr(rawText);
+            const match = text.match(/(?:^|\D)(\d{2,5})\s*K\s*G\s*S\b/);
+            if (!match) return null;
+            const kilograms = Number(match[1]);
+            if (!Number.isFinite(kilograms) || kilograms < 50 || kilograms > 50000) return null;
+
+            let wordConfidence = null;
+            const words = (ocrData?.words || []).map(word => ({
+                text: normalizeInsuranceOcr(word.text || '').replace(/\s/g, ''),
+                confidence: Number(word.confidence)
+            }));
+            for (let start = 0; start < words.length && wordConfidence === null; start += 1) {
+                let combined = '';
+                const confidences = [];
+                for (let end = start; end < Math.min(words.length, start + 3); end += 1) {
+                    combined += words[end].text;
+                    if (Number.isFinite(words[end].confidence)) confidences.push(words[end].confidence);
+                    const tokenMatch = combined.match(/(\d{2,5})KGS/);
+                    if (tokenMatch && Number(tokenMatch[1]) === kilograms && confidences.length) {
+                        wordConfidence = Math.min(...confidences);
+                        break;
+                    }
+                }
+            }
+            const overallConfidence = Number(ocrData?.confidence);
+            return {
+                kilograms,
+                confidence: wordConfidence ?? (Number.isFinite(overallConfidence) ? overallConfidence : null)
+            };
+        };
+        const classifyInsuranceDocument = (rawText, ocrData) => {
             const text = normalizeInsuranceOcr(rawText);
             const choose = (needle, evidence) => ({ index: insurancePrices.findIndex(item => normalizeInsuranceOcr(item.vehicle).includes(needle)), evidence });
             if (/MOTO\s*CARRO/.test(text)) return choose('MOTO CARRO', 'El documento parece identificar un moto carro. Confirma su capacidad máxima de 750 kg.');
@@ -481,7 +514,13 @@
                 return { index: -1, evidence: 'Se detectó posible vehículo de carga, pero no se pudo leer su capacidad en toneladas. Elige la capacidad manualmente.' };
             }
             if (/AUTOMOVIL|SEDAN|CAMIONETA|VEHICULO PARTICULAR/.test(text)) {
-                return { index: -1, evidence: 'Se detectó posible vehículo particular. La tabla separa tarifas por peso, pero no se pudo confirmar qué dato de peso aplica. Selecciona “Hasta 800 kg” o “Más de 800 kg” según la tarifa.' };
+                const weight = findKgsWeight(rawText, ocrData);
+                if (!weight) return { index: -1, recommendWhatsapp: true, evidence: 'Se detectó un vehículo particular, pero no se pudo leer con claridad el peso junto a “KGS”. Verifica el certificado y, si la foto está borrosa, consulta por WhatsApp el precio final.' };
+                if (weight.confidence !== null && weight.confidence < 55) {
+                    return { index: -1, recommendWhatsapp: true, uncertainWeight: weight.kilograms, evidence: `El OCR leyó aproximadamente ${weight.kilograms} KGS, pero la lectura no es suficientemente clara (${Math.round(weight.confidence)}% de confianza). Verifica el documento y consulta por WhatsApp el precio final.` };
+                }
+                const category = weight.kilograms <= 800 ? 'HASTA 800 KG' : 'MAS DE 800 KG';
+                return choose(category, `Peso leído en el certificado: ${weight.kilograms} KGS. Confirma que la lectura sea correcta.`);
             }
             return { index: -1, evidence: 'No se pudo reconocer con suficiente seguridad el tipo de vehículo. Puedes seleccionar la tarifa manualmente.' };
         };
@@ -517,7 +556,7 @@
                 } });
                 button.querySelector('span').textContent = 'Analizando imagen…';
                 const { data } = await worker.recognize(file);
-                const suggestion = classifyInsuranceDocument(data.text || '');
+                const suggestion = classifyInsuranceDocument(data.text || '', data);
                 if (suggestion.index >= 0) {
                     renderInsuranceQuoteSuggestion(suggestion.index, suggestion.evidence);
                     quoteStatus.textContent = 'Lectura lista. Confirma que la sugerencia coincida con el documento.';
@@ -526,6 +565,14 @@
                     document.getElementById('insurance-quote-result-name').textContent = 'Falta confirmar la categoría';
                     document.getElementById('insurance-quote-result-evidence').textContent = suggestion.evidence;
                     document.getElementById('insurance-quote-result-price').textContent = 'Selecciona la categoría manualmente para ver su tarifa.';
+                    const whatsappLink = document.getElementById('insurance-quote-whatsapp');
+                    if (suggestion.recommendWhatsapp) {
+                        const message = suggestion.uncertainWeight
+                            ? `Hola, el cotizador leyó aproximadamente ${suggestion.uncertainWeight} KGS en el certificado, pero quisiera confirmar la categoría y el precio final de la póliza.`
+                            : 'Hola, no se pudo leer con claridad el peso KGS de mi certificado de circulación. Quisiera confirmar la categoría y el precio final de la póliza.';
+                        whatsappLink.href = `https://wa.me/584264057916?text=${encodeURIComponent(message)}`;
+                        whatsappLink.classList.remove('hidden');
+                    }
                     quoteResult.classList.remove('hidden');
                     quoteStatus.textContent = 'No se asignó automáticamente una tarifa.';
                 }
