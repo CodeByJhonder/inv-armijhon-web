@@ -1,0 +1,89 @@
+/* Shared contrast corrections for the public site, insurance page and admin. */
+html:not(.dark) .text-slate-300,
+html.light .text-slate-300 { color: #575247; }
+html:not(.dark) .text-slate-400,
+html.light .text-slate-400 { color: #625b50; }
+html:not(.dark) .text-slate-500,
+html.light .text-slate-500 { color: #625b50; }
+
+html:not(.dark) .text-violet-200,
+html.light .text-violet-200,
+html:not(.dark) .text-violet-300,
+html.light .text-violet-300 { color: #60451f; }
+html:not(.dark) .text-emerald-100,
+html.light .text-emerald-100,
+html:not(.dark) .text-emerald-200,
+html.light .text-emerald-200 { color: #15543a; }
+html:not(.dark) .text-amber-100,
+html.light .text-amber-100,
+html:not(.dark) .text-amber-200,
+html.light .text-amber-200 { color: #744d12; }
+html:not(.dark) .text-sky-200,
+html.light .text-sky-200 { color: #075985; }
+html:not(.dark) .text-blue-200,
+html.light .text-blue-200 { color: #1e3a8a; }
+html:not(.dark) .text-rose-200,
+html.light .text-rose-200 { color: #8a2834; }
+html:not(.dark) .text-red-300,
+html.light .text-red-300 { color: #9b2926; }
+
+/* Keep translucent dark surfaces readable after switching to a light theme. */
+html:not(.dark) [class~="bg-slate-950/50"],
+html:not(.dark) [class~="bg-slate-950/60"],
+html:not(.dark) [class~="bg-slate-950/70"],
+html:not(.dark) [class~="bg-slate-900/50"],
+html:not(.dark) [class~="bg-slate-900/60"],
+html:not(.dark) [class~="bg-slate-900/70"],
+html.light [class~="bg-slate-950/50"],
+html.light [class~="bg-slate-950/60"],
+html.light [class~="bg-slate-950/70"],
+html.light [class~="bg-slate-900/50"],
+html.light [class~="bg-slate-900/60"],
+html.light [class~="bg-slate-900/70"] { background-color: #fff; }
+
+/* The admin theme toggle adds .light while keeping its dark utility classes in markup. */
+html.light #login-view input,
+html.light #orders-view input:not([type="checkbox"]):not([type="radio"]),
+html.light #orders-view select,
+html.light #orders-view textarea {
+    border-color: #c4b8a0;
+    background-color: #fff;
+    color: #171512;
+}
+html.light #login-view input::placeholder,
+html.light #orders-view input::placeholder,
+html.light #orders-view textarea::placeholder { color: #71695d; opacity: 1; }
+html.light .admin-sidebar > a.text-white { color: #171512; }
+html.light #orders-view .text-white:not(button):not(button *):not([class*="bg-"]) { color: #171512; }
+html.light .admin-nav-button[aria-current="page"] {
+    border-radius: .75rem;
+    background: #f1e4c8;
+    color: #523e20;
+    box-shadow: inset 3px 0 #8b6b39;
+}
+html.light .admin-nav-button:not([aria-current="page"]) { color: #514b42; }
+html.light .admin-nav-button:not([aria-current="page"]):hover {
+    background: #efe8da;
+    color: #171512;
+}
+html.light .admin-layout [class~="bg-violet-500/15"],
+html.light #login-view [class~="bg-violet-500/15"] { background-color: #f1e4c8; }
+
+/* Preserve white labels on filled action buttons, while strengthening pastel labels. */
+html.light .text-violet-200,
+html.light .text-violet-300 { color: #60451f; }
+html.light .text-emerald-200,
+html.light .text-emerald-300 { color: #15543a; }
+html.light .text-sky-200,
+html.light .text-sky-300 { color: #075985; }
+html.light .text-amber-200,
+html.light .text-amber-300 { color: #744d12; }
+html.light .text-rose-200,
+html.light .text-rose-300,
+html.light .text-red-300 { color: #8a2834; }
+html.light .text-indigo-200,
+html.light .text-indigo-300 { color: #254d3f; }
+
+/* The calculation is intentionally legible on both quote-card backgrounds. */
+.insurance-price-selection-calculation { color: #b8d2c2; }
+html.light .insurance-price-selection-calculation { color: #40594a; }
