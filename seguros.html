@@ -97,33 +97,6 @@
             </div>
         </section>
 
-        <section id="insurance-prices" class="overflow-hidden rounded-3xl border border-blue-400/20 bg-slate-900 shadow-2xl shadow-blue-950/20" aria-labelledby="insurance-prices-heading">
-            <div class="border-b border-slate-800 bg-gradient-to-r from-blue-950/70 via-slate-900 to-emerald-950/40 p-5 sm:p-8">
-                <div class="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                        <span class="inline-flex items-center gap-2 rounded-full border border-blue-300/20 bg-blue-400/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[.16em] text-blue-200"><i class="fa-solid fa-tags"></i> Tarifas anuales</span>
-                        <h1 id="insurance-prices-heading" class="mt-4 text-3xl font-black sm:text-4xl">Precios de seguro vehicular</h1>
-                        <p class="mt-2 max-w-2xl text-sm leading-relaxed text-slate-400">Explora las categorías y selecciona tu vehículo para consultar su prima anual y las sumas aseguradas.</p>
-                    </div>
-                    <div class="rounded-2xl border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-right">
-                        <span class="block text-[10px] font-black uppercase tracking-widest text-amber-200">Moneda de la tarifa</span>
-                        <strong class="mt-1 block text-2xl font-black text-amber-100">EUR €</strong>
-                    </div>
-                </div>
-                <div class="mt-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                    <div id="insurance-price-filters" class="flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Filtrar tarifas por categoría"></div>
-                    <label class="relative block shrink-0 lg:w-72">
-                        <span class="sr-only">Buscar tipo de vehículo</span>
-                        <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
-                        <input id="insurance-price-search" type="search" class="insurance-input py-2.5 pl-9 text-xs" placeholder="Buscar vehículo o uso" autocomplete="off">
-                    </label>
-                </div>
-                <p id="insurance-price-count" class="mt-3 text-[11px] text-slate-500" aria-live="polite"></p>
-            </div>
-            <div id="insurance-price-cards" class="grid gap-3 p-4 sm:grid-cols-2 sm:p-6 xl:grid-cols-3" aria-live="polite"></div>
-            <p class="border-t border-slate-800 px-5 py-4 text-[11px] leading-relaxed text-slate-500 sm:px-8">Las primas y sumas aseguradas están expresadas en euros según la tabla recibida. El pago se realiza en bolívares usando la tasa EUR/VES de referencia consultada; no necesitas pagar en euros. La emisión y las condiciones finales dependen de la revisión de la aseguradora. Los remolques se calculan con la misma tarifa de vehículos de carga.</p>
-        </section>
-
         <section id="insurance-quote-tool" class="rounded-3xl border border-emerald-400/20 bg-slate-900 p-5 shadow-2xl shadow-emerald-950/10 sm:p-8" aria-labelledby="insurance-quote-tool-heading">
             <div class="max-w-3xl">
                 <span class="inline-flex items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-400/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[.15em] text-emerald-200"><i class="fa-solid fa-wand-magic-sparkles"></i> Cotizador asistido</span>
@@ -154,6 +127,33 @@
                 <button id="insurance-quote-continue" type="button" class="mt-4 inline-flex items-center gap-2 rounded-xl border border-emerald-400/30 px-4 py-3 text-xs font-black text-emerald-100 transition hover:bg-emerald-400/10">Ver precio y continuar al formulario <i class="fa-solid fa-arrow-down"></i></button>
                 <p class="mt-3 text-[11px] leading-relaxed text-slate-500">La lectura puede equivocarse. Esta orientación no confirma la cobertura: la tarifa y la emisión deben validarse con la aseguradora.</p>
             </div>
+        </section>
+
+        <section id="insurance-prices" class="overflow-hidden rounded-3xl border border-blue-400/20 bg-slate-900 shadow-2xl shadow-blue-950/20" aria-labelledby="insurance-prices-heading">
+            <div class="border-b border-slate-800 bg-gradient-to-r from-blue-950/70 via-slate-900 to-emerald-950/40 p-5 sm:p-8">
+                <div class="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                        <span class="inline-flex items-center gap-2 rounded-full border border-blue-300/20 bg-blue-400/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[.16em] text-blue-200"><i class="fa-solid fa-tags"></i> Tarifas anuales</span>
+                        <h1 id="insurance-prices-heading" class="mt-4 text-3xl font-black sm:text-4xl">Precios de seguro vehicular</h1>
+                        <p class="mt-2 max-w-2xl text-sm leading-relaxed text-slate-400">Explora las categorías y selecciona tu vehículo para consultar su prima anual y las sumas aseguradas.</p>
+                    </div>
+                    <div class="rounded-2xl border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-right">
+                        <span class="block text-[10px] font-black uppercase tracking-widest text-amber-200">Moneda de la tarifa</span>
+                        <strong class="mt-1 block text-2xl font-black text-amber-100">EUR €</strong>
+                    </div>
+                </div>
+                <div class="mt-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div id="insurance-price-filters" class="flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Filtrar tarifas por categoría"></div>
+                    <label class="relative block shrink-0 lg:w-72">
+                        <span class="sr-only">Buscar tipo de vehículo</span>
+                        <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                        <input id="insurance-price-search" type="search" class="insurance-input py-2.5 pl-9 text-xs" placeholder="Buscar vehículo o uso" autocomplete="off">
+                    </label>
+                </div>
+                <p id="insurance-price-count" class="mt-3 text-[11px] text-slate-500" aria-live="polite"></p>
+            </div>
+            <div id="insurance-price-cards" class="grid gap-3 p-4 sm:grid-cols-2 sm:p-6 xl:grid-cols-3" aria-live="polite"></div>
+            <p class="border-t border-slate-800 px-5 py-4 text-[11px] leading-relaxed text-slate-500 sm:px-8">Las primas y sumas aseguradas están expresadas en euros según la tabla recibida. El pago se realiza en bolívares usando la tasa EUR/VES de referencia consultada; no necesitas pagar en euros. La emisión y las condiciones finales dependen de la revisión de la aseguradora. Los remolques se calculan con la misma tarifa de vehículos de carga.</p>
         </section>
 
         <div class="grid gap-8 lg:grid-cols-[.85fr_1.15fr] xl:grid-cols-[minmax(260px,.75fr)_minmax(480px,1.25fr)_minmax(280px,.85fr)]">
