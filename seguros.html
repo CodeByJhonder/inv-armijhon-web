@@ -45,6 +45,29 @@
         .insurance-process-step:nth-child(2) { animation-delay: 4s; }
         .insurance-process-step:nth-child(3) { animation-delay: 8s; }
         .insurance-process-step:nth-child(4) { animation-delay: 12s; }
+        .insurance-coverage-footer { background: linear-gradient(135deg, #101b18 0%, #171512 58%, #211719 100%); }
+        .insurance-coverage-card { border-radius: 1.25rem; padding: 1.25rem; box-shadow: 0 12px 28px rgb(0 0 0 / .16); }
+        .insurance-coverage-card.is-covered { border: 1px solid #258365; background: linear-gradient(145deg, #123b30, #102a24); }
+        .insurance-coverage-card.is-excluded { border: 1px solid #a94e59; background: linear-gradient(145deg, #46252b, #321d22); }
+        .insurance-coverage-card.is-covered h3 { color: #b7f7d8; }
+        .insurance-coverage-card.is-excluded h3 { color: #ffd0d5; }
+        .insurance-coverage-card ul { margin-top: 1rem; display: grid; gap: .7rem; }
+        .insurance-coverage-card li { display: flex; align-items: flex-start; gap: .65rem; color: #f1f5f2; font-size: .9rem; line-height: 1.5; }
+        .insurance-coverage-card.is-covered li::before { content: '✓'; color: #6ee7b7; font-weight: 900; }
+        .insurance-coverage-card.is-excluded li::before { content: '×'; color: #fda4af; font-size: 1.1rem; font-weight: 900; line-height: 1.1; }
+        .insurance-coverage-note { border: 1px solid #8b754c; border-radius: .9rem; background: #24251f; padding: 1rem; color: #eee5d3; font-size: .8rem; line-height: 1.65; }
+        html.light .insurance-coverage-footer { background: linear-gradient(135deg, #eee9dd 0%, #f7f3ea 55%, #f1e7e3 100%); }
+        html.light .insurance-coverage-card.is-covered { border-color: #258365; background: linear-gradient(145deg, #d9f2e5, #e8f5ec); }
+        html.light .insurance-coverage-card.is-excluded { border-color: #ad4d58; background: linear-gradient(145deg, #f8e1e2, #f4e9e5); }
+        html.light .insurance-coverage-card.is-covered h3 { color: #07583f; }
+        html.light .insurance-coverage-card.is-excluded h3 { color: #842b37; }
+        html.light .insurance-coverage-card.is-covered li { color: #173c30; }
+        html.light .insurance-coverage-card.is-excluded li { color: #4d252a; }
+        html.light .insurance-coverage-card.is-covered li::before { color: #08764f; }
+        html.light .insurance-coverage-card.is-excluded li::before { color: #a52f3f; }
+        html.light .insurance-coverage-note { border-color: #c4ad7e; background: #fffaf0; color: #514635; }
+        html.light .insurance-coverage-footer .insurance-coverage-heading { color: #171512; }
+        html.light .insurance-coverage-footer .insurance-coverage-description { color: #514b42; }
         @keyframes insurance-process-highlight {
             0%, 18% { box-shadow: 0 0 0 2px rgb(16 185 129 / .2), 0 8px 24px rgb(16 185 129 / .08); transform: translateY(-1px); }
             24%, 100% { box-shadow: 0 0 0 0 transparent; transform: translateY(0); }
@@ -287,26 +310,26 @@
         </div>
     </main>
 
-    <footer class="border-t border-slate-800 bg-slate-900/40 px-4 pt-10 sm:px-6">
+    <footer class="insurance-coverage-footer border-t border-slate-800 px-4 pt-10 sm:px-6">
         <section class="mx-auto max-w-6xl pb-8" aria-labelledby="insurance-coverage-heading">
             <div class="max-w-3xl">
                 <span class="inline-flex items-center gap-2 rounded-full border border-blue-300/20 bg-blue-400/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[.15em] text-blue-200"><i class="fa-solid fa-shield-halved"></i> Guía informativa de RCV</span>
-                <h2 id="insurance-coverage-heading" class="mt-4 text-2xl font-black text-white">¿Qué cubre y qué no cubre?</h2>
-                <p class="mt-2 text-sm leading-relaxed text-slate-400">Este resumen presenta los alcances generales que aparecen en la guía de La Soberanía de Seguros.</p>
+                <h2 id="insurance-coverage-heading" class="insurance-coverage-heading mt-4 text-2xl font-black text-white">¿Qué cubre y qué no cubre?</h2>
+                <p class="insurance-coverage-description mt-2 text-sm leading-relaxed text-slate-400">Este resumen presenta los alcances generales que aparecen en la guía de La Soberanía de Seguros.</p>
             </div>
             <div class="mt-5 grid gap-4 md:grid-cols-2">
-                <div class="rounded-2xl border border-emerald-400/20 bg-emerald-400/5 p-5">
+                <div class="insurance-coverage-card is-covered">
                     <h3 class="flex items-center gap-2 text-base font-black text-emerald-200"><i class="fa-solid fa-circle-check"></i> Sí cubre</h3>
-                    <ul class="mt-3 space-y-2 text-sm leading-relaxed text-slate-300">
+                    <ul>
                         <li>Daños a vehículos de terceros.</li>
                         <li>Gastos médicos de terceros.</li>
                         <li>Asistencia jurídica básica.</li>
                         <li>Daños a la propiedad pública.</li>
                     </ul>
                 </div>
-                <div class="rounded-2xl border border-rose-400/20 bg-rose-400/5 p-5">
+                <div class="insurance-coverage-card is-excluded">
                     <h3 class="flex items-center gap-2 text-base font-black text-rose-200"><i class="fa-solid fa-circle-xmark"></i> No cubre según esta guía</h3>
-                    <ul class="mt-3 space-y-2 text-sm leading-relaxed text-slate-300">
+                    <ul>
                         <li>Daños al vehículo propio.</li>
                         <li>Robo, hurto o incendio.</li>
                         <li>Daños por inundación o sismos.</li>
@@ -314,7 +337,7 @@
                     </ul>
                 </div>
             </div>
-            <p class="mt-4 rounded-xl border border-slate-800 bg-slate-950/50 p-4 text-xs leading-relaxed text-slate-400">Es una guía general y no reemplaza el contrato. Los límites, requisitos y condiciones aplicables son los indicados en la póliza emitida; consulta con nosotros cualquier duda antes de contratar.</p>
+            <p class="insurance-coverage-note mt-4">Es una guía general y no reemplaza el contrato. Los límites, requisitos y condiciones aplicables son los indicados en la póliza emitida; consulta con nosotros cualquier duda antes de contratar.</p>
         </section>
         <div class="border-t border-slate-800 py-6 text-center text-[10px] text-slate-500">© <span id="year"></span> INV. Armijhon · <a href="index.html" class="text-emerald-300 hover:text-emerald-200">Inicio</a></div>
     </footer>
