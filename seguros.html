@@ -56,6 +56,12 @@
         .insurance-coverage-card.is-covered li::before { content: '✓'; color: #6ee7b7; font-weight: 900; }
         .insurance-coverage-card.is-excluded li::before { content: '×'; color: #fda4af; font-size: 1.1rem; font-weight: 900; line-height: 1.1; }
         .insurance-coverage-note { border: 1px solid #8b754c; border-radius: .9rem; background: #24251f; padding: 1rem; color: #eee5d3; font-size: .8rem; line-height: 1.65; }
+        .insurance-quote-manual { min-height: 100%; border: 1px solid #34745d; border-radius: 1rem; background: linear-gradient(145deg, #17362d, #172b26); padding: 1.25rem; box-shadow: 0 10px 24px rgb(0 0 0 / .14); }
+        .insurance-quote-manual label { color: #e5f4eb; font-size: .875rem; line-height: 1.5; }
+        .insurance-quote-manual-note { color: #b6c9bd; font-size: .8rem; line-height: 1.55; }
+        html.light .insurance-quote-manual { border-color: #9cc9ac; background: linear-gradient(145deg, #e3f2e8, #eff6ed); box-shadow: 0 10px 24px rgb(39 75 54 / .08); }
+        html.light .insurance-quote-manual label { color: #193c2d; }
+        html.light .insurance-quote-manual-note { color: #4f6657; }
         html.light .insurance-coverage-footer { background: linear-gradient(135deg, #eee9dd 0%, #f7f3ea 55%, #f1e7e3 100%); }
         html.light .insurance-coverage-card.is-covered { border-color: #258365; background: linear-gradient(145deg, #d9f2e5, #e8f5ec); }
         html.light .insurance-coverage-card.is-excluded { border-color: #ad4d58; background: linear-gradient(145deg, #f8e1e2, #f4e9e5); }
@@ -135,10 +141,10 @@
                     <button id="insurance-quote-analyze" type="button" class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-500 disabled:cursor-wait disabled:opacity-60"><i class="fa-solid fa-magnifying-glass"></i><span>Analizar documento</span></button>
                     <p id="insurance-quote-status" class="min-h-5 text-xs text-slate-400" role="status" aria-live="polite"></p>
                 </div>
-                <div class="rounded-2xl border border-slate-800 bg-slate-950/50 p-4">
-                    <label class="block text-xs font-bold text-slate-300" for="insurance-quote-policy">También puedes elegir la categoría manualmente</label>
+                <div class="insurance-quote-manual">
+                    <label class="block font-bold" for="insurance-quote-policy">También puedes elegir la categoría manualmente</label>
                     <select id="insurance-quote-policy" class="insurance-input mt-2" aria-describedby="insurance-quote-policy-note"><option value="">Selecciona tipo de vehículo</option></select>
-                    <p id="insurance-quote-policy-note" class="mt-2 text-[11px] leading-relaxed text-slate-500">Revisa la sugerencia y corrígela si no coincide con los datos del documento.</p>
+                    <p id="insurance-quote-policy-note" class="insurance-quote-manual-note mt-2">Revisa la sugerencia y corrígela si no coincide con los datos del documento.</p>
                 </div>
             </div>
             <div id="insurance-quote-result" class="mt-5 hidden rounded-2xl border border-emerald-400/20 bg-emerald-400/5 p-5" aria-live="polite">
