@@ -138,9 +138,9 @@
             <div class="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,.8fr)]">
                 <div class="space-y-4">
                     <label class="block text-xs font-bold text-slate-300">Documento del vehículo
-                        <input id="insurance-quote-document" class="insurance-input mt-2" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" aria-describedby="insurance-quote-privacy">
+                        <input id="insurance-quote-document" class="insurance-input mt-2" type="file" accept="image/jpeg,image/png,image/webp" aria-describedby="insurance-quote-privacy">
                     </label>
-                    <p id="insurance-quote-privacy" class="text-[11px] leading-relaxed text-slate-500">JPG, PNG o WebP; máximo 5 MB. La imagen se procesa en este navegador y no se envía ni se guarda. Para tramitar la póliza, luego adjunta los documentos en el formulario seguro.</p>
+                    <p id="insurance-quote-privacy" class="text-[11px] leading-relaxed text-slate-500">JPG, PNG o WebP; máximo 30 MB. Puedes elegir una imagen de la galería o tomar una foto. La imagen se procesa en este navegador y no se envía ni se guarda. Para tramitar la póliza, luego adjunta los documentos en el formulario seguro.</p>
                     <button id="insurance-quote-analyze" type="button" class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-500 disabled:cursor-wait disabled:opacity-60"><i class="fa-solid fa-magnifying-glass"></i><span>Analizar documento</span></button>
                     <p id="insurance-quote-status" class="min-h-5 text-xs text-slate-400" role="status" aria-live="polite"></p>
                 </div>
@@ -620,8 +620,8 @@
             const file = quoteFile.files?.[0];
             quoteResult.classList.add('hidden');
             if (!file) { quoteStatus.textContent = 'Selecciona primero una foto del documento del vehículo.'; return; }
-            if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) {
-                quoteStatus.textContent = 'Usa una foto JPG, PNG o WebP de máximo 5 MB.'; return;
+            if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 30 * 1024 * 1024) {
+                quoteStatus.textContent = 'Usa una imagen JPG, PNG o WebP de máximo 30 MB.'; return;
             }
             button.disabled = true;
             button.querySelector('span').textContent = 'Preparando lector…';
