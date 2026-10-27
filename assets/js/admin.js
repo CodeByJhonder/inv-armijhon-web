@@ -170,6 +170,8 @@ async function loadLocalSaleVesRate() {
             ? 'No se pudo actualizar; se conserva la ultima tasa disponible'
             : 'No se pudo actualizar; se usa la tasa de respaldo configurada';
     }
+    renderLocalCreditCustomers();
+    updateLocalSaleCreditCustomerHint();
     updateLocalSaleCurrencyUi();
     updateLocalSaleTotalPreview();
 }
@@ -1685,7 +1687,9 @@ function updateLocalSaleCreditCustomerHint() {
     }
     const currency = localSaleCurrency.value;
     const suffix = currency.toLowerCase();
-    const balance = Number(customer[`balance_${suffix}`] || 0);
+    const balance = currency === 'VES'
+        ? Number(customer.balance_ves_usd || 0) * (localSaleVesBaseRate + localSaleVesAdjustment)
+        : Number(customer[`balance_${suffix}`] || 0);
     const limit = Number(customer[`credit_limit_${suffix}`] || 0);
     const available = Math.max(0, limit - balance);
     hint.textContent = `Saldo pendiente: ${formatLocalSaleAmount(balance, currency)} · Límite: ${formatLocalSaleAmount(limit, currency)} · Disponible: ${formatLocalSaleAmount(available, currency)}`;
@@ -2373,15 +2377,18 @@ function renderLocalSaleCreditCustomerOptions() {
 function localCreditCustomerCurrencyRows(customer) {
     return [
         ['USD', 'balance_usd', 'credit_limit_usd'],
-        ['VES', 'balance_ves', 'credit_limit_ves'],
+        ['VES', 'balance_ves_usd', 'credit_limit_ves'],
         ['COP', 'balance_cop', 'credit_limit_cop']
     ].map(([currency, balanceKey, limitKey]) => {
-        const balance = Number(customer[balanceKey] || 0);
+        const rate = localSaleVesBaseRate + localSaleVesAdjustment;
+        const balance = currency === 'VES'
+            ? Number(customer[balanceKey] || 0) * rate
+            : Number(customer[balanceKey] || 0);
         const limit = Number(customer[limitKey] || 0);
         const available = Math.max(0, limit - balance);
         return `<div class="rounded-lg border border-slate-800 bg-slate-950/50 px-2.5 py-2">
             <div class="flex items-center justify-between gap-2"><span class="text-[10px] font-black text-slate-400">${currency}</span><strong class="text-xs ${balance > 0 ? 'text-amber-200' : 'text-slate-200'}">${formatLocalSaleAmount(balance, currency)}</strong></div>
-            <p class="mt-1 text-[9px] text-slate-500">Límite ${formatLocalSaleAmount(limit, currency)} · disponible ${formatLocalSaleAmount(available, currency)}</p>
+            <p class="mt-1 text-[9px] text-slate-500">Límite ${formatLocalSaleAmount(limit, currency)} · disponible ${formatLocalSaleAmount(available, currency)}${currency === 'VES' ? `<br>Base ${formatLocalSaleAmount(customer[balanceKey] || 0, 'USD')} · tasa actual Bs. ${formatVes(rate)} / USD` : ''}</p>
         </div>`;
     }).join('');
 }
@@ -2514,6 +2521,9 @@ async function registerLocalCreditPayment(event) {
             p_customer_id: customerId,
             p_currency: currency,
             p_amount: amount,
+            p_exchange_rate: currency === 'VES'
+                ? Number((localSaleVesBaseRate + localSaleVesAdjustment).toFixed(6))
+                : null,
             p_sold_on: localDateInputValue(),
             p_note: form.elements.note.value.trim() || null
         });
@@ -2546,8 +2556,11 @@ async function loadLocalCustomerCreditLedger(customerId) {
         panel.innerHTML = `<ul class="space-y-2">${data.map(entry => {
             const isPayment = entry.entry_type === 'payment';
             const date = new Intl.DateTimeFormat('es-VE', { dateStyle: 'medium' }).format(new Date(`${entry.sold_on}T12:00:00`));
+            const rateDetail = entry.currency === 'VES'
+                ? `<br><span class="text-slate-500">Equiv. ${formatLocalSaleAmount(entry.amount_usd, 'USD')} · tasa Bs. ${formatVes(entry.exchange_rate)} / USD</span>`
+                : '';
             return `<li class="flex items-start justify-between gap-2 border-b border-slate-800 pb-2 text-[10px] last:border-0 last:pb-0">
-                <span class="min-w-0"><strong class="${isPayment ? 'text-emerald-300' : 'text-amber-200'}">${isPayment ? 'Abono' : 'Fiado'}</strong> · ${date}<br><span class="break-words text-slate-400">${escapeHtml(entry.description || '')}</span></span>
+                <span class="min-w-0"><strong class="${isPayment ? 'text-emerald-300' : 'text-amber-200'}">${isPayment ? 'Abono' : 'Fiado'}</strong> · ${date}<br><span class="break-words text-slate-400">${escapeHtml(entry.description || '')}</span>${rateDetail}</span>
                 <strong class="shrink-0 ${isPayment ? 'text-emerald-300' : 'text-amber-200'}">${isPayment ? '−' : '+'}${formatLocalSaleAmount(entry.amount, entry.currency)}</strong>
             </li>`;
         }).join('')}</ul>`;
