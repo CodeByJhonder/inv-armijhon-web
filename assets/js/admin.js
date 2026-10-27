@@ -36,9 +36,14 @@ const localSaleForm = document.getElementById('local-sale-form');
 const localSaleLines = document.getElementById('local-sale-lines');
 const localSaleCurrency = document.getElementById('local-sale-currency');
 const localSaleDate = document.getElementById('local-sale-date');
+const localSaleMode = document.getElementById('local-sale-mode');
+const localSaleCreditCustomer = document.getElementById('local-sale-credit-customer');
 const localSaleFormStatus = document.getElementById('local-sale-form-status');
 const localSalesStatus = document.getElementById('local-sales-status');
 const localSalesList = document.getElementById('local-sales-list');
+const localCreditCustomerList = document.getElementById('local-credit-customer-list');
+const localCreditCustomerStatus = document.getElementById('local-credit-customer-status');
+const localCreditCustomerForm = document.getElementById('local-credit-customer-form');
 const insuranceCasesList = document.getElementById('insurance-cases-list');
 const insuranceCasesStatus = document.getElementById('insurance-cases-status');
 const insuranceManualForm = document.getElementById('insurance-manual-form');
@@ -84,6 +89,7 @@ const productCatalogImageOverrides = {
 let inventoryProducts = [];
 let localSales = [];
 let localSaleServices = [];
+let localCreditCustomers = [];
 const selectedLocalSaleIds = new Set();
 let ordersLoaded = false;
 let inventoryLoaded = false;
@@ -1593,6 +1599,45 @@ function updateLocalSaleCurrencyUi() {
     } else {
         totalLabel.textContent = 'Total cobrado en d\u00f3lares';
     }
+    updateLocalSaleCreditUi();
+}
+
+function updateLocalSaleCreditUi() {
+    const isCredit = localSaleMode.value === 'credit';
+    document.getElementById('local-sale-credit-customer-field').classList.toggle('hidden', !isCredit);
+    document.getElementById('local-sale-received-wrap').classList.toggle('hidden', isCredit);
+    document.getElementById('local-sale-change-wrap').classList.toggle('hidden', isCredit);
+    localSaleCreditCustomer.required = isCredit;
+    document.getElementById('local-sale-total-label').textContent = isCredit
+        ? `Total fiado en ${localSaleCurrency.value}`
+        : localSaleCurrency.value === 'COP'
+            ? 'Total cobrado en pesos'
+            : localSaleCurrency.value === 'VES'
+                ? 'Total cobrado en bol\u00edvares'
+                : 'Total cobrado en d\u00f3lares';
+    document.getElementById('save-local-sale').innerHTML = isCredit
+        ? '<i class="fa-solid fa-handshake mr-2" aria-hidden="true"></i>Registrar fiado'
+        : '<i class="fa-solid fa-floppy-disk mr-2" aria-hidden="true"></i>Guardar venta';
+    updateLocalSaleCreditCustomerHint();
+}
+
+function updateLocalSaleCreditCustomerHint() {
+    const hint = document.getElementById('local-sale-credit-customer-hint');
+    const customer = localCreditCustomers.find(item => item.id === localSaleCreditCustomer.value);
+    if (!customer) {
+        hint.textContent = localCreditCustomers.length
+            ? 'Selecciona un cliente para revisar su saldo y crédito disponible.'
+            : 'Primero registra un cliente en la sección Clientes y fiados.';
+        return;
+    }
+    const currency = localSaleCurrency.value;
+    const suffix = currency.toLowerCase();
+    const balance = Number(customer[`balance_${suffix}`] || 0);
+    const limit = Number(customer[`credit_limit_${suffix}`] || 0);
+    const available = Math.max(0, limit - balance);
+    hint.textContent = `Saldo pendiente: ${formatLocalSaleAmount(balance, currency)} · Límite: ${formatLocalSaleAmount(limit, currency)} · Disponible: ${formatLocalSaleAmount(available, currency)}`;
+    hint.classList.toggle('text-rose-300', balance > limit);
+    hint.classList.toggle('text-slate-400', balance <= limit);
 }
 
 function updateLocalSaleLineTypeUi(row) {
@@ -1826,6 +1871,7 @@ function renderLocalSales() {
             : new Intl.DateTimeFormat('es-VE', {
                 hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'America/Caracas'
             }).format(createdAt);
+        const creditCustomerName = lines[0].customer_name || '';
         const totals = {};
         lines.forEach(sale => {
             const currency = sale.currency || 'USD';
@@ -1847,8 +1893,8 @@ function renderLocalSales() {
                 : '';
             return `<li class="flex flex-wrap items-center justify-between gap-2 border-t border-slate-800 py-2 text-xs"><label class="flex min-w-0 items-start gap-2 text-slate-200"><input type="checkbox" data-local-sale-select="${escapeHtml(sale.id)}" class="mt-0.5 accent-rose-500" ${selectedLocalSaleIds.has(sale.id) ? 'checked' : ''} aria-label="Seleccionar venta de ${escapeHtml(sale.product_name)}"><span class="min-w-0 break-words"><span class="mr-1 rounded bg-slate-800 px-1.5 py-0.5 text-[9px] font-bold uppercase text-sky-200">${isService ? 'Servicio' : 'Producto'}</span>${escapeHtml(sale.product_name)} <span class="text-slate-400">x ${sale.quantity} ${unit}</span>${unitPrice}${rate}</span></label><strong class="shrink-0 text-emerald-200">${amount}</strong></li>`;
         }).join('');
-        return `<article class="rounded-2xl border border-slate-800 bg-slate-900 p-4">
-            <div class="flex items-start justify-between gap-3"><div><p class="text-sm font-bold text-white">Venta local - ${dateLabel}</p><p class="mt-1 text-[10px] text-slate-400">${timeLabel ? `Registrada a las ${timeLabel} · ` : ''}${lines.length} línea${lines.length === 1 ? '' : 's'}</p></div><div class="flex flex-wrap justify-end gap-1">${totalsMarkup}</div></div>
+        return `<article class="rounded-2xl border ${creditCustomerName ? 'border-amber-500/30' : 'border-slate-800'} bg-slate-900 p-4">
+            <div class="flex items-start justify-between gap-3"><div><p class="text-sm font-bold text-white">${creditCustomerName ? 'Venta fiada' : 'Venta local'} - ${dateLabel}</p><p class="mt-1 text-[10px] text-slate-400">${creditCustomerName ? `Cliente: ${escapeHtml(creditCustomerName)} · ` : ''}${timeLabel ? `Registrada a las ${timeLabel} · ` : ''}${lines.length} línea${lines.length === 1 ? '' : 's'}</p></div><div class="flex flex-wrap justify-end gap-1">${totalsMarkup}</div></div>
             <ul class="mt-3">${lineMarkup}</ul>
         </article>`;
     }).join('');
@@ -2263,10 +2309,207 @@ async function loadLocalSales() {
     }
 }
 
+function renderLocalSaleCreditCustomerOptions() {
+    const selectedId = localSaleCreditCustomer.value;
+    localSaleCreditCustomer.innerHTML = '<option value="">Selecciona un cliente</option>'
+        + localCreditCustomers.map(customer => `<option value="${escapeHtml(customer.id)}">${escapeHtml(customer.full_name)} · ${escapeHtml(customer.phone)}</option>`).join('');
+    if (localCreditCustomers.some(customer => customer.id === selectedId)) localSaleCreditCustomer.value = selectedId;
+    updateLocalSaleCreditCustomerHint();
+}
+
+function localCreditCustomerCurrencyRows(customer) {
+    return [
+        ['USD', 'balance_usd', 'credit_limit_usd'],
+        ['VES', 'balance_ves', 'credit_limit_ves'],
+        ['COP', 'balance_cop', 'credit_limit_cop']
+    ].map(([currency, balanceKey, limitKey]) => {
+        const balance = Number(customer[balanceKey] || 0);
+        const limit = Number(customer[limitKey] || 0);
+        const available = Math.max(0, limit - balance);
+        return `<div class="rounded-lg border border-slate-800 bg-slate-950/50 px-2.5 py-2">
+            <div class="flex items-center justify-between gap-2"><span class="text-[10px] font-black text-slate-400">${currency}</span><strong class="text-xs ${balance > 0 ? 'text-amber-200' : 'text-slate-200'}">${formatLocalSaleAmount(balance, currency)}</strong></div>
+            <p class="mt-1 text-[9px] text-slate-500">Límite ${formatLocalSaleAmount(limit, currency)} · disponible ${formatLocalSaleAmount(available, currency)}</p>
+        </div>`;
+    }).join('');
+}
+
+function renderLocalCreditCustomers() {
+    if (!localCreditCustomerList) return;
+    if (!localCreditCustomers.length) {
+        localCreditCustomerList.innerHTML = '<p class="rounded-xl border border-slate-800 bg-slate-900 p-5 text-center text-xs text-slate-400 2xl:col-span-2">Aún no hay clientes. Registra uno para comenzar a vender fiado.</p>';
+        return;
+    }
+    localCreditCustomerList.innerHTML = localCreditCustomers.map(customer => `
+        <article class="rounded-2xl border border-slate-800 bg-slate-900 p-3 sm:p-4">
+            <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0"><h4 class="break-words text-sm font-black text-white">${escapeHtml(customer.full_name)}</h4><p class="mt-1 text-[10px] text-slate-400">${escapeHtml(customer.phone)}</p></div>
+                <button type="button" data-edit-local-credit-customer="${escapeHtml(customer.id)}" class="shrink-0 rounded-lg border border-slate-700 px-2.5 py-1.5 text-[10px] font-bold text-slate-300 hover:bg-slate-800"><i class="fa-solid fa-pen mr-1" aria-hidden="true"></i>Editar</button>
+            </div>
+            <div class="mt-3 grid gap-2 sm:grid-cols-3">${localCreditCustomerCurrencyRows(customer)}</div>
+            <form data-local-credit-payment="${escapeHtml(customer.id)}" class="mt-3 rounded-xl border border-emerald-500/15 bg-emerald-500/5 p-2.5">
+                <p class="mb-2 text-[10px] font-black uppercase tracking-wide text-emerald-200">Registrar abono</p>
+                <div class="grid gap-2 sm:grid-cols-[6rem_minmax(6rem,.7fr)_minmax(8rem,1fr)_auto]">
+                    <label class="text-[9px] font-bold text-slate-400">Moneda
+                        <select name="currency" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2 py-2 text-xs text-white"><option>USD</option><option>VES</option><option>COP</option></select>
+                    </label>
+                    <label class="text-[9px] font-bold text-slate-400">Monto
+                        <input name="amount" type="number" min="0.01" max="999999999999.99" step="0.01" required placeholder="Monto" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2 py-2 text-xs text-white">
+                    </label>
+                    <label class="text-[9px] font-bold text-slate-400">Nota (opcional)
+                        <input name="note" type="text" maxlength="200" placeholder="Ej. Pago parcial" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2 py-2 text-xs text-white placeholder:text-slate-500">
+                    </label>
+                    <button type="submit" class="self-end rounded-lg bg-emerald-700 px-3 py-2 text-[10px] font-black text-white hover:bg-emerald-600">Guardar</button>
+                </div>
+                <p data-credit-payment-status class="mt-2 min-h-4 text-[10px] text-slate-400" role="status" aria-live="polite"></p>
+            </form>
+            <div class="mt-2">
+                <button type="button" data-load-local-credit-ledger="${escapeHtml(customer.id)}" class="text-[10px] font-bold text-sky-200 hover:underline">Ver movimientos</button>
+                <div data-local-credit-ledger="${escapeHtml(customer.id)}" class="mt-2 hidden rounded-lg border border-slate-800 bg-slate-950/40 p-2"></div>
+            </div>
+        </article>`).join('');
+}
+
+async function loadLocalCreditCustomers() {
+    localCreditCustomerStatus.textContent = 'Cargando clientes…';
+    try {
+        const { data, error } = await supabaseClient.rpc('admin_list_local_sale_customers');
+        if (error) throw error;
+        localCreditCustomers = data || [];
+        renderLocalCreditCustomers();
+        renderLocalSaleCreditCustomerOptions();
+        localCreditCustomerStatus.textContent = `${localCreditCustomers.length} cliente${localCreditCustomers.length === 1 ? '' : 's'}`;
+    } catch (error) {
+        console.error('Error cargando clientes de crédito:', error);
+        localCreditCustomerStatus.textContent = error.message || 'No se pudieron cargar los clientes. Ejecuta la migración de clientes y fiados.';
+        localCreditCustomerList.innerHTML = '<p class="rounded-xl border border-rose-500/20 p-4 text-xs text-rose-200 2xl:col-span-2">No se pudo cargar la lista de clientes.</p>';
+    }
+}
+
+function resetLocalCreditCustomerForm() {
+    localCreditCustomerForm.reset();
+    document.getElementById('local-credit-customer-id').value = '';
+    document.getElementById('local-credit-limit-usd').value = '0';
+    document.getElementById('local-credit-limit-ves').value = '0';
+    document.getElementById('local-credit-limit-cop').value = '0';
+    document.getElementById('credit-customer-form-heading').textContent = 'Registrar cliente';
+    document.getElementById('save-local-credit-customer').textContent = 'Guardar cliente';
+    document.getElementById('cancel-edit-local-credit-customer').classList.add('hidden');
+    document.getElementById('local-credit-customer-form-status').textContent = '';
+}
+
+function editLocalCreditCustomer(customerId) {
+    const customer = localCreditCustomers.find(item => item.id === customerId);
+    if (!customer) return;
+    document.getElementById('local-credit-customer-id').value = customer.id;
+    document.getElementById('local-credit-customer-name').value = customer.full_name;
+    document.getElementById('local-credit-customer-phone').value = customer.phone;
+    document.getElementById('local-credit-limit-usd').value = customer.credit_limit_usd;
+    document.getElementById('local-credit-limit-ves').value = customer.credit_limit_ves;
+    document.getElementById('local-credit-limit-cop').value = customer.credit_limit_cop;
+    document.getElementById('credit-customer-form-heading').textContent = 'Editar cliente y límites';
+    document.getElementById('save-local-credit-customer').textContent = 'Guardar cambios';
+    document.getElementById('cancel-edit-local-credit-customer').classList.remove('hidden');
+    document.getElementById('local-credit-customer-form-status').textContent = '';
+    document.getElementById('local-credit-customer-name').focus();
+}
+
+async function saveLocalCreditCustomer(event) {
+    event.preventDefault();
+    const formStatus = document.getElementById('local-credit-customer-form-status');
+    const saveButton = document.getElementById('save-local-credit-customer');
+    const customerId = document.getElementById('local-credit-customer-id').value || null;
+    saveButton.disabled = true;
+    formStatus.textContent = customerId ? 'Actualizando cliente…' : 'Guardando cliente…';
+    try {
+        const { error } = await supabaseClient.rpc('admin_save_local_sale_customer', {
+            p_customer_id: customerId,
+            p_full_name: document.getElementById('local-credit-customer-name').value.trim(),
+            p_phone: document.getElementById('local-credit-customer-phone').value.trim(),
+            p_credit_limit_usd: Number(document.getElementById('local-credit-limit-usd').value),
+            p_credit_limit_ves: Number(document.getElementById('local-credit-limit-ves').value),
+            p_credit_limit_cop: Number(document.getElementById('local-credit-limit-cop').value)
+        });
+        if (error) throw error;
+        resetLocalCreditCustomerForm();
+        await loadLocalCreditCustomers();
+        localCreditCustomerStatus.textContent = 'Cliente guardado correctamente.';
+    } catch (error) {
+        console.error('Error guardando cliente de crédito:', error);
+        formStatus.textContent = error.message || 'No se pudo guardar el cliente.';
+    } finally {
+        saveButton.disabled = false;
+    }
+}
+
+async function registerLocalCreditPayment(event) {
+    event.preventDefault();
+    const form = event.target.closest('[data-local-credit-payment]');
+    if (!form) return;
+    const customerId = form.dataset.localCreditPayment;
+    const currency = form.elements.currency.value;
+    const amount = Number(form.elements.amount.value);
+    const status = form.querySelector('[data-credit-payment-status]');
+    const button = form.querySelector('button[type="submit"]');
+    if (!Number.isFinite(amount) || amount <= 0 || (currency === 'COP' && !Number.isInteger(amount))) {
+        status.textContent = currency === 'COP' ? 'El abono COP debe ser un entero.' : 'Indica un monto válido.';
+        return;
+    }
+    button.disabled = true;
+    status.textContent = 'Registrando abono…';
+    try {
+        const { error } = await supabaseClient.rpc('admin_record_local_customer_payment', {
+            p_customer_id: customerId,
+            p_currency: currency,
+            p_amount: amount,
+            p_sold_on: localDateInputValue(),
+            p_note: form.elements.note.value.trim() || null
+        });
+        if (error) throw error;
+        await loadLocalCreditCustomers();
+        localCreditCustomerStatus.textContent = 'Abono registrado y saldo actualizado.';
+    } catch (error) {
+        console.error('Error registrando abono:', error);
+        status.textContent = error.message || 'No se pudo registrar el abono.';
+    } finally {
+        button.disabled = false;
+    }
+}
+
+async function loadLocalCustomerCreditLedger(customerId) {
+    const panel = localCreditCustomerList.querySelector(`[data-local-credit-ledger="${CSS.escape(customerId)}"]`);
+    if (!panel) return;
+    panel.classList.remove('hidden');
+    panel.innerHTML = '<p class="text-[10px] text-slate-400">Cargando movimientos…</p>';
+    try {
+        const { data, error } = await supabaseClient.rpc('admin_list_local_customer_credit_ledger', {
+            p_customer_id: customerId,
+            p_limit: 100
+        });
+        if (error) throw error;
+        if (!data?.length) {
+            panel.innerHTML = '<p class="text-[10px] text-slate-400">Este cliente aún no tiene movimientos.</p>';
+            return;
+        }
+        panel.innerHTML = `<ul class="space-y-2">${data.map(entry => {
+            const isPayment = entry.entry_type === 'payment';
+            const date = new Intl.DateTimeFormat('es-VE', { dateStyle: 'medium' }).format(new Date(`${entry.sold_on}T12:00:00`));
+            return `<li class="flex items-start justify-between gap-2 border-b border-slate-800 pb-2 text-[10px] last:border-0 last:pb-0">
+                <span class="min-w-0"><strong class="${isPayment ? 'text-emerald-300' : 'text-amber-200'}">${isPayment ? 'Abono' : 'Fiado'}</strong> · ${date}<br><span class="break-words text-slate-400">${escapeHtml(entry.description || '')}</span></span>
+                <strong class="shrink-0 ${isPayment ? 'text-emerald-300' : 'text-amber-200'}">${isPayment ? '−' : '+'}${formatLocalSaleAmount(entry.amount, entry.currency)}</strong>
+            </li>`;
+        }).join('')}</ul>`;
+    } catch (error) {
+        console.error('Error consultando movimientos de crédito:', error);
+        panel.innerHTML = `<p class="text-[10px] text-rose-300">${escapeHtml(error.message || 'No se pudieron cargar los movimientos.')}</p>`;
+    }
+}
+
 async function registerLocalProductSale(event) {
     event.preventDefault();
     const currency = localSaleCurrency.value;
     const soldOn = localSaleDate.value;
+    const isCredit = localSaleMode.value === 'credit';
+    const customerId = isCredit ? localSaleCreditCustomer.value : null;
     const items = [...localSaleLines.querySelectorAll('[data-local-sale-line]')].map(line => {
         const saleType = line.querySelector('.local-sale-line-type').value;
         return {
@@ -2278,6 +2521,10 @@ async function registerLocalProductSale(event) {
         };
     });
     const saveButton = document.getElementById('save-local-sale');
+    if (isCredit && !customerId) {
+        localSaleFormStatus.textContent = 'Selecciona el cliente antes de registrar el fiado.';
+        return;
+    }
     if (!items.length || items.length > 30) {
         localSaleFormStatus.textContent = 'Agrega entre 1 y 30 líneas a la venta.';
         return;
@@ -2310,17 +2557,22 @@ async function registerLocalProductSale(event) {
     }
 
     saveButton.disabled = true;
-    localSaleFormStatus.textContent = 'Guardando productos y servicios...';
+    localSaleFormStatus.textContent = isCredit ? 'Validando crédito y guardando la venta…' : 'Guardando productos y servicios...';
     try {
         const exchangeRate = currency === 'VES'
             ? Number((localSaleVesBaseRate + localSaleVesAdjustment).toFixed(6))
             : null;
-        const { data, error } = await supabaseClient.rpc('admin_record_local_product_sales', {
+        const rpcName = isCredit
+            ? 'admin_record_local_product_sales_on_credit'
+            : 'admin_record_local_product_sales';
+        const saleParams = {
             p_items: items,
             p_currency: currency,
             p_exchange_rate: exchangeRate,
             p_sold_on: soldOn
-        });
+        };
+        if (isCredit) saleParams.p_customer_id = customerId;
+        const { data, error } = await supabaseClient.rpc(rpcName, saleParams);
         if (error) throw error;
 
         localSaleForm.reset();
@@ -2330,8 +2582,12 @@ async function registerLocalProductSale(event) {
         renderLocalSaleProductOptions([]);
         if (items.some(item => item.sale_type === 'product')) await loadAdminInventory();
         await loadLocalSales();
+        if (isCredit) await loadLocalCreditCustomers();
         const productLines = items.filter(item => item.sale_type === 'product').length;
-        localSaleFormStatus.textContent = `Venta guardada: ${data.line_count} líneas (${productLines} producto${productLines === 1 ? '' : 's'} con descuento de stock). Total: ${formatLocalSaleAmount(data.total_amount, data.currency)}.`;
+        const customerName = isCredit ? localCreditCustomers.find(customer => customer.id === customerId)?.full_name : '';
+        localSaleFormStatus.textContent = isCredit
+            ? `Fiado registrado para ${customerName || data.customer_name}: ${formatLocalSaleAmount(data.total_amount, data.currency)}. ${productLines} producto${productLines === 1 ? '' : 's'} descontado${productLines === 1 ? '' : 's'} del inventario.`
+            : `Venta guardada: ${data.line_count} líneas (${productLines} producto${productLines === 1 ? '' : 's'} con descuento de stock). Total: ${formatLocalSaleAmount(data.total_amount, data.currency)}.`;
     } catch (error) {
         console.error('Error registrando la venta local:', error);
         localSaleFormStatus.textContent = error.message || 'No se pudo registrar la venta local.';
@@ -3117,6 +3373,34 @@ logoutButton.addEventListener('click', async () => {
 document.getElementById('refresh-orders').addEventListener('click', loadOrders);
 document.getElementById('refresh-inventory').addEventListener('click', loadAdminInventory);
 document.getElementById('refresh-local-sales').addEventListener('click', loadLocalSales);
+document.getElementById('refresh-credit-customers').addEventListener('click', loadLocalCreditCustomers);
+localCreditCustomerForm.addEventListener('submit', saveLocalCreditCustomer);
+document.getElementById('cancel-edit-local-credit-customer').addEventListener('click', resetLocalCreditCustomerForm);
+localSaleMode.addEventListener('change', updateLocalSaleCreditUi);
+localSaleCreditCustomer.addEventListener('change', updateLocalSaleCreditCustomerHint);
+localCreditCustomerList.addEventListener('submit', registerLocalCreditPayment);
+localCreditCustomerList.addEventListener('change', event => {
+    const currencySelect = event.target.closest('form[data-local-credit-payment] select[name="currency"]');
+    if (!currencySelect) return;
+    const amountInput = currencySelect.form.elements.amount;
+    amountInput.step = currencySelect.value === 'COP' ? '1' : '0.01';
+    amountInput.max = '999999999999.99';
+    amountInput.placeholder = currencySelect.value === 'COP' ? 'Monto entero' : 'Monto';
+});
+localCreditCustomerList.addEventListener('click', async event => {
+    const editButton = event.target.closest('[data-edit-local-credit-customer]');
+    if (editButton) {
+        editLocalCreditCustomer(editButton.dataset.editLocalCreditCustomer);
+        return;
+    }
+    const ledgerButton = event.target.closest('[data-load-local-credit-ledger]');
+    if (!ledgerButton) return;
+    const customerId = ledgerButton.dataset.loadLocalCreditLedger;
+    const ledgerPanel = localCreditCustomerList.querySelector(`[data-local-credit-ledger="${CSS.escape(customerId)}"]`);
+    const wasHidden = ledgerPanel.classList.contains('hidden');
+    ledgerPanel.classList.toggle('hidden', !wasHidden);
+    if (wasHidden) await loadLocalCustomerCreditLedger(customerId);
+});
 document.getElementById('local-sales-delete-date').value = localDateInputValue();
 document.getElementById('local-sales-delete-date').max = localDateInputValue();
 document.getElementById('local-sales-delete-month').value = localDateInputValue().slice(0, 7);
@@ -3226,6 +3510,8 @@ adminNavigation.addEventListener('click', event => {
         });
     }
     if (button.dataset.adminPage === 'sales-history') loadLocalSales();
+    if (button.dataset.adminPage === 'local-sales' || button.dataset.adminPage === 'credit-customers') loadLocalCreditCustomers();
+    if (button.dataset.adminPage === 'credit-customers') resetLocalCreditCustomerForm();
     if (button.dataset.adminPage === 'sales-reports') updateLocalSalesExportRange();
     if (button.dataset.adminPage === 'insurance') loadInsuranceCases();
 });
