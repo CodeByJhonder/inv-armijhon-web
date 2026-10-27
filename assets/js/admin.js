@@ -1519,28 +1519,29 @@ function renderLocalSaleProductOptions(draftLines = getLocalSaleDraftLines()) {
     }).join('');
     const serviceOptions = localSaleServices.map(service => `<option value="${escapeHtml(service.id)}">${escapeHtml(service.name)} (${escapeHtml(service.unit === 'pagina' ? 'por página' : service.unit === 'unidad' ? 'por unidad' : 'por servicio')})</option>`).join('');
     localSaleLines.innerHTML = draftLines.map((line, index) => `
-        <div data-local-sale-line class="rounded-xl border border-slate-800 bg-slate-950/50 p-3">
-            <div class="mb-2 flex items-center justify-between">
-                <p class="local-sale-line-title text-[10px] font-black uppercase tracking-wide text-slate-500">${line.saleType === 'service' ? 'Servicio' : 'Producto'} ${index + 1}</p>
-                <button type="button" data-remove-local-sale-line class="rounded-lg px-2 py-1 text-[10px] font-bold text-rose-300 hover:bg-rose-500/10" ${draftLines.length === 1 ? 'disabled' : ''} aria-label="Quitar línea ${index + 1}"><i class="fa-solid fa-trash" aria-hidden="true"></i> Quitar</button>
+        <div data-local-sale-line class="rounded-lg border border-slate-800 bg-slate-900/70 px-2.5 py-2">
+            <div class="mb-1 flex items-center justify-between">
+                <p class="local-sale-line-title text-[9px] font-black uppercase tracking-wide text-slate-500">${line.saleType === 'service' ? 'Servicio' : 'Producto'} ${index + 1}</p>
+                <button type="button" data-remove-local-sale-line class="rounded-md px-2 py-1 text-[10px] font-bold text-rose-300 hover:bg-rose-500/10" ${draftLines.length === 1 ? 'disabled' : ''} aria-label="Quitar línea ${index + 1}"><i class="fa-solid fa-trash" aria-hidden="true"></i> Quitar</button>
             </div>
-            <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-                <label class="text-xs font-bold text-slate-300">Tipo
-                    <select class="local-sale-line-type mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white"><option value="product">Producto</option><option value="service">Servicio</option></select>
+            <div class="local-sale-line-grid">
+                <label class="text-[10px] font-bold text-slate-300">Tipo
+                    <select class="local-sale-line-type mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-2 text-xs text-white"><option value="product">Producto</option><option value="service">Servicio</option></select>
                 </label>
-                <label class="local-sale-line-product-wrap text-xs font-bold text-slate-300 sm:col-span-2">Producto del inventario
-                    <select class="local-sale-line-product mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-400"><option value="">Selecciona un producto</option>${productOptions}</select>
+                <label class="local-sale-line-product-wrap text-[10px] font-bold text-slate-300">Producto del inventario
+                    <select class="local-sale-line-product mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-2 text-xs text-white outline-none focus:border-emerald-400"><option value="">Selecciona un producto</option>${productOptions}</select>
                 </label>
-                <label class="local-sale-line-service-wrap hidden text-xs font-bold text-slate-300 sm:col-span-2">Servicio
-                    <select class="local-sale-line-service mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-400"><option value="">Selecciona un servicio</option>${serviceOptions}</select>
+                <label class="local-sale-line-service-wrap hidden text-[10px] font-bold text-slate-300">Servicio
+                    <select class="local-sale-line-service mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-2 text-xs text-white outline-none focus:border-emerald-400"><option value="">Selecciona un servicio</option>${serviceOptions}</select>
                 </label>
-                <label class="text-xs font-bold text-slate-300">Cantidad vendida
-                    <input class="local-sale-line-quantity mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-400" type="number" min="1" max="99999" step="1" value="${escapeHtml(line.quantity || '1')}" required>
+                <label class="text-[10px] font-bold text-slate-300">Cantidad
+                    <input class="local-sale-line-quantity mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-2 text-xs text-white outline-none focus:border-emerald-400" type="number" min="1" max="99999" step="1" value="${escapeHtml(line.quantity || '1')}" required>
                 </label>
-                <label class="text-xs font-bold text-slate-300 sm:col-span-2"><span class="local-sale-line-amount-label"></span>
-                    <input class="local-sale-line-amount mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-400" type="number" min="0.01" max="999999.99" step="0.01" value="${escapeHtml(line.amount)}" data-auto-filled-value="${escapeHtml(line.autoAmount || '')}" placeholder="Ej. 1.30" required>
+                <label class="local-sale-line-amount-wrap text-[10px] font-bold text-slate-300"><span class="local-sale-line-amount-label"></span>
+                    <input class="local-sale-line-amount mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-2 text-xs text-white outline-none focus:border-emerald-400" type="number" min="0.01" max="999999.99" step="0.01" value="${escapeHtml(line.amount)}" data-auto-filled-value="${escapeHtml(line.autoAmount || '')}" placeholder="Ej. 1.30" required>
                 </label>
             </div>
+            <p class="local-sale-line-reference mt-1 min-h-4 text-[10px] text-slate-400" aria-live="polite"></p>
         </div>`).join('');
     draftLines.forEach((line, index) => {
         const row = localSaleLines.querySelectorAll('[data-local-sale-line]')[index];
@@ -1579,20 +1580,18 @@ function updateLocalSaleCurrencyUi() {
     receivedInput.min = '0';
     receivedInput.max = currency === 'COP' ? '999999999999' : '999999999999.99';
     receivedInput.placeholder = currency === 'COP' ? 'Ej. 10000' : currency === 'VES' ? 'Ej. 1000,00' : 'Ej. 10.00';
+    const appliedRate = localSaleVesBaseRate + localSaleVesAdjustment;
+    const rateText = `Tasa para referencia: Bs. ${formatVes(appliedRate)} por USD (tasa automática + ajuste comercial)`;
+    rateStatus.textContent = localSaleVesRateStatus
+        ? `${rateText}; ${localSaleVesRateStatus}`
+        : `${rateText}${localSaleVesRateUpdatedAt ? `; actualizada ${localSaleVesRateUpdatedAt}` : ''}`;
+    rateStatus.classList.remove('hidden');
     if (currency === 'COP') {
         totalLabel.textContent = 'Total cobrado en pesos';
-        rateStatus.classList.add('hidden');
     } else if (currency === 'VES') {
         totalLabel.textContent = 'Total cobrado en bol\u00edvares';
-        const appliedRate = localSaleVesBaseRate + localSaleVesAdjustment;
-        const rateText = `Tasa aplicada: Bs. ${formatVes(appliedRate)} por USD (autom\u00e1tica + ajuste comercial)`;
-        rateStatus.textContent = localSaleVesRateStatus
-            ? `${rateText}; ${localSaleVesRateStatus}`
-            : `${rateText}${localSaleVesRateUpdatedAt ? `; actualizada ${localSaleVesRateUpdatedAt}` : ''}`;
-        rateStatus.classList.remove('hidden');
     } else {
         totalLabel.textContent = 'Total cobrado en d\u00f3lares';
-        rateStatus.classList.add('hidden');
     }
 }
 
@@ -1696,13 +1695,59 @@ function formatLocalSaleAmount(amount, currency) {
     }).format(Number(amount || 0));
 }
 
+function getLocalSaleLineUsdReference(line) {
+    const quantity = Number(line.querySelector('.local-sale-line-quantity').value);
+    if (!Number.isInteger(quantity) || quantity < 1) return null;
+
+    let unitPriceUsd;
+    if (localSaleCurrency.value === 'COP') {
+        if (line.querySelector('.local-sale-line-type').value !== 'product') return null;
+        const productId = line.querySelector('.local-sale-line-product').value;
+        const product = inventoryProducts.find(item => item.product_id === productId);
+        unitPriceUsd = Number(product?.price_usd);
+    } else {
+        unitPriceUsd = Number(line.querySelector('.local-sale-line-amount').value);
+    }
+    if (!Number.isFinite(unitPriceUsd) || unitPriceUsd <= 0) return null;
+    return Math.round(unitPriceUsd * quantity * 100) / 100;
+}
+
 function updateLocalSaleTotalPreview() {
     const currency = localSaleCurrency.value;
     let total = 0;
     const appliedRate = Number((localSaleVesBaseRate + localSaleVesAdjustment).toFixed(6));
+    let referenceUsd = 0;
+    let referenceVes = 0;
+    let referenceLines = 0;
+    let hasCopService = false;
+    let hasCopProductWithoutUsdPrice = false;
+    const saleLineCount = localSaleLines.querySelectorAll('[data-local-sale-line]').length;
     localSaleLines.querySelectorAll('[data-local-sale-line]').forEach(line => {
         const quantity = Number(line.querySelector('.local-sale-line-quantity').value);
         const amount = Number(line.querySelector('.local-sale-line-amount').value);
+        const lineUsdReference = getLocalSaleLineUsdReference(line);
+        const reference = line.querySelector('.local-sale-line-reference');
+        if (lineUsdReference !== null) {
+            const lineVesReference = Math.round(lineUsdReference * appliedRate * 100) / 100;
+            referenceUsd += lineUsdReference;
+            referenceVes += lineVesReference;
+            referenceLines++;
+            reference.textContent = `${formatLocalSaleAmount(lineUsdReference, 'USD')} · ${formatLocalSaleAmount(lineVesReference, 'VES')} al cambio aplicado`;
+            reference.classList.remove('text-slate-400');
+            reference.classList.add('text-emerald-300');
+        } else {
+            const isCopService = currency === 'COP' && line.querySelector('.local-sale-line-type').value === 'service';
+            const selectedProduct = line.querySelector('.local-sale-line-product').value;
+            hasCopService ||= isCopService;
+            hasCopProductWithoutUsdPrice ||= currency === 'COP' && Boolean(selectedProduct);
+            reference.textContent = isCopService
+                ? 'Servicio cobrado en COP; no tiene precio USD para calcular referencia.'
+                : currency === 'COP' && selectedProduct
+                    ? 'Asigna un precio USD en el inventario para mostrar su referencia.'
+                    : 'El total en USD y bolívares aparecerá al completar la línea.';
+            reference.classList.add('text-slate-400');
+            reference.classList.remove('text-emerald-300');
+        }
         if (!Number.isFinite(amount) || amount <= 0) return;
         if (currency === 'COP') {
             total += amount;
@@ -1714,6 +1759,19 @@ function updateLocalSaleTotalPreview() {
         }
     });
     document.getElementById('local-sale-total').textContent = formatLocalSaleAmount(total, currency);
+    const hasAnyReference = referenceLines > 0;
+    const hasCompleteReference = hasAnyReference && referenceLines === saleLineCount;
+    const referenceSuffix = hasAnyReference && !hasCompleteReference ? ' · parcial' : '';
+    document.getElementById('local-sale-total-usd-reference').textContent = hasAnyReference
+        ? `${formatLocalSaleAmount(referenceUsd, 'USD')}${referenceSuffix}`
+        : '—';
+    document.getElementById('local-sale-total-ves-reference').textContent = hasAnyReference
+        ? `${formatLocalSaleAmount(referenceVes, 'VES')}${referenceSuffix}`
+        : '—';
+    const referenceNote = document.getElementById('local-sale-reference-note');
+    referenceNote.textContent = currency === 'COP'
+        ? `El cobro real se registra en COP. La referencia USD/VES usa el precio USD del inventario${hasCopService ? ' y no incluye servicios cobrados en COP' : ''}${hasCopProductWithoutUsdPrice ? ' ni productos sin precio USD configurado' : ''}.`
+        : `Referencias calculadas a partir de los precios en USD ingresados y la tasa aplicada de Bs. ${formatVes(appliedRate)} por USD${referenceLines ? '.' : '. Completa los precios para ver los totales.'}`;
     updateLocalSaleChangePreview(total, currency);
 }
 
@@ -3107,6 +3165,8 @@ localSaleLines.addEventListener('change', event => {
         updateLocalSaleTotalPreview();
     } else if (line && event.target.matches('.local-sale-line-product')) {
         updateLocalSaleLinePriceFromProduct(line, true);
+        updateLocalSaleTotalPreview();
+    } else if (line && event.target.matches('.local-sale-line-service')) {
         updateLocalSaleTotalPreview();
     }
 });

@@ -25,12 +25,21 @@
         .admin-nav-button[aria-current="page"] { background: rgba(168, 131, 74, 0.18); color: #E3CC9A; box-shadow: inset 3px 0 #E3CC9A; }
         .admin-nav-button:not([aria-current="page"]):hover { background: #23241F; color: #fff; }
         .admin-sidebar-hint { display: none; }
+        .local-sale-line-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: .5rem; }
+        @media (min-width: 640px) {
+            .local-sale-line-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .local-sale-line-product-wrap, .local-sale-line-service-wrap, .local-sale-line-amount-wrap { grid-column: 1 / -1; }
+        }
         @media (min-width: 1024px) {
             .admin-layout { grid-template-columns: 15rem minmax(0, 1fr); align-items: start; }
             .admin-sidebar { position: sticky; top: 1.5rem; }
             .admin-sidebar-nav { display: grid; overflow: visible; }
             .admin-nav-button { width: 100%; }
             .admin-sidebar-hint { display: block; }
+        }
+        @media (min-width: 1280px) {
+            .local-sale-line-grid { grid-template-columns: minmax(7rem, .7fr) minmax(13rem, 2fr) minmax(5.5rem, .55fr) minmax(10rem, 1fr); }
+            .local-sale-line-product-wrap, .local-sale-line-service-wrap, .local-sale-line-amount-wrap { grid-column: auto; }
         }
     </style>
     <script src="assets/js/supabase-config.js"></script>
@@ -369,41 +378,57 @@
                         <p class="mt-1 text-xs text-slate-400">Registra productos del inventario y servicios. Solo los productos descuentan existencias.</p>
                     </div>
                 </div>
-                <section class="mb-5 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4 sm:p-5" aria-labelledby="local-sale-form-heading">
-                    <h3 id="local-sale-form-heading" class="text-sm font-black">Registrar venta de productos o servicios</h3>
-                    <form id="local-sale-form" class="mt-4 space-y-4">
-                        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <section class="mb-5 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-3 sm:p-4" aria-labelledby="local-sale-form-heading">
+                    <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                        <h3 id="local-sale-form-heading" class="text-sm font-black">Registrar venta de productos o servicios</h3>
+                        <span class="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-bold text-emerald-200"><i class="fa-solid fa-cash-register mr-1" aria-hidden="true"></i>Punto de venta</span>
+                    </div>
+                    <form id="local-sale-form" class="space-y-3">
+                        <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-[minmax(11rem,.8fr)_minmax(11rem,.8fr)_minmax(0,2fr)]">
                             <label class="text-xs font-bold text-slate-300">Moneda de cobro
-                                <select id="local-sale-currency" name="currency" required class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-400">
+                                <select id="local-sale-currency" name="currency" required class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-emerald-400">
                                     <option value="USD">D&oacute;lares (USD)</option>
                                     <option value="VES">Bol&iacute;vares (VES)</option>
                                     <option value="COP">Pesos colombianos (COP)</option>
                                 </select>
                             </label>
                             <label class="text-xs font-bold text-slate-300">Fecha de venta
-                                <input id="local-sale-date" name="soldOn" type="date" required class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-400">
+                                <input id="local-sale-date" name="soldOn" type="date" required class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-emerald-400">
                             </label>
-                            <p id="local-sale-rate" class="hidden sm:col-span-2 text-[10px] text-slate-400" aria-live="polite"></p>
+                            <p id="local-sale-rate" class="hidden self-end rounded-lg border border-slate-800 bg-slate-950/50 px-3 py-2 text-[10px] text-slate-400" aria-live="polite"></p>
                         </div>
-                        <div id="local-sale-lines" class="space-y-3"></div>
-                        <div class="flex flex-wrap items-center justify-between gap-3">
-                            <div class="flex flex-wrap gap-2">
-                                <button id="add-local-sale-line" type="button" class="rounded-xl border border-emerald-500/40 px-4 py-2.5 text-xs font-bold text-emerald-200 transition hover:bg-emerald-500/10"><i class="fa-solid fa-plus mr-2" aria-hidden="true"></i>Agregar línea</button>
-                                <button id="toggle-add-local-service" type="button" class="rounded-xl border border-sky-500/40 px-4 py-2.5 text-xs font-bold text-sky-200 transition hover:bg-sky-500/10" aria-expanded="false"><i class="fa-solid fa-plus mr-2" aria-hidden="true"></i>Crear servicio</button>
+                        <div class="rounded-xl border border-slate-800 bg-slate-950/40 p-2 sm:p-3">
+                            <div class="mb-2 flex items-center justify-between gap-2 px-1">
+                                <p class="text-[10px] font-black uppercase tracking-wider text-slate-400">Productos y servicios</p>
+                                <p class="text-[10px] text-slate-500">Hasta 30 líneas por venta</p>
                             </div>
-                            <div class="min-w-48 rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-right">
+                            <div id="local-sale-lines" class="space-y-2"></div>
+                            <div class="mt-2 flex flex-wrap gap-2">
+                                <button id="add-local-sale-line" type="button" class="rounded-lg border border-emerald-500/40 px-3 py-2 text-[11px] font-bold text-emerald-200 transition hover:bg-emerald-500/10"><i class="fa-solid fa-plus mr-1.5" aria-hidden="true"></i>Agregar línea</button>
+                                <button id="toggle-add-local-service" type="button" class="rounded-lg border border-sky-500/40 px-3 py-2 text-[11px] font-bold text-sky-200 transition hover:bg-sky-500/10" aria-expanded="false"><i class="fa-solid fa-plus mr-1.5" aria-hidden="true"></i>Crear servicio</button>
+                            </div>
+                        </div>
+                        <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                            <div class="rounded-xl border border-slate-800 bg-slate-950/60 px-3 py-2.5">
                                 <p id="local-sale-total-label" class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Total de la venta</p>
                                 <p id="local-sale-total" class="mt-1 text-lg font-black text-emerald-200">$0.00</p>
                             </div>
-                        </div>
-                        <div class="grid gap-3 rounded-xl border border-slate-800 bg-slate-950/50 p-3 sm:grid-cols-2">
-                            <label for="local-sale-received" class="text-xs font-bold text-slate-300">Monto recibido (<span id="local-sale-received-currency-label">USD</span>)
-                                <input id="local-sale-received" type="number" min="0" step="0.01" inputmode="decimal" autocomplete="off" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-400" placeholder="Ej. 10.00">
-                            </label>
-                            <div aria-live="polite" class="self-end rounded-lg border border-slate-800 px-3 py-2.5">
-                                <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Vuelto para el cliente</p>
-                                <strong id="local-sale-change" class="mt-1 block text-sm font-black text-slate-400">Ingresa el monto recibido</strong>
+                            <div class="rounded-xl border border-slate-800 bg-slate-950/60 px-3 py-2.5">
+                                <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Referencia en USD</p>
+                                <p id="local-sale-total-usd-reference" class="mt-1 text-sm font-black text-slate-100">$0.00</p>
                             </div>
+                            <div class="rounded-xl border border-slate-800 bg-slate-950/60 px-3 py-2.5">
+                                <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Referencia en bolívares</p>
+                                <p id="local-sale-total-ves-reference" class="mt-1 text-sm font-black text-emerald-200">Bs. 0,00</p>
+                            </div>
+                            <label for="local-sale-received" class="rounded-xl border border-slate-800 bg-slate-950/50 px-3 py-2.5 text-[11px] font-bold text-slate-300">Monto recibido (<span id="local-sale-received-currency-label">USD</span>)
+                                <input id="local-sale-received" type="number" min="0" step="0.01" inputmode="decimal" autocomplete="off" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-emerald-400" placeholder="Ej. 10.00">
+                            </label>
+                        </div>
+                        <p id="local-sale-reference-note" class="text-[10px] leading-relaxed text-slate-500"></p>
+                        <div aria-live="polite" class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-800 bg-slate-950/40 px-3 py-2">
+                            <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Vuelto para el cliente</p>
+                            <strong id="local-sale-change" class="text-sm font-black text-slate-400">Ingresa el monto recibido</strong>
                         </div>
                         <div id="add-local-service-panel" class="hidden rounded-xl border border-sky-500/20 bg-slate-950/50 p-3">
                             <p class="mb-2 text-xs font-bold text-sky-200">Nuevo servicio</p>
