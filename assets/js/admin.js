@@ -2348,17 +2348,17 @@ function renderLocalCreditCustomers() {
             <div class="mt-3 grid gap-2 sm:grid-cols-3">${localCreditCustomerCurrencyRows(customer)}</div>
             <form data-local-credit-payment="${escapeHtml(customer.id)}" class="mt-3 rounded-xl border border-emerald-500/15 bg-emerald-500/5 p-2.5">
                 <p class="mb-2 text-[10px] font-black uppercase tracking-wide text-emerald-200">Registrar abono</p>
-                <div class="grid gap-2 sm:grid-cols-[6rem_minmax(6rem,.7fr)_minmax(8rem,1fr)_auto]">
-                    <label class="text-[9px] font-bold text-slate-400">Moneda
+                <div class="grid min-w-0 gap-2 sm:grid-cols-2">
+                    <label class="min-w-0 text-[10px] font-bold text-slate-400">Moneda
                         <select name="currency" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2 py-2 text-xs text-white"><option>USD</option><option>VES</option><option>COP</option></select>
                     </label>
-                    <label class="text-[9px] font-bold text-slate-400">Monto
+                    <label class="min-w-0 text-[10px] font-bold text-slate-400">Monto
                         <input name="amount" type="number" min="0.01" max="999999999999.99" step="0.01" required placeholder="Monto" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2 py-2 text-xs text-white">
                     </label>
-                    <label class="text-[9px] font-bold text-slate-400">Nota (opcional)
+                    <label class="min-w-0 sm:col-span-2 text-[10px] font-bold text-slate-400">Nota (opcional)
                         <input name="note" type="text" maxlength="200" placeholder="Ej. Pago parcial" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2 py-2 text-xs text-white placeholder:text-slate-500">
                     </label>
-                    <button type="submit" class="self-end rounded-lg bg-emerald-700 px-3 py-2 text-[10px] font-black text-white hover:bg-emerald-600">Guardar</button>
+                    <button type="submit" class="w-full sm:col-span-2 rounded-lg bg-emerald-700 px-3 py-2.5 text-xs font-black text-white transition hover:bg-emerald-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300">Registrar abono</button>
                 </div>
                 <p data-credit-payment-status class="mt-2 min-h-4 text-[10px] text-slate-400" role="status" aria-live="polite"></p>
             </form>
