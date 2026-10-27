@@ -1510,20 +1510,20 @@ function getLocalSaleDraftLines() {
         saleType: line.querySelector('.local-sale-line-type').value,
         productId: line.querySelector('.local-sale-line-product').value,
         serviceId: line.querySelector('.local-sale-line-service').value,
+        productQuery: line.querySelector('.local-sale-line-product-search').value,
+        serviceQuery: line.querySelector('.local-sale-line-service-search').value,
         quantity: line.querySelector('.local-sale-line-quantity').value,
         amount: line.querySelector('.local-sale-line-amount').value,
         autoAmount: line.querySelector('.local-sale-line-amount').dataset.autoFilledValue || ''
     }));
 }
 
+function normalizeLocalSaleSearch(value) {
+    return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es').trim();
+}
+
 function renderLocalSaleProductOptions(draftLines = getLocalSaleDraftLines()) {
-    if (!draftLines.length) draftLines = [{ saleType: 'product', productId: '', serviceId: '', quantity: '1', amount: '' }];
-    const productOptions = inventoryProducts.filter(product => product.is_active !== false).map(product => {
-        const unit = product.unit === 'metro' ? 'm' : 'unidades';
-        const soon = product.coming_soon ? ' - Proximamente' : '';
-        return `<option value="${escapeHtml(product.product_id)}">${escapeHtml(product.product_name)} - ${product.stock} ${unit}${soon}</option>`;
-    }).join('');
-    const serviceOptions = localSaleServices.map(service => `<option value="${escapeHtml(service.id)}">${escapeHtml(service.name)} (${escapeHtml(service.unit === 'pagina' ? 'por página' : service.unit === 'unidad' ? 'por unidad' : 'por servicio')})</option>`).join('');
+    if (!draftLines.length) draftLines = [{ saleType: 'product', productId: '', serviceId: '', productQuery: '', serviceQuery: '', quantity: '1', amount: '' }];
     localSaleLines.innerHTML = draftLines.map((line, index) => `
         <div data-local-sale-line class="rounded-lg border border-slate-800 bg-slate-900/70 px-2.5 py-2">
             <div class="mb-1 flex items-center justify-between">
@@ -1535,10 +1535,12 @@ function renderLocalSaleProductOptions(draftLines = getLocalSaleDraftLines()) {
                     <select class="local-sale-line-type mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-2 text-xs text-white"><option value="product">Producto</option><option value="service">Servicio</option></select>
                 </label>
                 <label class="local-sale-line-product-wrap text-[10px] font-bold text-slate-300">Producto del inventario
-                    <select class="local-sale-line-product mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-2 text-xs text-white outline-none focus:border-emerald-400"><option value="">Selecciona un producto</option>${productOptions}</select>
+                    <span class="relative mt-1 block"><i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-500" aria-hidden="true"></i><input type="search" autocomplete="off" class="local-sale-line-product-search w-full rounded-t-lg border border-slate-700 bg-slate-950 py-2 pl-8 pr-2 text-xs text-white outline-none placeholder:text-slate-500 focus:border-emerald-400" placeholder="Buscar por nombre o código" aria-label="Buscar producto por nombre o código"></span>
+                    <select class="local-sale-line-product w-full rounded-b-lg border border-t-0 border-slate-700 bg-slate-950 px-2.5 py-2 text-xs text-white outline-none focus:border-emerald-400"><option value="">Selecciona un producto</option></select>
                 </label>
                 <label class="local-sale-line-service-wrap hidden text-[10px] font-bold text-slate-300">Servicio
-                    <select class="local-sale-line-service mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-2 text-xs text-white outline-none focus:border-emerald-400"><option value="">Selecciona un servicio</option>${serviceOptions}</select>
+                    <span class="relative mt-1 block"><i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-500" aria-hidden="true"></i><input type="search" autocomplete="off" class="local-sale-line-service-search w-full rounded-t-lg border border-slate-700 bg-slate-950 py-2 pl-8 pr-2 text-xs text-white outline-none placeholder:text-slate-500 focus:border-emerald-400" placeholder="Buscar servicio" aria-label="Buscar servicio"></span>
+                    <select class="local-sale-line-service w-full rounded-b-lg border border-t-0 border-slate-700 bg-slate-950 px-2.5 py-2 text-xs text-white outline-none focus:border-emerald-400"><option value="">Selecciona un servicio</option></select>
                 </label>
                 <label class="text-[10px] font-bold text-slate-300">Cantidad
                     <input class="local-sale-line-quantity mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-2 text-xs text-white outline-none focus:border-emerald-400" type="number" min="1" max="99999" step="1" value="${escapeHtml(line.quantity || '1')}" required>
@@ -1552,10 +1554,13 @@ function renderLocalSaleProductOptions(draftLines = getLocalSaleDraftLines()) {
     draftLines.forEach((line, index) => {
         const row = localSaleLines.querySelectorAll('[data-local-sale-line]')[index];
         row.querySelector('.local-sale-line-type').value = line.saleType || 'product';
+        row.querySelector('.local-sale-line-product-search').value = line.productQuery || '';
+        row.querySelector('.local-sale-line-service-search').value = line.serviceQuery || '';
         row.querySelector('.local-sale-line-product').value = line.productId || '';
         row.querySelector('.local-sale-line-service').value = line.serviceId || '';
         const amountInput = row.querySelector('.local-sale-line-amount');
         if (line.autoAmount) amountInput.dataset.autoFilledValue = line.autoAmount;
+        updateLocalSaleLineSearchOptions(row, line.productId || '', line.serviceId || '');
         updateLocalSaleLineTypeUi(row);
     });
     document.getElementById('add-local-sale-line').disabled = draftLines.length >= 30;
@@ -1563,6 +1568,32 @@ function renderLocalSaleProductOptions(draftLines = getLocalSaleDraftLines()) {
     updateLocalSaleTotalPreview();
 }
 
+function updateLocalSaleLineSearchOptions(row, desiredProductId = '', desiredServiceId = '') {
+    const productSelect = row.querySelector('.local-sale-line-product');
+    const selectedProductId = desiredProductId || productSelect.value;
+    const productQuery = normalizeLocalSaleSearch(row.querySelector('.local-sale-line-product-search').value);
+    const products = inventoryProducts.filter(product => {
+        if (product.is_active === false) return false;
+        return !productQuery || normalizeLocalSaleSearch(`${product.product_name} ${product.product_id}`).includes(productQuery) || product.product_id === selectedProductId;
+    });
+    productSelect.innerHTML = '<option value="">Selecciona un producto</option>' + products.map(product => {
+        const unit = product.unit === 'metro' ? 'm' : 'unidades';
+        const soon = product.coming_soon ? ' - Próximamente' : '';
+        return `<option value="${escapeHtml(product.product_id)}">${escapeHtml(product.product_name)} - ${product.stock} ${unit}${soon}</option>`;
+    }).join('');
+    if (products.some(product => product.product_id === selectedProductId)) productSelect.value = selectedProductId;
+
+    const serviceSelect = row.querySelector('.local-sale-line-service');
+    const selectedServiceId = desiredServiceId || serviceSelect.value;
+    const serviceQuery = normalizeLocalSaleSearch(row.querySelector('.local-sale-line-service-search').value);
+    const services = localSaleServices.filter(service => !serviceQuery
+        || normalizeLocalSaleSearch(`${service.name} ${service.unit}`).includes(serviceQuery)
+        || service.id === selectedServiceId);
+    serviceSelect.innerHTML = '<option value="">Selecciona un servicio</option>' + services.map(service =>
+        `<option value="${escapeHtml(service.id)}">${escapeHtml(service.name)} (${escapeHtml(service.unit === 'pagina' ? 'por página' : service.unit === 'unidad' ? 'por unidad' : 'por servicio')})</option>`
+    ).join('');
+    if (services.some(service => service.id === selectedServiceId)) serviceSelect.value = selectedServiceId;
+}
 function updateLocalSaleCurrencyUi() {
     const currency = localSaleCurrency.value;
     const totalLabel = document.getElementById('local-sale-total-label');
@@ -3456,7 +3487,12 @@ localSaleLines.addEventListener('change', event => {
 });
 localSaleLines.addEventListener('input', event => {
     const line = event.target.closest('[data-local-sale-line]');
-    if (line && event.target.matches('.local-sale-line-quantity') && localSaleCurrency.value === 'COP') {
+    if (!line) return;
+    if (event.target.matches('.local-sale-line-product-search, .local-sale-line-service-search')) {
+        updateLocalSaleLineSearchOptions(line);
+        return;
+    }
+    if (event.target.matches('.local-sale-line-quantity') && localSaleCurrency.value === 'COP') {
         updateLocalSaleLinePriceFromProduct(line);
     }
     updateLocalSaleTotalPreview();
@@ -3475,7 +3511,7 @@ localSaleLines.addEventListener('click', event => {
 document.getElementById('add-local-sale-line').addEventListener('click', () => {
     const drafts = getLocalSaleDraftLines();
     if (drafts.length >= 30) return;
-    drafts.push({ saleType: 'product', productId: '', serviceId: '', quantity: '1', amount: '' });
+    drafts.push({ saleType: 'product', productId: '', serviceId: '', productQuery: '', serviceQuery: '', quantity: '1', amount: '' });
     renderLocalSaleProductOptions(drafts);
 });
 localSaleCurrency.addEventListener('change', handleLocalSaleCurrencyChange);
