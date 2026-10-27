@@ -1534,13 +1534,15 @@ function renderLocalSaleProductOptions(draftLines = getLocalSaleDraftLines()) {
                 <label class="text-[10px] font-bold text-slate-300">Tipo
                     <select class="local-sale-line-type mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-2 text-xs text-white"><option value="product">Producto</option><option value="service">Servicio</option></select>
                 </label>
-                <label class="local-sale-line-product-wrap text-[10px] font-bold text-slate-300">Producto del inventario
-                    <span class="relative mt-1 block"><i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-500" aria-hidden="true"></i><input type="search" autocomplete="off" class="local-sale-line-product-search w-full rounded-t-lg border border-slate-700 bg-slate-950 py-2 pl-8 pr-2 text-xs text-white outline-none placeholder:text-slate-500 focus:border-emerald-400" placeholder="Buscar por nombre o código" aria-label="Buscar producto por nombre o código"></span>
-                    <select class="local-sale-line-product w-full rounded-b-lg border border-t-0 border-slate-700 bg-slate-950 px-2.5 py-2 text-xs text-white outline-none focus:border-emerald-400"><option value="">Selecciona un producto</option></select>
+                <label class="local-sale-line-product-wrap relative text-[10px] font-bold text-slate-300">Producto del inventario
+                    <span class="relative mt-1 block"><i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-500" aria-hidden="true"></i><input type="search" autocomplete="off" class="local-sale-line-product-search w-full rounded-lg border border-slate-700 bg-slate-950 py-2 pl-8 pr-2 text-xs text-white outline-none placeholder:text-slate-500 focus:border-emerald-400" placeholder="Buscar por nombre o código" aria-label="Buscar producto por nombre o código" aria-autocomplete="list"></span>
+                    <div class="local-sale-product-results absolute left-0 right-0 top-full z-50 mt-1 hidden max-h-56 overflow-y-auto rounded-lg border border-slate-700 bg-slate-900 p-1 shadow-xl" role="listbox"></div>
+                    <select class="local-sale-line-product hidden"><option value="">Selecciona un producto</option></select>
                 </label>
-                <label class="local-sale-line-service-wrap hidden text-[10px] font-bold text-slate-300">Servicio
-                    <span class="relative mt-1 block"><i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-500" aria-hidden="true"></i><input type="search" autocomplete="off" class="local-sale-line-service-search w-full rounded-t-lg border border-slate-700 bg-slate-950 py-2 pl-8 pr-2 text-xs text-white outline-none placeholder:text-slate-500 focus:border-emerald-400" placeholder="Buscar servicio" aria-label="Buscar servicio"></span>
-                    <select class="local-sale-line-service w-full rounded-b-lg border border-t-0 border-slate-700 bg-slate-950 px-2.5 py-2 text-xs text-white outline-none focus:border-emerald-400"><option value="">Selecciona un servicio</option></select>
+                <label class="local-sale-line-service-wrap relative hidden text-[10px] font-bold text-slate-300">Servicio
+                    <span class="relative mt-1 block"><i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-500" aria-hidden="true"></i><input type="search" autocomplete="off" class="local-sale-line-service-search w-full rounded-lg border border-slate-700 bg-slate-950 py-2 pl-8 pr-2 text-xs text-white outline-none placeholder:text-slate-500 focus:border-emerald-400" placeholder="Buscar servicio" aria-label="Buscar servicio" aria-autocomplete="list"></span>
+                    <div class="local-sale-service-results absolute left-0 right-0 top-full z-50 mt-1 hidden max-h-56 overflow-y-auto rounded-lg border border-slate-700 bg-slate-900 p-1 shadow-xl" role="listbox"></div>
+                    <select class="local-sale-line-service hidden"><option value="">Selecciona un servicio</option></select>
                 </label>
                 <label class="text-[10px] font-bold text-slate-300">Cantidad
                     <input class="local-sale-line-quantity mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-2 text-xs text-white outline-none focus:border-emerald-400" type="number" min="1" max="99999" step="1" value="${escapeHtml(line.quantity || '1')}" required>
@@ -1582,6 +1584,16 @@ function updateLocalSaleLineSearchOptions(row, desiredProductId = '', desiredSer
         return `<option value="${escapeHtml(product.product_id)}">${escapeHtml(product.product_name)} - ${product.stock} ${unit}${soon}</option>`;
     }).join('');
     if (products.some(product => product.product_id === selectedProductId)) productSelect.value = selectedProductId;
+    const productResults = row.querySelector('.local-sale-product-results');
+    if (productQuery) {
+        productResults.innerHTML = products.length
+            ? products.slice(0, 8).map(product => `<button type="button" role="option" aria-selected="false" data-select-local-sale-product="${escapeHtml(product.product_id)}" class="flex w-full items-center justify-between gap-3 rounded-md px-2.5 py-2 text-left text-xs text-slate-100 transition hover:bg-emerald-500/10"><span class="min-w-0"><span class="block truncate font-bold">${escapeHtml(product.product_name)}</span><span class="mt-0.5 block text-[10px] text-slate-400">Código ${escapeHtml(product.product_id)}</span></span><span class="shrink-0 text-[10px] text-slate-400">${product.stock} ${product.unit === 'metro' ? 'm' : 'uds.'}</span></button>`).join('')
+            : '<p class="px-2.5 py-2 text-xs text-slate-400">No hay productos que coincidan.</p>';
+        productResults.classList.remove('hidden');
+    } else {
+        productResults.innerHTML = '';
+        productResults.classList.add('hidden');
+    }
 
     const serviceSelect = row.querySelector('.local-sale-line-service');
     const selectedServiceId = desiredServiceId || serviceSelect.value;
@@ -1593,6 +1605,16 @@ function updateLocalSaleLineSearchOptions(row, desiredProductId = '', desiredSer
         `<option value="${escapeHtml(service.id)}">${escapeHtml(service.name)} (${escapeHtml(service.unit === 'pagina' ? 'por página' : service.unit === 'unidad' ? 'por unidad' : 'por servicio')})</option>`
     ).join('');
     if (services.some(service => service.id === selectedServiceId)) serviceSelect.value = selectedServiceId;
+    const serviceResults = row.querySelector('.local-sale-service-results');
+    if (serviceQuery) {
+        serviceResults.innerHTML = services.length
+            ? services.slice(0, 8).map(service => `<button type="button" role="option" aria-selected="false" data-select-local-sale-service="${escapeHtml(service.id)}" class="block w-full rounded-md px-2.5 py-2 text-left text-xs font-bold text-slate-100 transition hover:bg-emerald-500/10">${escapeHtml(service.name)} <span class="font-normal text-slate-400">· ${escapeHtml(service.unit === 'pagina' ? 'por página' : service.unit === 'unidad' ? 'por unidad' : 'por servicio')}</span></button>`).join('')
+            : '<p class="px-2.5 py-2 text-xs text-slate-400">No hay servicios que coincidan.</p>';
+        serviceResults.classList.remove('hidden');
+    } else {
+        serviceResults.innerHTML = '';
+        serviceResults.classList.add('hidden');
+    }
 }
 function updateLocalSaleCurrencyUi() {
     const currency = localSaleCurrency.value;
@@ -1675,8 +1697,8 @@ function updateLocalSaleLineTypeUi(row) {
     const isService = row.querySelector('.local-sale-line-type').value === 'service';
     row.querySelector('.local-sale-line-product-wrap').classList.toggle('hidden', isService);
     row.querySelector('.local-sale-line-service-wrap').classList.toggle('hidden', !isService);
-    row.querySelector('.local-sale-line-product').required = !isService;
-    row.querySelector('.local-sale-line-service').required = isService;
+    row.querySelector('.local-sale-line-product').required = false;
+    row.querySelector('.local-sale-line-service').required = false;
     row.querySelector('.local-sale-line-title').textContent = `${isService ? 'Servicio' : 'Producto'} ${[...localSaleLines.querySelectorAll('[data-local-sale-line]')].indexOf(row) + 1}`;
 }
 
@@ -3472,6 +3494,9 @@ localSaleLines.addEventListener('change', event => {
     if (line && event.target.matches('.local-sale-line-type')) {
         line.querySelector('.local-sale-line-product').value = '';
         line.querySelector('.local-sale-line-service').value = '';
+        line.querySelector('.local-sale-line-product-search').value = '';
+        line.querySelector('.local-sale-line-service-search').value = '';
+        updateLocalSaleLineSearchOptions(line);
         const amountInput = line.querySelector('.local-sale-line-amount');
         amountInput.value = '';
         delete amountInput.dataset.autoFilledValue;
@@ -3489,7 +3514,24 @@ localSaleLines.addEventListener('input', event => {
     const line = event.target.closest('[data-local-sale-line]');
     if (!line) return;
     if (event.target.matches('.local-sale-line-product-search, .local-sale-line-service-search')) {
+        if (event.target.matches('.local-sale-line-product-search')) {
+            const selected = inventoryProducts.find(product => product.product_id === line.querySelector('.local-sale-line-product').value);
+            if (selected && normalizeLocalSaleSearch(selected.product_name) !== normalizeLocalSaleSearch(event.target.value)) {
+                line.querySelector('.local-sale-line-product').value = '';
+                const amount = line.querySelector('.local-sale-line-amount');
+                if (amount.dataset.autoFilledValue) {
+                    amount.value = '';
+                    delete amount.dataset.autoFilledValue;
+                }
+            }
+        } else {
+            const selected = localSaleServices.find(service => service.id === line.querySelector('.local-sale-line-service').value);
+            if (selected && normalizeLocalSaleSearch(selected.name) !== normalizeLocalSaleSearch(event.target.value)) {
+                line.querySelector('.local-sale-line-service').value = '';
+            }
+        }
         updateLocalSaleLineSearchOptions(line);
+        updateLocalSaleTotalPreview();
         return;
     }
     if (event.target.matches('.local-sale-line-quantity') && localSaleCurrency.value === 'COP') {
@@ -3500,6 +3542,31 @@ localSaleLines.addEventListener('input', event => {
 });
 document.getElementById('local-sale-received').addEventListener('input', updateLocalSaleTotalPreview);
 localSaleLines.addEventListener('click', event => {
+    const productOption = event.target.closest('[data-select-local-sale-product]');
+    if (productOption) {
+        const line = productOption.closest('[data-local-sale-line]');
+        const product = inventoryProducts.find(item => item.product_id === productOption.dataset.selectLocalSaleProduct);
+        if (!line || !product) return;
+        line.querySelector('.local-sale-line-product').value = product.product_id;
+        line.querySelector('.local-sale-line-product-search').value = product.product_name;
+        updateLocalSaleLineSearchOptions(line);
+        line.querySelector('.local-sale-product-results').classList.add('hidden');
+        updateLocalSaleLinePriceFromProduct(line, true);
+        updateLocalSaleTotalPreview();
+        return;
+    }
+    const serviceOption = event.target.closest('[data-select-local-sale-service]');
+    if (serviceOption) {
+        const line = serviceOption.closest('[data-local-sale-line]');
+        const service = localSaleServices.find(item => item.id === serviceOption.dataset.selectLocalSaleService);
+        if (!line || !service) return;
+        line.querySelector('.local-sale-line-service').value = service.id;
+        line.querySelector('.local-sale-line-service-search').value = service.name;
+        updateLocalSaleLineSearchOptions(line);
+        line.querySelector('.local-sale-service-results').classList.add('hidden');
+        updateLocalSaleTotalPreview();
+        return;
+    }
     const removeButton = event.target.closest('[data-remove-local-sale-line]');
     if (!removeButton) return;
     const drafts = getLocalSaleDraftLines();
