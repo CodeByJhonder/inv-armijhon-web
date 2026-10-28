@@ -3449,8 +3449,9 @@ localCreditCustomerList.addEventListener('change', event => {
     const currencySelect = event.target.closest('form[data-local-credit-payment] select[name="currency"]');
     if (!currencySelect) return;
     const amountInput = currencySelect.form.elements.amount;
+    amountInput.min = currencySelect.value === 'COP' ? '1' : '0.01';
     amountInput.step = currencySelect.value === 'COP' ? '1' : '0.01';
-    amountInput.max = '999999999999.99';
+    amountInput.max = currencySelect.value === 'COP' ? '999999999999' : '999999999999.99';
     amountInput.placeholder = currencySelect.value === 'COP' ? 'Monto entero' : 'Monto';
 });
 localCreditCustomerList.addEventListener('click', async event => {
