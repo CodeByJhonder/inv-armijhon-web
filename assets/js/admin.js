@@ -240,15 +240,17 @@ function renderInsuranceCases() {
         const legacyDetails = item.customer_name || item.customer_document || item.vehicle_make || item.vehicle_model || item.vehicle_plate
             ? `<p class="mb-3 rounded-lg border border-slate-800 bg-slate-950/50 p-3 text-[10px] text-slate-400">Registro anterior: ${escapeHtml(item.customer_name || '')} ${escapeHtml(item.customer_document || '')} · ${escapeHtml([item.vehicle_make, item.vehicle_model, item.vehicle_year, item.vehicle_plate].filter(Boolean).join(' · '))}</p>`
             : '';
-        return `<article class="rounded-2xl border border-slate-800 bg-slate-900 p-4 sm:p-5">
+        return `<article class="admin-record-row rounded-2xl border border-slate-800 bg-slate-900 p-4 sm:p-5">
             <div class="mb-4 flex flex-wrap items-start justify-between gap-3 border-b border-slate-800 pb-3">
                 <div class="min-w-0">
                     <p class="text-[9px] font-black uppercase tracking-widest text-emerald-300">${sourceLabel} · ${escapeHtml(createdAt)}</p>
                     <h3 class="mt-1 break-words text-base font-black">${escapeHtml(title)}</h3>
-                    <p class="mt-1 text-xs text-slate-400">${escapeHtml(item.sales_location || 'Elorza, Apure')} · ${escapeHtml(item.sales_date || item.created_at?.slice(0, 10) || '')} · ${escapeHtml(item.customer_phone || '')}</p>
+                    <p class="mt-1 text-xs text-slate-400">${escapeHtml(item.sales_location || 'Elorza, Apure')} · ${escapeHtml(item.sales_date || item.created_at?.slice(0, 10) || '')} · ${escapeHtml(item.customer_phone || '')} · <strong class="text-emerald-200">${escapeHtml(insuranceStatuses[item.status] || item.status)}</strong></p>
                 </div>
             </div>
-            <dl class="mb-4 grid grid-cols-2 gap-x-3 gap-y-2 rounded-xl bg-slate-950/60 p-3 text-[10px] sm:grid-cols-3">
+            <details class="mt-2 rounded-xl border border-slate-800 bg-slate-950/25 p-3">
+            <summary class="cursor-pointer text-xs font-bold text-emerald-200">Ver ficha, documentos y editar póliza</summary>
+            <dl class="mb-4 mt-3 grid grid-cols-2 gap-x-3 gap-y-2 rounded-xl bg-slate-950/60 p-3 text-[10px] sm:grid-cols-3">
                 <div><dt class="text-slate-500">Dirección</dt><dd class="break-words text-slate-200">${escapeHtml(item.customer_address || '—')}</dd></div>
                 <div><dt class="text-slate-500">Código postal</dt><dd class="text-slate-200">${escapeHtml(item.customer_postal_code || '—')}</dd></div>
                 <div><dt class="text-slate-500">Correo</dt><dd class="break-all text-slate-200">${escapeHtml(item.customer_email || '—')}</dd></div>
@@ -279,6 +281,7 @@ function renderInsuranceCases() {
                 </div>
                 <button type="submit" class="w-full rounded-xl bg-emerald-700 px-4 py-2.5 text-xs font-black text-white hover:bg-emerald-600 disabled:cursor-wait disabled:opacity-50"><i class="fa-solid fa-floppy-disk mr-2"></i>Guardar ficha</button>
             </form>
+            </details>
         </article>`;
     }).join('') : '<p class="rounded-2xl border border-slate-800 p-6 text-center text-sm text-slate-400 xl:col-span-2">No hay solicitudes que coincidan con este filtro.</p>';
 }
@@ -1418,6 +1421,8 @@ function renderAdminInventory() {
                         <p class="mt-1 text-sm font-black text-sky-200">${productTotalCop}</p>
                     </div>
                 </div>
+                <details class="mt-3 rounded-xl border border-slate-800 bg-slate-950/30 p-2">
+                <summary class="cursor-pointer text-xs font-bold text-sky-200"><i class="fa-solid fa-pen-to-square mr-2" aria-hidden="true"></i>Editar producto: foto y precios</summary>
                 <div class="mt-3 flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-950/50 p-2">
                     <img src="${escapeHtml(product.image_url && product.image_url.includes('/product-images/') ? product.image_url : (productCatalogImageOverrides[product.product_id] || product.image_url || ''))}" alt="" class="h-14 w-14 rounded-lg bg-slate-900 object-contain" loading="lazy" onerror="this.classList.add('hidden')">
                     <div class="min-w-0 flex-1">
@@ -1437,6 +1442,7 @@ function renderAdminInventory() {
                     <p class="text-[10px] leading-relaxed text-slate-500">Sin precio queda como Próximamente; al guardar un precio válido se publica para compra. La imagen está asignada en el catálogo.</p>
                     <button class="w-full rounded-lg border border-violet-400/30 px-3 py-2 text-xs font-bold text-violet-200 transition hover:bg-violet-500/10 disabled:cursor-wait disabled:opacity-50" type="submit">Guardar precios</button>
                 </form>
+                </details>
                 <form class="inventory-stock-form mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-800/70 pt-3" data-product-id="${escapeHtml(product.product_id)}">
                     <label class="text-[11px] font-bold text-slate-400" for="stock-${escapeHtml(product.product_id)}">${product.unit === 'metro' ? 'Existencias (metros)' : 'Existencias (unidades)'}</label>
                     <div class="flex shrink-0 items-center gap-2">
@@ -1908,13 +1914,20 @@ function updateLocalSaleChangePreview(total, currency = localSaleCurrency.value)
 
 function renderLocalSales() {
     if (!localSalesList) return;
-    if (!localSales.length) {
+    const query = normalizeSearchValue(document.getElementById('local-sales-history-search')?.value || '');
+    const matchingBatchIds = query ? new Set(localSales.filter(sale => normalizeSearchValue([
+        sale.product_name, sale.customer_name, sale.sale_type, sale.currency, sale.sold_on
+    ].join(' ')).includes(query)).map(sale => sale.batch_id || sale.id)) : null;
+    const filteredSales = query
+        ? localSales.filter(sale => matchingBatchIds.has(sale.batch_id || sale.id))
+        : localSales;
+    if (!filteredSales.length) {
         localSalesList.innerHTML = '<p class="rounded-2xl border border-slate-800 p-6 text-center text-sm text-slate-400 md:col-span-2 2xl:col-span-3">Todavia no hay ventas locales registradas.</p>';
         updateLocalSaleSelectionUi();
         return;
     }
     const groups = new Map();
-    localSales.forEach(sale => {
+    filteredSales.forEach(sale => {
         const key = sale.batch_id || sale.id;
         if (!groups.has(key)) groups.set(key, []);
         groups.get(key).push(sale);
@@ -2395,17 +2408,25 @@ function localCreditCustomerCurrencyRows(customer) {
 
 function renderLocalCreditCustomers() {
     if (!localCreditCustomerList) return;
-    if (!localCreditCustomers.length) {
+    const query = normalizeSearchValue(document.getElementById('credit-customer-search')?.value || '');
+    const filteredCustomers = query ? localCreditCustomers.filter(customer => normalizeSearchValue(`${customer.full_name} ${customer.phone}`).includes(query)) : localCreditCustomers;
+    if (!filteredCustomers.length && localCreditCustomers.length) {
+        localCreditCustomerList.innerHTML = '<p class="rounded-xl border border-slate-800 bg-slate-900 p-5 text-center text-xs text-slate-400">No hay clientes que coincidan con la búsqueda.</p>';
+        return;
+    }
+    if (!filteredCustomers.length) {
         localCreditCustomerList.innerHTML = '<p class="rounded-xl border border-slate-800 bg-slate-900 p-5 text-center text-xs text-slate-400 2xl:col-span-2">Aún no hay clientes. Registra uno para comenzar a vender fiado.</p>';
         return;
     }
-    localCreditCustomerList.innerHTML = localCreditCustomers.map(customer => `
-        <article class="rounded-2xl border border-slate-800 bg-slate-900 p-3 sm:p-4">
+    localCreditCustomerList.innerHTML = filteredCustomers.map(customer => `
+        <article class="admin-record-row rounded-2xl border border-slate-800 bg-slate-900 p-3 sm:p-4">
             <div class="flex items-start justify-between gap-3">
                 <div class="min-w-0"><h4 class="break-words text-sm font-black text-white">${escapeHtml(customer.full_name)}</h4><p class="mt-1 text-[10px] text-slate-400">${escapeHtml(customer.phone)}</p></div>
                 <button type="button" data-edit-local-credit-customer="${escapeHtml(customer.id)}" class="shrink-0 rounded-lg border border-slate-700 px-2.5 py-1.5 text-[10px] font-bold text-slate-300 hover:bg-slate-800"><i class="fa-solid fa-pen mr-1" aria-hidden="true"></i>Editar</button>
             </div>
             <div class="mt-3 grid gap-2 sm:grid-cols-3">${localCreditCustomerCurrencyRows(customer)}</div>
+            <details class="mt-2 rounded-xl border border-slate-800 bg-slate-950/30 p-2.5">
+                <summary class="cursor-pointer text-xs font-bold text-emerald-200">Registrar abono o consultar movimientos</summary>
             <form data-local-credit-payment="${escapeHtml(customer.id)}" class="mt-3 rounded-xl border border-emerald-500/15 bg-emerald-500/5 p-2.5">
                 <p class="mb-2 text-[10px] font-black uppercase tracking-wide text-emerald-200">Registrar abono</p>
                 <div class="grid min-w-0 gap-2 sm:grid-cols-2">
@@ -2426,6 +2447,7 @@ function renderLocalCreditCustomers() {
                 <button type="button" data-load-local-credit-ledger="${escapeHtml(customer.id)}" class="text-[10px] font-bold text-sky-200 hover:underline">Ver movimientos</button>
                 <div data-local-credit-ledger="${escapeHtml(customer.id)}" class="mt-2 hidden rounded-lg border border-slate-800 bg-slate-950/40 p-2"></div>
             </div>
+            </details>
         </article>`).join('');
 }
 
@@ -2447,6 +2469,7 @@ async function loadLocalCreditCustomers() {
 
 function resetLocalCreditCustomerForm() {
     localCreditCustomerForm.reset();
+    document.getElementById('credit-customer-form-details').open = false;
     document.getElementById('local-credit-customer-id').value = '';
     document.getElementById('local-credit-limit-usd').value = '0';
     document.getElementById('local-credit-limit-ves').value = '0';
@@ -2470,6 +2493,7 @@ function editLocalCreditCustomer(customerId) {
     document.getElementById('save-local-credit-customer').textContent = 'Guardar cambios';
     document.getElementById('cancel-edit-local-credit-customer').classList.remove('hidden');
     document.getElementById('local-credit-customer-form-status').textContent = '';
+    document.getElementById('credit-customer-form-details').open = true;
     document.getElementById('local-credit-customer-name').focus();
 }
 
@@ -3634,6 +3658,8 @@ adminNavigation.addEventListener('click', event => {
 });
 document.getElementById('refresh-insurance-cases').addEventListener('click', loadInsuranceCases);
 document.getElementById('insurance-search').addEventListener('input', renderInsuranceCases);
+document.getElementById('credit-customer-search')?.addEventListener('input', renderLocalCreditCustomers);
+document.getElementById('local-sales-history-search')?.addEventListener('input', renderLocalSales);
 document.getElementById('insurance-status-filter').addEventListener('change', renderInsuranceCases);
 document.getElementById('toggle-insurance-manual-form').addEventListener('click', event => {
     const isHidden = insuranceManualForm.classList.toggle('hidden');

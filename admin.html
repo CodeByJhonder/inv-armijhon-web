@@ -26,6 +26,16 @@
         .admin-nav-button:not([aria-current="page"]):hover { background: #23241F; color: #fff; }
         .admin-sidebar-hint { display: none; }
         .local-sale-line-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: .5rem; }
+        #inventory-list, #insurance-cases-list, #local-credit-customer-list, #local-sales-list { display: flex; flex-direction: column; gap: .55rem; }
+        .admin-record-row { border-radius: .85rem !important; padding: .8rem !important; }
+        #inventory-list .inventory-product { display: grid; grid-template-columns: minmax(0, 1fr); gap: .55rem; }
+        #inventory-list .inventory-product > * { margin-top: 0; }
+        #inventory-list .inventory-product > div:nth-child(2) { margin-top: 0; }
+        #local-sales-list > article { border-radius: .85rem; padding: .75rem .9rem; }
+        #local-credit-customer-list > article { border-radius: .85rem; padding: .75rem .9rem; }
+        #insurance-cases-list > article { border-radius: .85rem; padding: .8rem .9rem; }
+        .admin-list-toolbar { border: 1px solid #334155; border-radius: .85rem; background: rgba(15, 23, 42, .7); padding: .65rem; }
+        html.light .admin-list-toolbar { border-color: #DED4C1; background: #fff; }
         @media (min-width: 640px) {
             .local-sale-line-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
             .local-sale-line-product-wrap, .local-sale-line-service-wrap, .local-sale-line-amount-wrap { grid-column: 1 / -1; }
@@ -36,6 +46,28 @@
             .admin-sidebar-nav { display: grid; overflow: visible; }
             .admin-nav-button { width: 100%; }
             .admin-sidebar-hint { display: block; }
+        }
+        @media (min-width: 1200px) {
+            #local-credit-customer-list > article { display: grid; grid-template-columns: minmax(12rem, .7fr) minmax(24rem, 1.5fr) minmax(14rem, .9fr); align-items: center; }
+            #local-credit-customer-list > article > div:first-child { grid-column: 1; }
+            #local-credit-customer-list > article > div:nth-child(2) { grid-column: 2; margin-top: 0; }
+            #local-credit-customer-list > article > details { grid-column: 3; margin-top: 0; }
+            #insurance-cases-list > article { display: grid; grid-template-columns: minmax(15rem, .8fr) minmax(0, 1.2fr); align-items: center; }
+            #insurance-cases-list > article > div:first-child { margin-bottom: 0; border: 0; padding: 0; }
+            #insurance-cases-list > article > details { margin-top: 0; }
+            #local-sales-list > article { display: grid; grid-template-columns: minmax(15rem, .7fr) minmax(0, 1.3fr); align-items: start; }
+            #local-sales-list > article > ul { margin-top: 0; }
+            #inventory-list .inventory-product { grid-template-columns: minmax(15rem, 1.3fr) minmax(12rem, .9fr) minmax(16rem, 1.2fr); align-items: center; }
+            #inventory-list .inventory-product > div:first-child { grid-column: 1; grid-row: 1; }
+            #inventory-list .inventory-product > div:nth-child(2) { grid-column: 2; grid-row: 1; }
+            #inventory-list .inventory-product > details { grid-column: 3; grid-row: 1 / 4; }
+            #inventory-list .inventory-product > details > .inventory-catalog-form { display: grid; grid-template-columns: 1fr 1fr; align-items: end; }
+            #inventory-list .inventory-product > details > .inventory-catalog-form > p,
+            #inventory-list .inventory-product > details > .inventory-catalog-form > button { grid-column: 1 / -1; }
+            #inventory-list .inventory-product > form.inventory-stock-form { grid-column: 1 / 2; grid-row: 2; }
+            #inventory-list .inventory-product > form.inventory-min-stock-form { grid-column: 2 / 3; grid-row: 2; }
+            #inventory-list .inventory-product > button.stock-history-button { grid-column: 1 / 2; grid-row: 3; }
+            #inventory-list .inventory-product > button.archive-product-button { grid-column: 2 / 4; grid-row: 3; margin-top: 0; }
         }
         @media (min-width: 1280px) {
             .local-sale-line-grid { grid-template-columns: minmax(7rem, .7fr) minmax(13rem, 2fr) minmax(5.5rem, .55fr) minmax(10rem, 1fr); }
@@ -362,7 +394,7 @@
                         <button type="submit" class="rounded-xl bg-emerald-600 px-5 py-3 text-xs font-black text-white hover:bg-emerald-500 disabled:opacity-50"><i class="fa-solid fa-floppy-disk mr-2"></i>Registrar venta</button>
                     </form>
                 </section>
-                <div class="mb-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_14rem]">
+                <div class="admin-list-toolbar mb-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_14rem]">
                     <label class="sr-only" for="insurance-search">Buscar aliado, teléfono, dirección o correo</label>
                     <input id="insurance-search" type="search" placeholder="Buscar aliado, teléfono, dirección o correo" class="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white placeholder:text-slate-500">
                     <label class="sr-only" for="insurance-status-filter">Filtrar por estado</label>
@@ -472,9 +504,11 @@
                     </div>
                     <button id="refresh-credit-customers" type="button" class="rounded-xl border border-slate-700 px-4 py-2 text-xs font-bold hover:bg-slate-800"><i class="fa-solid fa-rotate mr-2" aria-hidden="true"></i>Actualizar clientes</button>
                 </div>
-                <div class="grid items-start gap-4 xl:grid-cols-[minmax(18rem,.75fr)_minmax(0,1.5fr)]">
+                <div class="grid items-start gap-3">
                     <section class="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4" aria-labelledby="credit-customer-form-heading">
                         <h3 id="credit-customer-form-heading" class="text-sm font-black">Registrar cliente</h3>
+                        <details id="credit-customer-form-details" class="mt-3 rounded-xl border border-slate-800 bg-slate-950/25 p-3">
+                            <summary class="cursor-pointer text-xs font-bold text-amber-200">Nuevo cliente o editar límites</summary>
                         <form id="local-credit-customer-form" class="mt-3 space-y-3">
                             <input id="local-credit-customer-id" type="hidden">
                             <label class="block text-xs font-bold text-slate-300">Nombre completo
@@ -503,6 +537,7 @@
                                 <button id="cancel-edit-local-credit-customer" type="button" class="hidden rounded-xl border border-slate-700 px-4 py-2.5 text-xs font-bold hover:bg-slate-800">Cancelar edición</button>
                             </div>
                         </form>
+                        </details>
                     </section>
                     <section aria-labelledby="credit-customer-list-heading">
                         <div class="mb-3 flex flex-wrap items-end justify-between gap-2">
@@ -512,6 +547,11 @@
                             </div>
                             <p id="local-credit-customer-status" class="text-xs text-slate-400" role="status" aria-live="polite"></p>
                         </div>
+                        <label class="admin-list-toolbar relative mb-3 block">
+                            <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" aria-hidden="true"></i>
+                            <span class="sr-only">Buscar cliente por nombre o teléfono</span>
+                            <input id="credit-customer-search" type="search" autocomplete="off" placeholder="Buscar cliente por nombre o teléfono..." class="w-full rounded-lg border border-slate-700 bg-slate-950 py-2.5 pl-9 pr-3 text-sm text-white placeholder:text-slate-500 outline-none focus:border-amber-400">
+                        </label>
                         <div id="local-credit-customer-list" class="grid gap-3 2xl:grid-cols-2"></div>
                     </section>
                 </div>
@@ -543,6 +583,11 @@
                         <button id="delete-selected-local-sales" type="button" class="rounded-xl bg-rose-700 px-4 py-2 text-xs font-black text-white hover:bg-rose-600">Eliminar seleccionadas</button>
                     </div>
                 </section>
+                <label class="admin-list-toolbar relative mb-3 block">
+                    <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" aria-hidden="true"></i>
+                    <span class="sr-only">Buscar en el historial de ventas</span>
+                    <input id="local-sales-history-search" type="search" autocomplete="off" placeholder="Buscar producto, servicio o cliente..." class="w-full rounded-lg border border-slate-700 bg-slate-950 py-2.5 pl-9 pr-3 text-sm text-white placeholder:text-slate-500 outline-none focus:border-emerald-400">
+                </label>
                 <div id="local-sales-list" class="grid gap-3 md:grid-cols-2 2xl:grid-cols-3"></div>
             </section>
 
@@ -764,7 +809,7 @@
     <script src="assets/js/payment-config.js"></script>
     <script src="assets/js/chat-push.js"></script>
     <script src="assets/js/chat-attachments.js"></script>
-    <script src="assets/js/admin.js?v=20261028-1"></script>
+    <script src="assets/js/admin.js?v=20261028-2"></script>
     <script>
         if (!window.supabaseClient && !window.supabase) {
             document.getElementById('login-status').textContent = 'No se pudo cargar Supabase. Revisa tu conexión a internet y recarga la página.';
