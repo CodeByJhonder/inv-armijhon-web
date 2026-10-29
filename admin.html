@@ -500,7 +500,7 @@
                 <div class="mb-5 flex flex-wrap items-end justify-between gap-3">
                     <div>
                         <h2 id="credit-customers-heading" class="text-xl font-black"><i class="fa-solid fa-handshake mr-2 text-amber-300" aria-hidden="true"></i>Clientes y fiados</h2>
-                        <p class="mt-1 text-xs text-slate-400">Administra límites por moneda, saldos pendientes y abonos. Cada venta fiada descuenta el inventario al registrarse.</p>
+                        <p class="mt-1 text-xs text-slate-400">Consulta lo que debe cada cliente y registra sus abonos. Las deudas en bolívares se actualizan con la tasa vigente.</p>
                     </div>
                     <button id="refresh-credit-customers" type="button" class="rounded-xl border border-slate-700 px-4 py-2 text-xs font-bold hover:bg-slate-800"><i class="fa-solid fa-rotate mr-2" aria-hidden="true"></i>Actualizar clientes</button>
                 </div>
@@ -508,7 +508,7 @@
                     <section class="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4" aria-labelledby="credit-customer-form-heading">
                         <h3 id="credit-customer-form-heading" class="text-sm font-black">Registrar cliente</h3>
                         <details id="credit-customer-form-details" class="mt-3 rounded-xl border border-slate-800 bg-slate-950/25 p-3">
-                            <summary class="cursor-pointer text-xs font-bold text-amber-200">Nuevo cliente o editar límites</summary>
+                            <summary class="cursor-pointer text-xs font-bold text-amber-200">Agregar un cliente</summary>
                         <form id="local-credit-customer-form" class="mt-3 space-y-3">
                             <input id="local-credit-customer-id" type="hidden">
                             <label class="block text-xs font-bold text-slate-300">Nombre completo
@@ -517,20 +517,6 @@
                             <label class="block text-xs font-bold text-slate-300">Teléfono
                                 <input id="local-credit-customer-phone" type="tel" maxlength="40" required placeholder="Ej. +58 426 000 0000" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white placeholder:text-slate-500">
                             </label>
-                            <div class="rounded-xl border border-slate-800 bg-slate-950/50 p-3">
-                                <p class="mb-2 text-[10px] font-black uppercase tracking-wide text-slate-400">Límite de crédito por moneda</p>
-                                <div class="grid gap-2 sm:grid-cols-3 xl:grid-cols-1 2xl:grid-cols-3">
-                                    <label class="text-[10px] font-bold text-slate-300">USD
-                                        <input id="local-credit-limit-usd" type="number" min="0" max="999999999999.99" step="0.01" value="0" required class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-2 text-xs text-white">
-                                    </label>
-                                    <label class="text-[10px] font-bold text-slate-300">VES
-                                        <input id="local-credit-limit-ves" type="number" min="0" max="999999999999.99" step="0.01" value="0" required class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-2 text-xs text-white">
-                                    </label>
-                                    <label class="text-[10px] font-bold text-slate-300">COP
-                                        <input id="local-credit-limit-cop" type="number" min="0" max="999999999999.99" step="1" value="0" required class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-2 text-xs text-white">
-                                    </label>
-                                </div>
-                            </div>
                             <p id="local-credit-customer-form-status" class="min-h-4 text-xs text-slate-400" role="status" aria-live="polite"></p>
                             <div class="flex flex-wrap gap-2">
                                 <button id="save-local-credit-customer" type="submit" class="rounded-xl bg-amber-600 px-4 py-2.5 text-xs font-black text-white hover:bg-amber-500">Guardar cliente</button>
@@ -543,7 +529,7 @@
                         <div class="mb-3 flex flex-wrap items-end justify-between gap-2">
                             <div>
                                 <h3 id="credit-customer-list-heading" class="text-sm font-black">Cuentas y saldos</h3>
-                                <p class="mt-1 text-[10px] text-slate-500">El crédito y los saldos se mantienen separados por moneda.</p>
+                                <p class="mt-1 text-[10px] text-slate-500">Saldos pendientes separados por moneda; los servicios se registran en USD o VES.</p>
                             </div>
                             <p id="local-credit-customer-status" class="text-xs text-slate-400" role="status" aria-live="polite"></p>
                         </div>
@@ -809,7 +795,7 @@
     <script src="assets/js/payment-config.js"></script>
     <script src="assets/js/chat-push.js"></script>
     <script src="assets/js/chat-attachments.js"></script>
-    <script src="assets/js/admin.js?v=20261028-2"></script>
+    <script src="assets/js/admin.js?v=20261028-3"></script>
     <script>
         if (!window.supabaseClient && !window.supabase) {
             document.getElementById('login-status').textContent = 'No se pudo cargar Supabase. Revisa tu conexión a internet y recarga la página.';

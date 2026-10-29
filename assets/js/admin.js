@@ -1625,6 +1625,11 @@ function updateLocalSaleLineSearchOptions(row, desiredProductId = '', desiredSer
     }
 }
 function updateLocalSaleCurrencyUi() {
+    const isCredit = localSaleMode.value === 'credit';
+    const hasService = [...localSaleLines.querySelectorAll('.local-sale-line-type')].some(select => select.value === 'service');
+    const copOption = [...localSaleCurrency.options].find(option => option.value === 'COP');
+    if (copOption) copOption.disabled = isCredit && hasService;
+    if (isCredit && hasService && localSaleCurrency.value === 'COP') localSaleCurrency.value = 'USD';
     const currency = localSaleCurrency.value;
     const totalLabel = document.getElementById('local-sale-total-label');
     const rateStatus = document.getElementById('local-sale-rate');
@@ -1687,20 +1692,20 @@ function updateLocalSaleCreditCustomerHint() {
     const customer = localCreditCustomers.find(item => item.id === localSaleCreditCustomer.value);
     if (!customer) {
         hint.textContent = localCreditCustomers.length
-            ? 'Selecciona un cliente para revisar su saldo y crédito disponible.'
+            ? 'Selecciona el cliente al que se le registrará esta deuda.'
             : 'Primero registra un cliente en la sección Clientes y fiados.';
         return;
     }
     const currency = localSaleCurrency.value;
-    const suffix = currency.toLowerCase();
     const balance = currency === 'VES'
         ? Number(customer.balance_ves_usd || 0) * (localSaleVesBaseRate + localSaleVesAdjustment)
-        : Number(customer[`balance_${suffix}`] || 0);
-    const limit = Number(customer[`credit_limit_${suffix}`] || 0);
-    const available = Math.max(0, limit - balance);
-    hint.textContent = `Saldo pendiente: ${formatLocalSaleAmount(balance, currency)} · Límite: ${formatLocalSaleAmount(limit, currency)} · Disponible: ${formatLocalSaleAmount(available, currency)}`;
-    hint.classList.toggle('text-rose-300', balance > limit);
-    hint.classList.toggle('text-slate-400', balance <= limit);
+        : Number(customer[`balance_${currency.toLowerCase()}`] || 0);
+    hint.textContent = `Deuda actual en ${currency}: ${formatLocalSaleAmount(balance, currency)}. La nueva venta se sumará a ese saldo.`;
+    if (localSaleMode.value === 'credit' && [...localSaleLines.querySelectorAll('.local-sale-line-type')].some(select => select.value === 'service')) {
+        hint.textContent += ' Los servicios fiados se registran en USD o VES.';
+    }
+    hint.classList.toggle('text-amber-200', balance > 0);
+    hint.classList.toggle('text-slate-400', balance <= 0);
 }
 
 function updateLocalSaleLineTypeUi(row) {
@@ -2389,19 +2394,22 @@ function renderLocalSaleCreditCustomerOptions() {
 
 function localCreditCustomerCurrencyRows(customer) {
     return [
-        ['USD', 'balance_usd', 'credit_limit_usd'],
-        ['VES', 'balance_ves_usd', 'credit_limit_ves'],
-        ['COP', 'balance_cop', 'credit_limit_cop']
-    ].map(([currency, balanceKey, limitKey]) => {
+        ['USD', 'balance_usd'],
+        ['VES', 'balance_ves_usd'],
+        ['COP', 'balance_cop']
+    ].map(([currency, balanceKey]) => {
         const rate = localSaleVesBaseRate + localSaleVesAdjustment;
         const balance = currency === 'VES'
             ? Number(customer[balanceKey] || 0) * rate
             : Number(customer[balanceKey] || 0);
-        const limit = Number(customer[limitKey] || 0);
-        const available = Math.max(0, limit - balance);
+        const balanceNote = currency === 'VES' && balance > 0
+            ? `Base ${formatLocalSaleAmount(customer[balanceKey] || 0, 'USD')} · tasa actual Bs. ${formatVes(rate)} / USD`
+            : currency === 'USD' && balance > 0
+                ? `Equivale a ${formatLocalSaleAmount(balance * rate, 'VES')} a la tasa actual`
+                : '';
         return `<div class="rounded-lg border border-slate-800 bg-slate-950/50 px-2.5 py-2">
             <div class="flex items-center justify-between gap-2"><span class="text-[10px] font-black text-slate-400">${currency}</span><strong class="text-xs ${balance > 0 ? 'text-amber-200' : 'text-slate-200'}">${formatLocalSaleAmount(balance, currency)}</strong></div>
-            <p class="mt-1 text-[9px] text-slate-500">Límite ${formatLocalSaleAmount(limit, currency)} · disponible ${formatLocalSaleAmount(available, currency)}${currency === 'VES' ? `<br>Base ${formatLocalSaleAmount(customer[balanceKey] || 0, 'USD')} · tasa actual Bs. ${formatVes(rate)} / USD` : ''}</p>
+            <p class="mt-1 text-[9px] text-slate-500">${balance > 0 ? 'Debe' : 'Sin deuda'}${balanceNote ? `<br>${balanceNote}` : ''}</p>
         </div>`;
     }).join('');
 }
@@ -2471,9 +2479,6 @@ function resetLocalCreditCustomerForm() {
     localCreditCustomerForm.reset();
     document.getElementById('credit-customer-form-details').open = false;
     document.getElementById('local-credit-customer-id').value = '';
-    document.getElementById('local-credit-limit-usd').value = '0';
-    document.getElementById('local-credit-limit-ves').value = '0';
-    document.getElementById('local-credit-limit-cop').value = '0';
     document.getElementById('credit-customer-form-heading').textContent = 'Registrar cliente';
     document.getElementById('save-local-credit-customer').textContent = 'Guardar cliente';
     document.getElementById('cancel-edit-local-credit-customer').classList.add('hidden');
@@ -2486,10 +2491,7 @@ function editLocalCreditCustomer(customerId) {
     document.getElementById('local-credit-customer-id').value = customer.id;
     document.getElementById('local-credit-customer-name').value = customer.full_name;
     document.getElementById('local-credit-customer-phone').value = customer.phone;
-    document.getElementById('local-credit-limit-usd').value = customer.credit_limit_usd;
-    document.getElementById('local-credit-limit-ves').value = customer.credit_limit_ves;
-    document.getElementById('local-credit-limit-cop').value = customer.credit_limit_cop;
-    document.getElementById('credit-customer-form-heading').textContent = 'Editar cliente y límites';
+    document.getElementById('credit-customer-form-heading').textContent = 'Editar cliente';
     document.getElementById('save-local-credit-customer').textContent = 'Guardar cambios';
     document.getElementById('cancel-edit-local-credit-customer').classList.remove('hidden');
     document.getElementById('local-credit-customer-form-status').textContent = '';
@@ -2508,10 +2510,7 @@ async function saveLocalCreditCustomer(event) {
         const { error } = await supabaseClient.rpc('admin_save_local_sale_customer', {
             p_customer_id: customerId,
             p_full_name: document.getElementById('local-credit-customer-name').value.trim(),
-            p_phone: document.getElementById('local-credit-customer-phone').value.trim(),
-            p_credit_limit_usd: Number(document.getElementById('local-credit-limit-usd').value),
-            p_credit_limit_ves: Number(document.getElementById('local-credit-limit-ves').value),
-            p_credit_limit_cop: Number(document.getElementById('local-credit-limit-cop').value)
+            p_phone: document.getElementById('local-credit-customer-phone').value.trim()
         });
         if (error) throw error;
         resetLocalCreditCustomerForm();
@@ -2617,6 +2616,10 @@ async function registerLocalProductSale(event) {
     }
     if (!items.length || items.length > 30) {
         localSaleFormStatus.textContent = 'Agrega entre 1 y 30 líneas a la venta.';
+        return;
+    }
+    if (isCredit && currency === 'COP' && items.some(item => item.sale_type === 'service')) {
+        localSaleFormStatus.textContent = 'Los servicios fiados solo se registran en USD o VES. Cambia la moneda para continuar.';
         return;
     }
     for (const [index, item] of items.entries()) {
@@ -3466,7 +3469,10 @@ document.getElementById('refresh-local-sales').addEventListener('click', loadLoc
 document.getElementById('refresh-credit-customers').addEventListener('click', loadLocalCreditCustomers);
 localCreditCustomerForm.addEventListener('submit', saveLocalCreditCustomer);
 document.getElementById('cancel-edit-local-credit-customer').addEventListener('click', resetLocalCreditCustomerForm);
-localSaleMode.addEventListener('change', updateLocalSaleCreditUi);
+localSaleMode.addEventListener('change', () => {
+    updateLocalSaleCurrencyUi();
+    updateLocalSaleTotalPreview();
+});
 localSaleCreditCustomer.addEventListener('change', updateLocalSaleCreditCustomerHint);
 localCreditCustomerList.addEventListener('submit', registerLocalCreditPayment);
 localCreditCustomerList.addEventListener('change', event => {
