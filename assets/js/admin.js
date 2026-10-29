@@ -3660,6 +3660,7 @@ adminNavigation.addEventListener('click', event => {
     if (button.dataset.adminPage === 'local-sales' || button.dataset.adminPage === 'credit-customers') loadLocalCreditCustomers();
     if (button.dataset.adminPage === 'credit-customers') resetLocalCreditCustomerForm();
     if (button.dataset.adminPage === 'sales-reports') updateLocalSalesExportRange();
+    if (button.dataset.adminPage === 'cash-closing') initCashClosingSection();
     if (button.dataset.adminPage === 'insurance') loadInsuranceCases();
 });
 document.getElementById('refresh-insurance-cases').addEventListener('click', loadInsuranceCases);
@@ -3977,3 +3978,513 @@ supabaseClient.auth.getSession()
     });
 
 initTheme();
+
+
+// ==========================================
+// CIERRE DE CAJA UNIFICADO (LOCAL + WEB)
+// ==========================================
+
+let currentCashClosingPreview = null;
+const cashClosingDateInput = document.getElementById('cash-closing-date');
+const cashClosingRateInput = document.getElementById('cash-closing-rate');
+const previewCashClosingBtn = document.getElementById('preview-cash-closing-btn');
+const saveCashClosingBtn = document.getElementById('save-cash-closing-btn');
+const exportCashClosingExcelBtn = document.getElementById('export-cash-closing-excel');
+const exportCashClosingPdfBtn = document.getElementById('export-cash-closing-pdf');
+const cashClosingStatus = document.getElementById('cash-closing-status');
+const cashClosingAlert = document.getElementById('cash-closing-alert');
+const cashClosingSummary = document.getElementById('cash-closing-summary');
+const cashClosingHistoryList = document.getElementById('cash-closing-history-list');
+const refreshCashClosingHistoryBtn = document.getElementById('refresh-cash-closing-history');
+const cashClosingNotesInput = document.getElementById('cash-closing-notes');
+
+function initCashClosingSection() {
+    if (cashClosingDateInput && !cashClosingDateInput.value) {
+        cashClosingDateInput.value = localDateInputValue();
+    }
+    if (cashClosingDateInput) {
+        cashClosingDateInput.max = localDateInputValue();
+    }
+    if (cashClosingRateInput && !cashClosingRateInput.value) {
+        const rate = (Number(localSaleVesBaseRate) || 849.564) + (Number(localSaleVesAdjustment) || 0);
+        cashClosingRateInput.value = rate.toFixed(2);
+    }
+    loadCashClosingHistory();
+}
+
+function renderCashClosingAlert(data) {
+    if (!cashClosingAlert) return;
+    const alerts = [];
+    if (data.web_sales && data.web_sales.pending_count > 0) {
+        alerts.push(`
+            <div class="flex items-start gap-3 text-amber-200">
+                <i class="fa-solid fa-triangle-exclamation text-lg mt-0.5 text-amber-400"></i>
+                <div class="text-xs">
+                    <strong>Atención:</strong> Hay <strong>${data.web_sales.pending_count} pedido(s) web pendiente(s)</strong> de revisión en esta fecha.
+                    Te recomendamos aprobarlos o revisarlos en la pestaña «Pedidos recibidos» antes de cerrar caja.
+                </div>
+            </div>
+        `);
+    }
+    if (data.is_already_closed && data.existing_closing) {
+        const closedDate = new Date(data.existing_closing.closed_at || data.existing_closing.updated_at).toLocaleString('es-VE');
+        alerts.push(`
+            <div class="flex items-start gap-3 text-emerald-200">
+                <i class="fa-solid fa-circle-check text-lg mt-0.5 text-emerald-400"></i>
+                <div class="text-xs">
+                    <strong>Caja ya cerrada:</strong> Este día fue cerrado formalmente el <strong>${closedDate}</strong>.
+                    Si vuelves a pulsar «Registrar cierre formal», se actualizarán los totales y las notas con las cifras vigentes.
+                </div>
+            </div>
+        `);
+    }
+
+    if (alerts.length) {
+        cashClosingAlert.className = 'mb-5 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 space-y-2';
+        cashClosingAlert.innerHTML = alerts.join('');
+        cashClosingAlert.classList.remove('hidden');
+    } else {
+        cashClosingAlert.className = 'hidden mb-5 rounded-2xl border p-4';
+        cashClosingAlert.innerHTML = '';
+    }
+}
+
+function renderCashClosingPreview(data) {
+    if (!cashClosingSummary) return;
+
+    // Gran Total
+    const grandUsd = document.getElementById('cash-closing-grand-usd');
+    const grandVes = document.getElementById('cash-closing-grand-ves');
+    const totalTx = document.getElementById('cash-closing-total-tx');
+    const rateBadge = document.getElementById('cash-closing-rate-badge');
+
+    if (grandUsd) grandUsd.textContent = `$${Number(data.consolidation.grand_total_usd || 0).toFixed(2)} USD`;
+    if (grandVes) grandVes.textContent = `Bs. ${formatVes(data.consolidation.grand_total_ves || 0)} VES`;
+    if (totalTx) totalTx.textContent = String(data.consolidation.total_transactions || 0);
+    if (rateBadge) rateBadge.textContent = `Bs. ${formatVes(data.exchange_rate)}`;
+
+    // Dinero Físico en Tienda vs Banco
+    const physUsd = document.getElementById('cash-closing-phys-usd');
+    const physVes = document.getElementById('cash-closing-phys-ves');
+    const physCop = document.getElementById('cash-closing-phys-cop');
+    const digVes = document.getElementById('cash-closing-digital-ves');
+
+    if (physUsd) physUsd.textContent = `$${Number(data.consolidation.total_physical_cash_usd || 0).toFixed(2)}`;
+    if (physVes) physVes.textContent = `Bs. ${formatVes(data.consolidation.total_physical_cash_ves || 0)}`;
+    if (physCop) physCop.textContent = formatLocalSaleAmount(data.consolidation.total_physical_cash_cop || 0, 'COP');
+    if (digVes) digVes.textContent = `Bs. ${formatVes(data.consolidation.total_digital_ves || 0)}`;
+
+    // Canal 1: Ventas Locales
+    const localCount = document.getElementById('cash-closing-local-count');
+    if (localCount) localCount.textContent = `${data.local_sales.sales_count + data.local_sales.credit_count} venta(s)`;
+
+    const locCashUsd = document.getElementById('closing-local-cash-usd');
+    const locCashVes = document.getElementById('closing-local-cash-ves');
+    const locCashCop = document.getElementById('closing-local-cash-cop');
+    if (locCashUsd) locCashUsd.textContent = `$${Number(data.local_sales.cash_usd || 0).toFixed(2)}`;
+    if (locCashVes) locCashVes.textContent = `Bs. ${formatVes(data.local_sales.cash_ves || 0)}`;
+    if (locCashCop) locCashCop.textContent = formatLocalSaleAmount(data.local_sales.cash_cop || 0, 'COP');
+
+    const locCredUsd = document.getElementById('closing-local-credit-usd');
+    const locCredVes = document.getElementById('closing-local-credit-ves');
+    const locCredCop = document.getElementById('closing-local-credit-cop');
+    if (locCredUsd) locCredUsd.textContent = `$${Number(data.local_sales.credit_usd || 0).toFixed(2)}`;
+    if (locCredVes) locCredVes.textContent = `Bs. ${formatVes(data.local_sales.credit_ves || 0)}`;
+    if (locCredCop) locCredCop.textContent = formatLocalSaleAmount(data.local_sales.credit_cop || 0, 'COP');
+
+    const locPayUsd = document.getElementById('closing-local-payments-usd');
+    const locPayVes = document.getElementById('closing-local-payments-ves');
+    const locPayCop = document.getElementById('closing-local-payments-cop');
+    if (locPayUsd) locPayUsd.textContent = `$${Number(data.local_sales.payments_usd || 0).toFixed(2)}`;
+    if (locPayVes) locPayVes.textContent = `Bs. ${formatVes(data.local_sales.payments_ves || 0)}`;
+    if (locPayCop) locPayCop.textContent = formatLocalSaleAmount(data.local_sales.payments_cop || 0, 'COP');
+
+    // Canal 2: Ventas Web
+    const webCount = document.getElementById('cash-closing-web-count');
+    if (webCount) webCount.textContent = `${data.web_sales.sales_count} pedido(s)`;
+
+    const webTotVes = document.getElementById('closing-web-total-ves');
+    const webTotUsd = document.getElementById('closing-web-total-usd');
+    if (webTotVes) webTotVes.textContent = `Bs. ${formatVes(data.web_sales.total_ves || 0)}`;
+    if (webTotUsd) webTotUsd.textContent = `$${Number(data.web_sales.total_usd || 0).toFixed(2)}`;
+
+    const webPmCount = document.getElementById('closing-web-pm-count');
+    const webPmVes = document.getElementById('closing-web-pm-ves');
+    if (webPmCount) webPmCount.textContent = `${data.web_sales.pago_movil_count} pago(s)`;
+    if (webPmVes) webPmVes.textContent = `Bs. ${formatVes(data.web_sales.pago_movil_ves || 0)}`;
+
+    const webTfCount = document.getElementById('closing-web-tf-count');
+    const webTfVes = document.getElementById('closing-web-tf-ves');
+    if (webTfCount) webTfCount.textContent = `${data.web_sales.transfer_count} transf.`;
+    if (webTfVes) webTfVes.textContent = `Bs. ${formatVes(data.web_sales.transfer_ves || 0)}`;
+
+    const webPendingBadge = document.getElementById('closing-web-pending-badge');
+    if (webPendingBadge) webPendingBadge.textContent = `${data.web_sales.pending_count} pendiente(s)`;
+
+    // Notas previas si existen
+    if (cashClosingNotesInput && data.existing_closing && data.existing_closing.notes) {
+        cashClosingNotesInput.value = data.existing_closing.notes;
+    }
+
+    // Listas detalladas
+    const localDetailList = document.getElementById('cash-closing-local-detail-list');
+    if (localDetailList) {
+        if (!data.local_sales.items || !data.local_sales.items.length) {
+            localDetailList.innerHTML = '<p class="text-slate-500 py-2">No hubo ventas locales en este día.</p>';
+        } else {
+            localDetailList.innerHTML = data.local_sales.items.map(item => `
+                <div class="flex items-center justify-between border-b border-slate-800/60 py-1.5">
+                    <div>
+                        <span class="font-bold text-white">${escapeHtml(item.product_name)}</span>
+                        <span class="text-[10px] text-slate-500 ml-1">(${item.quantity} ${item.unit || 'unid.'})</span>
+                        ${item.is_credit ? `<span class="ml-1 text-[9px] rounded bg-amber-500/20 text-amber-300 px-1 py-0.2">Fiado: ${escapeHtml(item.customer_name || 'Cliente')}</span>` : ''}
+                    </div>
+                    <span class="font-bold text-slate-200">${formatLocalSaleAmount(item.total_amount, item.currency)}</span>
+                </div>
+            `).join('');
+        }
+    }
+
+    const webDetailList = document.getElementById('cash-closing-web-detail-list');
+    if (webDetailList) {
+        if (!data.web_sales.orders || !data.web_sales.orders.length) {
+            webDetailList.innerHTML = '<p class="text-slate-500 py-2">No hubo pedidos web aprobados en este día.</p>';
+        } else {
+            webDetailList.innerHTML = data.web_sales.orders.map(order => `
+                <div class="flex items-center justify-between border-b border-slate-800/60 py-1.5">
+                    <div>
+                        <span class="font-bold text-white">${escapeHtml(order.customer_name)}</span>
+                        <span class="text-[10px] text-slate-500 ml-1">(${order.payment_method === 'pago_movil' ? 'Pago Móvil' : 'Transferencia'})</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="font-bold text-emerald-300">Bs. ${formatVes(order.total_ves)}</span>
+                        <span class="text-[10px] text-slate-500 ml-1">($${Number(order.total_usd || 0).toFixed(2)})</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+    }
+
+    renderCashClosingAlert(data);
+    cashClosingSummary.classList.remove('hidden');
+}
+
+async function previewCashClosing() {
+    const date = cashClosingDateInput ? cashClosingDateInput.value : '';
+    const rate = Number(cashClosingRateInput ? cashClosingRateInput.value : 0);
+    if (!date) {
+        if (cashClosingStatus) cashClosingStatus.textContent = 'Selecciona una fecha válida.';
+        return;
+    }
+    if (!rate || rate <= 0) {
+        if (cashClosingStatus) cashClosingStatus.textContent = 'Indica una tasa de cambio mayor que cero.';
+        return;
+    }
+
+    if (previewCashClosingBtn) previewCashClosingBtn.disabled = true;
+    if (cashClosingStatus) cashClosingStatus.textContent = 'Consultando ventas locales y pedidos web de ese día...';
+
+    try {
+        const { data, error } = await supabaseClient.rpc('admin_preview_cash_closing', {
+            p_closing_date: date,
+            p_exchange_rate: rate
+        });
+        if (error) throw error;
+        currentCashClosingPreview = data;
+        renderCashClosingPreview(data);
+        if (cashClosingStatus) {
+            cashClosingStatus.textContent = `Previsualización cargada para el ${date}. Revisa las cifras y presiona «Registrar cierre formal» si todo está conforme.`;
+        }
+        if (saveCashClosingBtn) saveCashClosingBtn.disabled = false;
+        if (exportCashClosingExcelBtn) exportCashClosingExcelBtn.disabled = false;
+        if (exportCashClosingPdfBtn) exportCashClosingPdfBtn.disabled = false;
+    } catch (error) {
+        console.error('Error previsualizando cierre de caja:', error);
+        if (cashClosingStatus) cashClosingStatus.textContent = error.message || 'No se pudo cargar el cierre de caja. Verifica la migración SQL en Supabase.';
+    } finally {
+        if (previewCashClosingBtn) previewCashClosingBtn.disabled = false;
+    }
+}
+
+async function saveCashClosing() {
+    if (!currentCashClosingPreview) {
+        if (cashClosingStatus) cashClosingStatus.textContent = 'Primero consulta y previsualiza las cifras del día.';
+        return;
+    }
+    const date = cashClosingDateInput ? cashClosingDateInput.value : '';
+    const rate = Number(cashClosingRateInput ? cashClosingRateInput.value : 0);
+    const notes = cashClosingNotesInput ? cashClosingNotesInput.value.trim() : '';
+
+    if (currentCashClosingPreview.is_already_closed) {
+        const confirmOverwrite = window.confirm(`Ya existe un cierre guardado para la fecha ${date}.\n¿Deseas sobreescribirlo/actualizarlo con las cifras actuales?`);
+        if (!confirmOverwrite) return;
+    }
+
+    if (saveCashClosingBtn) saveCashClosingBtn.disabled = true;
+    if (cashClosingStatus) cashClosingStatus.textContent = 'Guardando cierre formal en la base de datos...';
+
+    try {
+        const { data, error } = await supabaseClient.rpc('admin_save_cash_closing', {
+            p_closing_date: date,
+            p_exchange_rate: rate,
+            p_notes: notes || null
+        });
+        if (error) throw error;
+        if (cashClosingStatus) {
+            cashClosingStatus.textContent = `✓ ¡Cierre de caja para el ${date} guardado exitosamente! Total: $${Number(data.grand_total_usd || 0).toFixed(2)} USD / Bs. ${formatVes(data.grand_total_ves || 0)}.`;
+        }
+        currentCashClosingPreview.is_already_closed = true;
+        currentCashClosingPreview.existing_closing = data;
+        renderCashClosingAlert(currentCashClosingPreview);
+        loadCashClosingHistory();
+    } catch (error) {
+        console.error('Error guardando el cierre de caja:', error);
+        if (cashClosingStatus) cashClosingStatus.textContent = error.message || 'No se pudo guardar el cierre de caja.';
+    } finally {
+        if (saveCashClosingBtn) saveCashClosingBtn.disabled = false;
+    }
+}
+
+async function loadCashClosingHistory() {
+    if (!cashClosingHistoryList) return;
+    try {
+        const { data, error } = await supabaseClient.rpc('admin_list_cash_closings', { p_limit: 30 });
+        if (error) {
+            cashClosingHistoryList.innerHTML = `<p class="text-xs text-red-400 sm:col-span-2 lg:col-span-3">No se pudo cargar el historial: ${escapeHtml(error.message)}</p>`;
+            return;
+        }
+        if (!data || !data.length) {
+            cashClosingHistoryList.innerHTML = `<p class="text-xs text-slate-500 sm:col-span-2 lg:col-span-3">No hay cierres registrados aún. Selecciona una fecha arriba para tu primer cierre.</p>`;
+            return;
+        }
+
+        cashClosingHistoryList.innerHTML = data.map(closing => `
+            <article class="rounded-xl border border-slate-800 bg-slate-950/60 p-4 transition hover:border-violet-500/30">
+                <div class="flex items-start justify-between gap-2 border-b border-slate-800/80 pb-3">
+                    <div>
+                        <span class="text-[10px] font-black uppercase text-violet-300"><i class="fa-solid fa-calendar-day mr-1"></i>${escapeHtml(closing.closing_date)}</span>
+                        <strong class="mt-1 block text-lg font-black text-white">$${Number(closing.grand_total_usd || 0).toFixed(2)} USD</strong>
+                        <span class="text-xs font-bold text-emerald-300">Bs. ${formatVes(closing.grand_total_ves || 0)}</span>
+                    </div>
+                    <span class="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold text-emerald-300">Cerrado</span>
+                </div>
+                <div class="mt-3 grid grid-cols-2 gap-2 text-[11px] text-slate-400">
+                    <div><span class="text-slate-500">Transacciones:</span> <strong class="text-slate-200">${closing.total_transactions}</strong></div>
+                    <div><span class="text-slate-500">Tasa:</span> <strong class="text-slate-200">${formatVes(closing.exchange_rate)}</strong></div>
+                    <div><span class="text-slate-500">Ventas local:</span> <strong class="text-slate-200">${closing.local_sales_count}</strong></div>
+                    <div><span class="text-slate-500">Pedidos web:</span> <strong class="text-slate-200">${closing.web_sales_count}</strong></div>
+                </div>
+                ${closing.notes ? `<p class="mt-2 text-[10px] italic text-slate-400 truncate" title="${escapeHtml(closing.notes)}">Nota: ${escapeHtml(closing.notes)}</p>` : ''}
+                <div class="mt-3 flex items-center justify-between border-t border-slate-800/80 pt-2 text-[10px]">
+                    <span class="text-slate-500">${new Date(closing.created_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })}</span>
+                    <button type="button" data-load-closing-date="${escapeHtml(closing.closing_date)}" data-load-closing-rate="${closing.exchange_rate}" class="rounded-lg border border-violet-400/30 px-2.5 py-1 font-bold text-violet-200 hover:bg-violet-500/10">
+                        <i class="fa-solid fa-folder-open mr-1"></i>Cargar
+                    </button>
+                </div>
+            </article>
+        `).join('');
+    } catch (error) {
+        console.error('Error listando cierres de caja:', error);
+    }
+}
+
+async function exportCashClosingExcel() {
+    if (!currentCashClosingPreview) return;
+    if (!window.ExcelJS) {
+        alert('La librería ExcelJS no está cargada. Recarga la página.');
+        return;
+    }
+
+    const data = currentCashClosingPreview;
+    const date = data.closing_date;
+    const rate = data.exchange_rate;
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'INV. Armijhon';
+    workbook.created = new Date();
+
+    const sheet = workbook.addWorksheet(`Cierre ${date}`);
+    sheet.columns = [
+        { width: 5 }, { width: 28 }, { width: 18 }, { width: 18 }, { width: 20 }, { width: 24 }
+    ];
+
+    // Título
+    sheet.mergeCells('B1:F2');
+    sheet.getCell('B1').value = 'INV. ARMIJHON — CIERRE DE CAJA DIARIO';
+    sheet.getCell('B1').font = { name: 'Arial', size: 16, bold: true, color: { argb: 'FFFFFFFF' } };
+    sheet.getCell('B1').alignment = { vertical: 'middle', horizontal: 'center' };
+    sheet.getCell('B1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E1B4B' } };
+
+    sheet.getCell('B3').value = 'Fecha del Cierre:';
+    sheet.getCell('C3').value = date;
+    sheet.getCell('B4').value = 'Tasa de Cambio:';
+    sheet.getCell('C4').value = `Bs. ${rate} / USD`;
+    sheet.getCell('B5').value = 'Generado:';
+    sheet.getCell('C5').value = new Date().toLocaleString('es-VE');
+
+    // Tabla de Gran Total
+    sheet.mergeCells('B7:F7');
+    sheet.getCell('B7').value = '1. TOTALES CONSOLIDADOS DEL DÍA';
+    sheet.getCell('B7').font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    sheet.getCell('B7').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4338CA' } };
+
+    sheet.addRow(['', 'Gran Total Estimado en USD', `$${Number(data.consolidation.grand_total_usd).toFixed(2)} USD`]);
+    sheet.addRow(['', 'Gran Total Estimado en VES', `Bs. ${formatVes(data.consolidation.grand_total_ves)} VES`]);
+    sheet.addRow(['', 'Total Transacciones Realizadas', data.consolidation.total_transactions]);
+    sheet.addRow(['', 'Efectivo USD en Tienda Física', `$${Number(data.consolidation.total_physical_cash_usd).toFixed(2)} USD`]);
+    sheet.addRow(['', 'Efectivo VES en Tienda Física', `Bs. ${formatVes(data.consolidation.total_physical_cash_ves)} VES`]);
+    sheet.addRow(['', 'Efectivo COP en Tienda Física', formatLocalSaleAmount(data.consolidation.total_physical_cash_cop, 'COP')]);
+    sheet.addRow(['', 'Total Cuenta Banco Digital (Web)', `Bs. ${formatVes(data.consolidation.total_digital_ves)} VES`]);
+
+    sheet.addRow([]);
+
+    // Canal 1: Ventas Locales
+    sheet.mergeCells('B16:F16');
+    sheet.getCell('B16').value = '2. CANAL 1: VENTAS LOCALES (TIENDA FÍSICA)';
+    sheet.getCell('B16').font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    sheet.getCell('B16').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF059669' } };
+
+    sheet.addRow(['', 'Concepto', 'USD', 'VES', 'COP']);
+    sheet.addRow(['', 'Ventas de Contado', `$${Number(data.local_sales.cash_usd).toFixed(2)}`, `Bs. ${formatVes(data.local_sales.cash_ves)}`, formatLocalSaleAmount(data.local_sales.cash_cop, 'COP')]);
+    sheet.addRow(['', 'Ventas a Crédito (Fiado de hoy)', `$${Number(data.local_sales.credit_usd).toFixed(2)}`, `Bs. ${formatVes(data.local_sales.credit_ves)}`, formatLocalSaleAmount(data.local_sales.credit_cop, 'COP')]);
+    sheet.addRow(['', 'Abonos Cobrados (Deudas de fiados)', `$${Number(data.local_sales.payments_usd).toFixed(2)}`, `Bs. ${formatVes(data.local_sales.payments_ves)}`, formatLocalSaleAmount(data.local_sales.payments_cop, 'COP')]);
+
+    sheet.addRow([]);
+
+    // Canal 2: Ventas Web
+    sheet.mergeCells('B22:F22');
+    sheet.getCell('B22').value = '3. CANAL 2: VENTAS PÁGINA WEB';
+    sheet.getCell('B22').font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    sheet.getCell('B22').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0284C7' } };
+
+    sheet.addRow(['', 'Método de Pago', 'Cantidad Pedidos', 'Monto VES']);
+    sheet.addRow(['', 'Pago Móvil', data.web_sales.pago_movil_count, `Bs. ${formatVes(data.web_sales.pago_movil_ves)}`]);
+    sheet.addRow(['', 'Transferencia Bancaria', data.web_sales.transfer_count, `Bs. ${formatVes(data.web_sales.transfer_ves)}`]);
+    sheet.addRow(['', 'Total Aprobado Web', data.web_sales.sales_count, `Bs. ${formatVes(data.web_sales.total_ves)}`]);
+    sheet.addRow(['', 'Referencia USD Web', '', `$${Number(data.web_sales.total_usd).toFixed(2)} USD`]);
+
+    if (data.existing_closing && data.existing_closing.notes) {
+        sheet.addRow([]);
+        sheet.addRow(['', 'Observaciones del Cierre:', data.existing_closing.notes]);
+    }
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `cierre-de-caja-${date}.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function exportCashClosingPdf() {
+    if (!currentCashClosingPreview) return;
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+        alert('La librería jsPDF no está cargada. Recarga la página.');
+        return;
+    }
+
+    const data = currentCashClosingPreview;
+    const date = data.closing_date;
+    const rate = data.exchange_rate;
+
+    const doc = new window.jspdf.jsPDF();
+
+    // Encabezado
+    doc.setFillColor(30, 27, 75);
+    doc.rect(0, 0, 210, 24, 'F');
+    doc.setFontSize(16);
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.text('INV. ARMIJHON — CIERRE DE CAJA DIARIO', 105, 15, { align: 'center' });
+
+    doc.setTextColor(50, 50, 50);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Fecha del cierre: ${date}`, 14, 32);
+    doc.text(`Tasa de cambio: Bs. ${rate} / USD`, 14, 38);
+    doc.text(`Generado: ${new Date().toLocaleString('es-VE')}`, 14, 44);
+
+    // Tabla 1: Consolidado
+    const grandTable = [
+        ['Gran Total Estimado en USD', `$${Number(data.consolidation.grand_total_usd).toFixed(2)} USD`],
+        ['Gran Total Estimado en VES', `Bs. ${formatVes(data.consolidation.grand_total_ves)} VES`],
+        ['Efectivo USD en Tienda Física', `$${Number(data.consolidation.total_physical_cash_usd).toFixed(2)} USD`],
+        ['Efectivo VES en Tienda Física', `Bs. ${formatVes(data.consolidation.total_physical_cash_ves)} VES`],
+        ['Efectivo COP en Tienda Física', formatLocalSaleAmount(data.consolidation.total_physical_cash_cop, 'COP')],
+        ['Total Cuenta Banco Digital (Web)', `Bs. ${formatVes(data.consolidation.total_digital_ves)} VES`],
+        ['Total Transacciones Realizadas', String(data.consolidation.total_transactions)]
+    ];
+
+    doc.autoTable({
+        startY: 50,
+        head: [['1. TOTALES CONSOLIDADOS', 'MONTO']],
+        body: grandTable,
+        theme: 'striped',
+        headStyles: { fillColor: [67, 56, 202] },
+        styles: { fontSize: 9 }
+    });
+
+    // Tabla 2: Ventas Locales
+    const localTable = [
+        ['Ventas de Contado', `$${Number(data.local_sales.cash_usd).toFixed(2)}`, `Bs. ${formatVes(data.local_sales.cash_ves)}`, formatLocalSaleAmount(data.local_sales.cash_cop, 'COP')],
+        ['Ventas a Crédito (Fiado de hoy)', `$${Number(data.local_sales.credit_usd).toFixed(2)}`, `Bs. ${formatVes(data.local_sales.credit_ves)}`, formatLocalSaleAmount(data.local_sales.credit_cop, 'COP')],
+        ['Abonos Cobrados (Clientes fiados)', `$${Number(data.local_sales.payments_usd).toFixed(2)}`, `Bs. ${formatVes(data.local_sales.payments_ves)}`, formatLocalSaleAmount(data.local_sales.payments_cop, 'COP')]
+    ];
+
+    doc.autoTable({
+        startY: doc.lastAutoTable.finalY + 10,
+        head: [['2. VENTAS LOCALES (TIENDA)', 'USD', 'VES', 'COP']],
+        body: localTable,
+        theme: 'striped',
+        headStyles: { fillColor: [5, 150, 105] },
+        styles: { fontSize: 9 }
+    });
+
+    // Tabla 3: Ventas Web
+    const webTable = [
+        ['Pago Móvil', `${data.web_sales.pago_movil_count} pagos`, `Bs. ${formatVes(data.web_sales.pago_movil_ves)}`],
+        ['Transferencia Bancaria', `${data.web_sales.transfer_count} transf.`, `Bs. ${formatVes(data.web_sales.transfer_ves)}`],
+        ['Total Aprobado Web', `${data.web_sales.sales_count} pedidos`, `Bs. ${formatVes(data.web_sales.total_ves)} (Ref: $${Number(data.web_sales.total_usd).toFixed(2)})`]
+    ];
+
+    doc.autoTable({
+        startY: doc.lastAutoTable.finalY + 10,
+        head: [['3. VENTAS PÁGINA WEB', 'OPERACIONES', 'MONTO VES']],
+        body: webTable,
+        theme: 'striped',
+        headStyles: { fillColor: [2, 132, 199] },
+        styles: { fontSize: 9 }
+    });
+
+    if (data.existing_closing && data.existing_closing.notes) {
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'italic');
+        doc.text(`Observaciones: ${data.existing_closing.notes}`, 14, doc.lastAutoTable.finalY + 10);
+    }
+
+    doc.save(`cierre-de-caja-${date}.pdf`);
+}
+
+// Event Listeners de Cierre de Caja
+if (previewCashClosingBtn) previewCashClosingBtn.addEventListener('click', previewCashClosing);
+if (saveCashClosingBtn) saveCashClosingBtn.addEventListener('click', saveCashClosing);
+if (refreshCashClosingHistoryBtn) refreshCashClosingHistoryBtn.addEventListener('click', loadCashClosingHistory);
+if (exportCashClosingExcelBtn) exportCashClosingExcelBtn.addEventListener('click', exportCashClosingExcel);
+if (exportCashClosingPdfBtn) exportCashClosingPdfBtn.addEventListener('click', exportCashClosingPdf);
+
+if (cashClosingHistoryList) {
+    cashClosingHistoryList.addEventListener('click', event => {
+        const loadBtn = event.target.closest('[data-load-closing-date]');
+        if (!loadBtn) return;
+        const date = loadBtn.dataset.loadClosingDate;
+        const rate = loadBtn.dataset.loadClosingRate;
+        if (cashClosingDateInput) cashClosingDateInput.value = date;
+        if (cashClosingRateInput && rate) cashClosingRateInput.value = rate;
+        previewCashClosing();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+}
