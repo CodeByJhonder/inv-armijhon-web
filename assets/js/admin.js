@@ -549,6 +549,10 @@ function showLogin() {
 }
 
 
+
+async function loadMoneyRows(rpc,id,statusId){const r=document.getElementById(id),st=document.getElementById(statusId);if(!r)return;try{const{data,error}=await supabaseClient.rpc(rpc,{p_limit:100});if(error)throw error;r.innerHTML=(data||[]).map(x=>`<article class="flex justify-between rounded-xl border border-slate-800 bg-slate-900 p-3"><span>${escapeHtml(x.description)} <small class="text-slate-400">${escapeHtml(x.entry_date||x.movement_date)} ? ${escapeHtml(x.category||x.movement_type)}</small></span><b>${formatLocalSaleAmount(Number(x.amount),x.currency)}</b></article>`).join('')||'<p class="text-xs text-slate-400">Sin movimientos.</p>';}catch(e){st.textContent=e.message;}}
+async function saveMoneyForm(e,rpc,statusId){e.preventDefault();const f=e.currentTarget,st=document.getElementById(statusId),v=Object.fromEntries(new FormData(f));try{const args=rpc==='admin_create_income'?{p_description:v.description,p_category:v.category,p_currency:v.currency,p_amount:Number(v.amount),p_entry_date:v.entry_date,p_note:v.note||null}:{p_movement_type:v.movement_type,p_currency:v.currency,p_amount:Number(v.amount),p_movement_date:v.movement_date,p_description:v.description};const{error}=await supabaseClient.rpc(rpc,args);if(error)throw error;f.reset();st.textContent='Guardado.';const d=f.querySelector('[type=date]');if(d)d.value=new Date().toLocaleDateString('en-CA');if(rpc==='admin_create_income')loadMoneyRows('admin_list_income','income-list','income-status');else loadMoneyRows('admin_list_cash_movements','cash-movement-list','cash-movement-status');}catch(e){st.textContent=e.message||'No se pudo guardar.';}}
+
 async function loadExpenses() {
  const status=document.getElementById('expenses-status'), list=document.getElementById('expenses-list'); if(!status||!list)return; status.textContent='Cargando egresos?';
  try { const {data,error}=await supabaseClient.rpc('admin_list_expenses',{p_limit:200}); if(error)throw error; list.innerHTML=(data||[]).map(x=>`<article class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-800 bg-slate-950/40 p-3"><div><strong class="text-sm">${escapeHtml(x.description)}</strong><p class="text-xs text-slate-400">${escapeHtml(x.category)} ? ${escapeHtml(x.spent_on)}${x.note?` ? ${escapeHtml(x.note)}`:''}</p></div><b class="text-rose-200">${formatLocalSaleAmount(Number(x.amount),x.currency)}</b></article>`).join('')||'<p class="text-sm text-slate-400">Todav?a no hay egresos registrados.</p>'; status.textContent=`${(data||[]).length} egresos recientes`; } catch(e){status.textContent=e.message||'No se pudieron cargar los egresos.';}
@@ -3471,6 +3475,9 @@ logoutButton.addEventListener('click', async () => {
 });
 
 document.getElementById('refresh-orders').addEventListener('click', loadOrders);
+document.getElementById('income-form')?.addEventListener('submit',e=>saveMoneyForm(e,'admin_create_income','income-status'));
+document.getElementById('cash-movement-form')?.addEventListener('submit',e=>saveMoneyForm(e,'admin_create_cash_movement','cash-movement-status'));
+for(const f of document.querySelectorAll('#income-form [type=date],#cash-movement-form [type=date]'))f.value=new Date().toLocaleDateString('en-CA');
 document.getElementById('expense-form')?.addEventListener('submit', saveExpense);
 document.getElementById('refresh-expenses')?.addEventListener('click', loadExpenses);
 const expenseDate=document.querySelector('#expense-form [name=spent_on]'); if(expenseDate) expenseDate.value=new Date().toLocaleDateString('en-CA');
@@ -3660,6 +3667,8 @@ adminNavigation.addEventListener('click', event => {
     const button = event.target.closest('[data-admin-page]');
     if (!button) return;
     showAdminPage(button.dataset.adminPage);
+    if(button.dataset.adminPage==='income')loadMoneyRows('admin_list_income','income-list','income-status');
+    if(button.dataset.adminPage==='cash-register')loadMoneyRows('admin_list_cash_movements','cash-movement-list','cash-movement-status');
     if (button.dataset.adminPage === 'expenses') loadExpenses();
     if (button.dataset.adminPage === 'local-sales') {
         loadLocalSaleServices().catch(error => {
