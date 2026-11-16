@@ -548,6 +548,13 @@ function showLogin() {
     }
 }
 
+
+async function loadExpenses() {
+ const status=document.getElementById('expenses-status'), list=document.getElementById('expenses-list'); if(!status||!list)return; status.textContent='Cargando egresos?';
+ try { const {data,error}=await supabaseClient.rpc('admin_list_expenses',{p_limit:200}); if(error)throw error; list.innerHTML=(data||[]).map(x=>`<article class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-800 bg-slate-950/40 p-3"><div><strong class="text-sm">${escapeHtml(x.description)}</strong><p class="text-xs text-slate-400">${escapeHtml(x.category)} ? ${escapeHtml(x.spent_on)}${x.note?` ? ${escapeHtml(x.note)}`:''}</p></div><b class="text-rose-200">${formatLocalSaleAmount(Number(x.amount),x.currency)}</b></article>`).join('')||'<p class="text-sm text-slate-400">Todav?a no hay egresos registrados.</p>'; status.textContent=`${(data||[]).length} egresos recientes`; } catch(e){status.textContent=e.message||'No se pudieron cargar los egresos.';}
+}
+async function saveExpense(e){ e.preventDefault(); const f=e.currentTarget, st=document.getElementById('expense-form-status'); const b=f.querySelector('button[type=submit]'); b.disabled=true; st.textContent='Guardando?'; try{const {error}=await supabaseClient.rpc('admin_record_expense',{p_description:f.elements.description.value.trim(),p_category:f.elements.category.value,p_currency:f.elements.currency.value,p_amount:Number(f.elements.amount.value),p_spent_on:f.elements.spent_on.value,p_note:f.elements.note.value.trim()||null});if(error)throw error;f.reset();f.elements.spent_on.value=new Date().toLocaleDateString('en-CA');st.textContent='Egreso guardado.';await loadExpenses();}catch(err){st.textContent=err.message||'No se pudo guardar el egreso.';}finally{b.disabled=false;}}
+
 function showOrders() {
     loginView.classList.add('hidden');
     ordersView.classList.remove('hidden');
@@ -3464,6 +3471,9 @@ logoutButton.addEventListener('click', async () => {
 });
 
 document.getElementById('refresh-orders').addEventListener('click', loadOrders);
+document.getElementById('expense-form')?.addEventListener('submit', saveExpense);
+document.getElementById('refresh-expenses')?.addEventListener('click', loadExpenses);
+const expenseDate=document.querySelector('#expense-form [name=spent_on]'); if(expenseDate) expenseDate.value=new Date().toLocaleDateString('en-CA');
 document.getElementById('refresh-inventory').addEventListener('click', loadAdminInventory);
 document.getElementById('refresh-local-sales').addEventListener('click', loadLocalSales);
 document.getElementById('refresh-credit-customers').addEventListener('click', loadLocalCreditCustomers);
@@ -3650,6 +3660,7 @@ adminNavigation.addEventListener('click', event => {
     const button = event.target.closest('[data-admin-page]');
     if (!button) return;
     showAdminPage(button.dataset.adminPage);
+    if (button.dataset.adminPage === 'expenses') loadExpenses();
     if (button.dataset.adminPage === 'local-sales') {
         loadLocalSaleServices().catch(error => {
             console.error('Error cargando el catálogo de servicios locales:', error);
